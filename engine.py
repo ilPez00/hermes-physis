@@ -187,6 +187,16 @@ def discover_engines(binary: Any = None, timeout: int = DEFAULT_TIMEOUT) -> Engi
         if env_bins:
             binaries = [item.strip() for item in env_bins.split(",") if item.strip()]
         else:
+            # Prefer a binary bundled with the plugin, if present.
+            import platform as _platform
+
+            machine = _platform.machine().lower()
+            system = _platform.system().lower()
+            arch = "x86_64" if machine in {"x86_64", "amd64"} else machine
+            os_name = "linux" if system == "linux" else system
+            bundled = Path(__file__).resolve().parent / "bin" / f"{os_name}-{arch}" / "physis-core"
+            if bundled.is_file() and os.access(bundled, os.X_OK):
+                binaries.append(str(bundled))
             for candidate in CANDIDATES:
                 found = shutil.which(candidate)
                 if found and found not in binaries:

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from engine import EnginePool, discover_engines, EngineError
+from replant import ReplantMemo
 
 _DEFAULT_POOL: EnginePool | None = None
 
@@ -168,38 +169,25 @@ def physis_command(args: Any = None, **kwargs: Any) -> dict[str, Any]:
 
 def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _merge(args, kwargs)
-    try:
-        pool = _pool_from_args(merged)
-    except EngineError as exc:
-        return {"ok": False, "error": str(exc)}
-    if not pool.supports("run"):
-        return _unsupported(pool, "run")
     value = str(merged.get("input") or merged.get("value") or "").strip()
     if not value:
         return {"ok": False, "error": "input is required"}
-    return _run(pool, ["run", value], merged)
+    memo = ReplantMemo(_path(merged))
+    result = memo.run(value, merged.get("result"), float(merged.get("elapsed_ms", 0) or 0))
+    return {"ok": True, **result}
 
 
 def replant_stats(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _merge(args, kwargs)
-    try:
-        pool = _pool_from_args(merged)
-    except EngineError as exc:
-        return {"ok": False, "error": str(exc)}
-    if not pool.supports("stats"):
-        return _unsupported(pool, "stats")
-    return _run(pool, ["stats"], merged)
+    memo = ReplantMemo(_path(merged))
+    return {"ok": True, **memo.stats()}
 
 
 def replant_demo(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _merge(args, kwargs)
-    try:
-        pool = _pool_from_args(merged)
-    except EngineError as exc:
-        return {"ok": False, "error": str(exc)}
-    if not pool.supports("demo"):
-        return _unsupported(pool, "demo")
-    return _run(pool, ["demo"], merged)
+    iterations = int(merged.get("iterations", 10) or 10)
+    memo = ReplantMemo(_path(merged))
+    return {"ok": True, **memo.demo(iterations)}
 
 
 HANDLERS = {
