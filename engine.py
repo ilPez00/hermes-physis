@@ -1,8 +1,9 @@
 """Lightweight Physis engine wrapper.
 
-The plugin deliberately depends on a small engine (physis-core or
-physis-replant) instead of the full physis binary.  The exact command set of
-those binaries is not assumed; capabilities are probed at runtime.
+The plugin deliberately depends on small engines (physis-core or
+physis-replant) instead of the full physis binary.  Several engines may be
+available at once; the plugin discovers all of them and routes each command to
+an engine that advertises it.
 """
 
 from __future__ import annotations
@@ -18,19 +19,21 @@ from typing import Any, Iterable
 DEFAULT_TIMEOUT = 15
 MAX_OUTPUT = 12000
 
+CANDIDATES = ("physis-core", "physis-replant", "replant", "physis", "physis-next")
+
 
 class EngineError(Exception):
-    """Raised when the engine cannot be found or used."""
+    """Raised when no engine can be found or used."""
 
 
 class PhysisEngine:
-    def __init__(self, binary: str | None = None, timeout: int = DEFAULT_TIMEOUT):
+    def __init__(self, binary: str, timeout: int = DEFAULT_TIMEOUT):
         self.timeout = max(1, int(timeout or DEFAULT_TIMEOUT))
-        self.binary = self._resolve_binary(binary)
+        self.binary = self.resolve_binary(binary)
         self._capabilities: set[str] | None = None
 
     @staticmethod
-    def _resolve_binary(binary: str | None) -> str:
+    def resolve_binary(binary: str | None) -> str:
         if binary:
             if os.path.isfile(binary) and os.access(binary, os.X_OK):
                 return binary
@@ -38,17 +41,16 @@ class PhysisEngine:
             if found:
                 return found
             raise EngineError(f"configured engine binary not found: {binary}")
-
-        for candidate in ("physis-core", "physis-replant", "physis"):
+        for candidate in CANDIDATES:
             found = shutil.which(candidate)
             if found:
                 return found
         env_bin = os.environ.get("PHYSIS_BIN")
-        if env_bin and (os.path.isfile(env_bin) and os.access(env_bin, os.X_OK)):
+        if env_bin and os.path.isfile(env_bin) and os.access(env_bin, os.X_OK):
             return env_bin
         raise EngineError(
-            "no lightweight Physis engine found; install physis-core or "
-            "physis-replant, or set PHYSIS_BIN"
+            "no Phasis engine found; install physis-core or physis-replant, "
+            "or set PHYSIS_BIN"
         )
 
     def capabilities(self) -> set[str]:
@@ -65,9 +67,7 @@ class PhysisEngine:
             text = (proc.stdout or "") + "\n" + (proc.stderr or "")
         except (subprocess.TimeoutExpired, OSError):
             text = ""
-        # Match command names in clap-style help: "    observe " or "observe,"
         found = set(re.findall(r"(?m)^\s{2,}([a-z][a-z0-9_-]*)\b", text))
-        # Also accept words immediately followed by a description after two spaces.
         found.update(re.findall(r"(?m)^\s{2,}([a-z][a-z0-9_-]*)\s{2,}", text))
         self._capabilities = found
         return found
@@ -75,7 +75,6 @@ class PhysisEngine:
     def supports(self, command: str) -> bool:
         caps = self.capabilities()
         if not caps:
-            # If help parsing failed, be optimistic but let execution decide.
             return True
         return command in caps
 
@@ -112,15 +111,13 @@ class PhysisEngine:
                 "timed_out": False,
             }
 
-        stdout = _truncate(proc.stdout or "")
-        stderr = _truncate(proc.stderr or "")
         return {
             "ok": proc.returncode == 0,
             "binary": self.binary,
             "argv": argv,
             "returncode": proc.returncode,
-            "stdout": stdout,
-            "stderr": stderr,
+            "stdout": _truncate(proc.stdout or ""),
+            "stderr": _truncate(proc.stderr or ""),
             "timed_out": False,
         }
 
@@ -130,6 +127,93 @@ class PhysisEngine:
             "timeout": self.timeout,
             "capabilities": sorted(self.capabilities()),
         }
+
+
+class EnginePool:
+    """A collection of engines, routed by advertised command."""
+
+    def __init__(self, engines: list[PhysisEngine]):
+        if not engines:
+            raise EngineError("no Physis engines available")
+        self.engines = engines
+        self.timeout = engines[0].timeout
+
+    @property
+    def binary(self) -> str:
+        return self.engines[0].binary
+
+    def capabilities(self) -> set[str]:
+        result: set[str] = set()
+        for engine in self.engines:
+            result |= engine.capabilities()
+        return result
+
+    def supports(self, command: str) -> bool:
+        caps = self.capabilities()
+        if not caps:
+            return True
+        return command in caps
+
+    def engine_for(self, command: str) -> PhysisEngine:
+        for engine in self.engines:
+            if engine.supports(command):
+                return engine
+        return self.engines[0]
+
+    def run(self, args: Iterable[str], cwd: str | None = None, timeout: int | None = None) -> dict[str, Any]:
+        argv = list(args)
+        command = argv[0] if argv else ""
+        engine = self.engine_for(command)
+        return engine.run(argv, cwd=cwd, timeout=timeout)
+
+    def info(self) -> dict[str, Any]:
+        return {
+            "engines": [engine.info() for engine in self.engines],
+            "capabilities": sorted(self.capabilities()),
+        }
+
+
+def discover_engines(binary: Any = None, timeout: int = DEFAULT_TIMEOUT) -> EnginePool:
+    binaries: list[str] = []
+    if isinstance(binary, str) and binary.strip():
+        if "," in binary:
+            binaries = [item.strip() for item in binary.split(",") if item.strip()]
+        else:
+            binaries = [binary.strip()]
+    elif isinstance(binary, (list, tuple)):
+        binaries = [str(item).strip() for item in binary if str(item).strip()]
+    elif binary is None:
+        env_bins = os.environ.get("PHYSIS_BINS") or os.environ.get("PHYSIS_BIN")
+        if env_bins:
+            binaries = [item.strip() for item in env_bins.split(",") if item.strip()]
+        else:
+            for candidate in CANDIDATES:
+                found = shutil.which(candidate)
+                if found and found not in binaries:
+                    binaries.append(found)
+
+    if not binaries:
+        # Fall back to a single configured/available binary; may raise.
+        binaries = [PhysisEngine.resolve_binary(None)]
+
+    engines: list[PhysisEngine] = []
+    seen: set[str] = set()
+    for item in binaries:
+        try:
+            resolved = PhysisEngine.resolve_binary(item)
+        except EngineError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        engines.append(PhysisEngine(resolved, timeout=timeout))
+
+    if not engines:
+        raise EngineError(
+            "no Physis engines found; install physis-core or physis-replant, "
+            "or set PHYSIS_BIN/PHYSIS_BINS"
+        )
+    return EnginePool(engines)
 
 
 def _truncate(text: str) -> str:

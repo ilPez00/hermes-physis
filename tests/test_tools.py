@@ -28,14 +28,14 @@ def test_engine_status_ok(tmp_path):
     binary = make_binary(tmp_path, {"observe", "context"})
     result = HANDLERS["physis_engine_status"]({"engine_bin": binary})
     assert result["ok"] is True
-    assert binary == result["binary"]
+    assert binary == result["engines"][0]["binary"]
 
 
 def test_observe_unsupported(tmp_path):
     binary = make_binary(tmp_path, {"context"})
     result = HANDLERS["physis_observe"]({"engine_bin": binary, "path": "."})
     assert result["ok"] is False
-    assert "does not advertise" in result["error"]
+    assert "does not advertise" in result["error"] or "no available engine" in result["error"]
 
 
 def test_context_runs(tmp_path):

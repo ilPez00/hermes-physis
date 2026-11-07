@@ -8,6 +8,10 @@ provides_tools:
   - physis_query
   - physis_why
   - physis_diff
+  - physis_command
+  - replant_run
+  - replant_stats
+  - replant_demo
 provides_hooks:
   - post_tool_call
 config_schema:

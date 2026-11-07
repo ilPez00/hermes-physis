@@ -19,6 +19,8 @@ Set `PHYSIS_BIN` or `plugins.entries.physis.settings.engine_bin` to your engine 
 - `physis_query`
 - `physis_why`
 - `physis_diff`
+- `physis_command` (run any advertised command)
+- `replant_run`, `replant_stats`, `replant_demo`
 
 ## Notes
 - The plugin probes the engine's `--help` output and disables unsupported commands.
