@@ -17,6 +17,8 @@ CORE_COMMANDS = {
     "direction",
     "chain",
     "grid",
+    "watch",
+    "observed",
     "assert",
     "facet",
 }
@@ -55,6 +57,12 @@ def make_binary(tmp_path: Path, supported: set[str]) -> str:
         print('Fixed-token search: 2 results (120 tokens, budget 300)')
         print('  1. 0.9  src/auth.py: def rotate_token()')
         raise SystemExit(0)
+    if argv and argv[0] == "watch":
+        print("appended 3 observation(s), seq 1..=3  (3 fs)")
+        raise SystemExit(0)
+    if argv and argv[0] == "observed":
+        print('[{{"seq": 1, "source": "fs", "subject": "a.py"}}, {{"seq": 2, "source": "git", "subject": "c1"}}]')
+        raise SystemExit(0)
     if argv and argv[0] == "grid":
         print('{{"domains": ["DEFEND", "HEAL"], "modes": ["TEACH", "WORK"], "shape": [2, 2], "total_cells": 4, "populated_cells": 3, "entries": 9, "expanded": true, "embedder": {{"kind": "onnx-explicit", "dimension": 384}}}}')
         raise SystemExit(0)
@@ -64,7 +72,11 @@ def make_binary(tmp_path: Path, supported: set[str]) -> str:
     if argv and argv[0] == "classify":
         print("  HEAL        × MAINTAIN   0.940 ")
         print("  CONSTRUCT   × CREATE     0.921 ")
+        print("Grid: 7×16 = 112 cells (87 populated, 761 entries)")
         print("Margin over runner-up: 0.019  effectively a tie")
+        print("Embedder: onnx-explicit (384d) — semantic")
+        if "--no-expand" not in argv:
+            print("Ontology expanded: Sample Learned Thing (HEAL×MAINTAIN) — learned entry saved")
         raise SystemExit(0)
     print("ran:" + " ".join(argv))
     raise SystemExit(0)
@@ -186,6 +198,41 @@ def test_grid_reports_axes_and_shape(tmp_path):
     assert result["shape"] == [2, 2]
     assert result["expanded"] is True
     assert result["embedder"]["kind"] == "onnx-explicit"
+
+
+def test_classify_reports_expansion(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_classify"]({"engine_bin": binary, "text": "ambiguous thing"})
+    assert result["ok"] is True
+    assert result["created_entry"] == "Sample Learned Thing"
+    assert result["created_cell"] == "HEAL×MAINTAIN"
+    assert result["embedder_kind"] == "onnx-explicit"
+
+
+def test_classify_no_expand_flag(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_classify"](
+        {"engine_bin": binary, "text": "ambiguous thing", "auto_expand": False}
+    )
+    assert result["ok"] is True
+    assert "--no-expand" in result["argv"]
+    assert "created_entry" not in result
+
+
+def test_ingest_parses_appended(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_ingest"]({"engine_bin": binary, "path": str(tmp_path), "source": "fs"})
+    assert result["ok"] is True
+    assert result["appended"] == 3
+    assert result["argv"][1] == "watch"
+
+
+def test_observed_reads_log(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_observed"]({"engine_bin": binary, "limit": 2})
+    assert result["ok"] is True
+    assert result["count"] == 2
+    assert result["observations"][0]["source"] == "fs"
 
 
 def test_chain_passes_through_json(tmp_path):

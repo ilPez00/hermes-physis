@@ -149,6 +149,25 @@ def test_classify_uses_semantic_embedder(isolated_store):
     assert result["grid_shape"] == [7, 16]
 
 
+def test_ingest_and_observed_roundtrip(isolated_store, repo):
+    ingested = HANDLERS["physis_ingest"]({"path": str(repo), "source": "fs", "max": 20, "timeout": 60})
+    assert ingested["ok"] is True
+    assert ingested["appended"] >= 1
+    observed = HANDLERS["physis_observed"]({"limit": 5, "timeout": 60})
+    assert observed["ok"] is True
+    assert observed["count"] >= 1
+    assert observed["observations"][0]["source"] == "fs"
+
+
+def test_classify_auto_expands_on_tie(isolated_store):
+    result = HANDLERS["physis_classify"](
+        {"text": "rotate an expired authentication token", "timeout": 120}
+    )
+    assert result["ok"] is True
+    assert result.get("created_entry"), result["stdout"]
+    assert result["created_cell"]
+
+
 def test_replant_demo_records_then_replays(tmp_path):
     store = tmp_path / "replant-store"
     result = HANDLERS["replant_demo"]({"path": str(tmp_path), "store": str(store), "timeout": 60})

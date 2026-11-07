@@ -28,6 +28,7 @@ DEFAULTS: dict[str, Any] = {
     "timeout": 20,
     "budget": 800,
     "auto_observe": False,
+    "auto_expand": True,
 }
 
 _POOL: EnginePool | None = None
@@ -42,6 +43,8 @@ _CELL_RE = re.compile(r"^\s{2}([A-Z][A-Z_-]*)\s+[×x]\s+([A-Z][A-Z_-]*)\s+([0-9.
 _MARGIN_RE = re.compile(r"Margin over runner-up:\s*([0-9.]+)")
 _GRID_LINE_RE = re.compile(r"Grid:\s*(\d+)×(\d+)")
 _EMBEDDER_LINE_RE = re.compile(r"Embedder:\s*([^\s(]+)")
+_EXPANDED_RE = re.compile(r"Ontology expanded:\s*(.+?)\s*\(([^)]+)\)")
+_APPENDED_RE = re.compile(r"appended\s+(\d+)\s+observation")
 
 
 # --------------------------------------------------------------------------- #
@@ -480,7 +483,10 @@ def physis_classify(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if not text:
         return {"ok": False, "error": "text or file is required"}
 
-    result = _run(pool, ["classify", text], merged)
+    argv = ["classify", text]
+    if merged.get("auto_expand") is False:
+        argv.append("--no-expand")
+    result = _run(pool, argv, merged)
     cells = _parse_cells(result.get("stdout", ""))
     if cells:
         result["cells"] = cells[:8]
@@ -495,6 +501,10 @@ def physis_classify(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     embedder = _EMBEDDER_LINE_RE.search(result.get("stdout", ""))
     if embedder:
         result["embedder_kind"] = embedder.group(1)
+    expanded = _EXPANDED_RE.search(result.get("stdout", ""))
+    if expanded:
+        result["created_entry"] = expanded.group(1).strip()
+        result["created_cell"] = expanded.group(2).strip()
     return result
 
 
@@ -618,6 +628,67 @@ def physis_grid(args: Any = None, **kwargs: Any) -> dict[str, Any]:
             if key in payload:
                 result[key] = payload[key]
         result.pop("stdout", None)
+    return result
+
+
+def physis_ingest(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    merged = _with_defaults(_merge(args, kwargs))
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    if not pool.supports("watch"):
+        return _unsupported(pool, "watch")
+    source = str(merged.get("source") or "fs").strip().lower()
+    if source not in {"fs", "git", "terminal", "agent", "process", "browser", "all"}:
+        return {"ok": False, "error": "source must be fs, git, terminal, agent, process, browser or all"}
+    try:
+        limit = max(1, int(merged.get("max") or 500))
+    except (TypeError, ValueError):
+        limit = 500
+    argv = ["watch", "--source", source, "--max", str(limit)]
+    if source in {"fs", "git"}:
+        path = _path(merged)
+        if not Path(path).exists():
+            return {"ok": False, "error": f"path not found: {path}"}
+        argv += ["--path", path]
+    if merged.get("dry_run"):
+        argv.append("--dry-run")
+    result = _run(pool, argv, merged)
+    match = _APPENDED_RE.search(result.get("stdout") or "")
+    if match:
+        result["appended"] = int(match.group(1))
+    result["source"] = source
+    return result
+
+
+def physis_observed(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    merged = _with_defaults(_merge(args, kwargs))
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    if not pool.supports("observed"):
+        return _unsupported(pool, "observed")
+    try:
+        limit = max(1, int(merged.get("limit") or 20))
+    except (TypeError, ValueError):
+        limit = 20
+    argv = ["observed", "--json", "--limit", str(limit)]
+    source = str(merged.get("source") or "").strip()
+    if source:
+        argv += ["--source", source]
+    concurrent = str(merged.get("concurrent") or "").strip()
+    if concurrent:
+        argv += ["--concurrent", concurrent]
+    result = _run(pool, argv, merged)
+    text = (result.get("stdout") or "").strip()
+    if text.startswith("["):
+        try:
+            result["observations"] = json.loads(text)
+            result["count"] = len(result["observations"])
+        except (ValueError, TypeError):
+            pass
     return result
 
 
@@ -870,6 +941,8 @@ HANDLERS = {
     "physis_classify": physis_classify,
     "physis_chain": physis_chain,
     "physis_grid": physis_grid,
+    "physis_ingest": physis_ingest,
+    "physis_observed": physis_observed,
     "physis_command": physis_command,
     "replant_run": replant_run,
     "replant_record": replant_record,

@@ -33,7 +33,12 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Classify text against the semiotic grid.
-    Classify { text: String },
+    Classify {
+        text: String,
+        /// Do not add a learned ontology entry when the result is uncertain
+        #[arg(long)]
+        no_expand: bool,
+    },
     /// Show ontology stats.
     Ontology,
     /// Show the adaptive semiotic grid (axes, shape, populated cells).
@@ -543,7 +548,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     store::ensure_data_dir()?;
     match cli.command {
-        Command::Classify { text } => run_classify(&text),
+        Command::Classify { text, no_expand } => run_classify(&text, no_expand),
         Command::Ontology => run_ontology(),
         Command::Grid { json, cells } => run_grid(json, cells),
         Command::Facet {
@@ -719,11 +724,134 @@ fn build_classifier(
     )
 }
 
+/// Words worth keeping in a learned entry's label/hints.
+fn significant_words(text: &str, limit: usize) -> Vec<String> {
+    const STOP: &[&str] = &[
+        "the", "and", "for", "with", "from", "this", "that", "into", "your", "you",
+        "are", "was", "were", "has", "have", "had", "not", "but", "all", "any",
+        "can", "will", "would", "should", "could", "about", "when", "then", "than",
+        "them", "they", "its", "our", "out", "use", "using", "make", "made", "get",
+        "how", "what", "why", "where", "which", "who", "does", "did", "doing",
+    ];
+    let mut out: Vec<String> = Vec::new();
+    for word in text
+        .to_lowercase()
+        .split(|c: char| !c.is_alphanumeric() && c != '-' && c != '_')
+        .filter(|w| w.len() > 3 && !STOP.contains(w))
+    {
+        if !out.iter().any(|w| w == word) {
+            out.push(word.to_string());
+        }
+        if out.len() >= limit {
+            break;
+        }
+    }
+    out
+}
+
+/// A short, generic label from the text: first few significant words.
+fn inferred_label(text: &str) -> Option<String> {
+    let words = significant_words(text, 4);
+    if words.len() < 2 {
+        return None;
+    }
+    let label = words
+        .iter()
+        .map(|w| {
+            let mut chars = w.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    Some(label.chars().take(64).collect())
+}
+
+/// Persist a learned entry for text the current ontology could not place
+/// confidently. The grid grows one entry at a time; axes can grow too when a
+/// supplied ontology names a new domain or mode.
+fn auto_expand_ontology(text: &str, domain: &str, mode: &str) -> anyhow::Result<Option<String>> {
+    if std::env::var("PHYSIS_AUTO_EXPAND")
+        .map(|v| {
+            let v = v.trim().to_ascii_lowercase();
+            v == "0" || v == "false" || v == "off"
+        })
+        .unwrap_or(false)
+    {
+        return Ok(None);
+    }
+    if text.trim().len() < 20 {
+        return Ok(None);
+    }
+    let max_entries: usize = std::env::var("PHYSIS_AUTO_EXPAND_MAX")
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .unwrap_or(500);
+    let Some(label) = inferred_label(text) else {
+        return Ok(None);
+    };
+    let path = physis_core::store::custom_ontology_path();
+    let mut map: std::collections::HashMap<String, physis_core::models::DomainDef> =
+        std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|b| serde_json::from_str(&b).ok())
+            .unwrap_or_default();
+    if map.len() >= max_entries {
+        return Ok(None);
+    }
+    if map.values().any(|d| d.name.eq_ignore_ascii_case(&label)) {
+        return Ok(None);
+    }
+    let hints = significant_words(text, 8);
+    // Near-duplicate guard: the same idea phrased differently must not add a
+    // second entry on every call.
+    let new_terms: std::collections::HashSet<String> = hints
+        .iter()
+        .cloned()
+        .chain(label.to_lowercase().split_whitespace().map(str::to_string))
+        .collect();
+    for d in map.values() {
+        let existing: std::collections::HashSet<String> = d
+            .hints
+            .iter()
+            .cloned()
+            .chain(d.name.to_lowercase().split_whitespace().map(str::to_string))
+            .collect();
+        if existing.is_empty() || new_terms.is_empty() {
+            continue;
+        }
+        let inter = new_terms.intersection(&existing).count();
+        let union = new_terms.union(&existing).count();
+        if union > 0 && (inter as f32 / union as f32) >= 0.6 {
+            return Ok(None);
+        }
+    }
+    let def = physis_core::models::DomainDef {
+        name: label.clone(),
+        category: Some("learned".into()),
+        domain: Some(domain.to_string()),
+        mode: Some(mode.to_string()),
+        axis_kind: Some("inferred".into()),
+        axis_name: Some(label.clone()),
+        unit: String::new(),
+        hints,
+        facets: Default::default(),
+    };
+    map.insert(format!("learned:{label}"), def);
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(&path, serde_json::to_string_pretty(&map)?)?;
+    Ok(Some(label))
+}
+
 fn load_quality() -> QualityTracker {
     QualityTracker::load_or_new(&store::quality_path())
 }
 
-fn run_classify(text: &str) -> anyhow::Result<()> {
+fn run_classify(text: &str, no_expand: bool) -> anyhow::Result<()> {
     let ontology = OntologyLoader::load_all();
     let (embedder, embedder_kind) = load_embedder_kind();
     let classifier = build_classifier(&ontology, embedder.as_ref(), embedder_kind);
@@ -812,6 +940,33 @@ fn run_classify(text: &str) -> anyhow::Result<()> {
             "deterministic feature hashing, reproducible but NOT semantic"
         }
     );
+
+    // Auto-expansion: a weak margin or a weak best-entry cosine means the
+    // ontology has no good home for this text. Add one generic entry instead
+    // of pretending the top cell is a decision.
+    let best_entry = classifier.best_entry_sim(&embedder.embed(text));
+    let margin = match (adjusted.first(), adjusted.get(1)) {
+        (Some(a), Some(b)) => a.score - b.score,
+        _ => 0.0,
+    };
+    let uncertain = margin < 0.02
+        || best_entry
+            .as_ref()
+            .map(|(sim, _, _)| *sim < 0.45)
+            .unwrap_or(true);
+    if uncertain && !no_expand {
+        let (domain, mode) = adjusted
+            .first()
+            .map(|r| (r.domain.clone(), r.mode.clone()))
+            .unwrap_or_else(|| ("GENERIC".to_string(), "INFER".to_string()));
+        match auto_expand_ontology(text, &domain, &mode) {
+            Ok(Some(name)) => {
+                println!("Ontology expanded: {name} ({domain}×{mode}) — learned entry saved");
+            }
+            Ok(None) => {}
+            Err(e) => eprintln!("warning: could not persist learned entry: {e}"),
+        }
+    }
     Ok(())
 }
 

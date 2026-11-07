@@ -220,6 +220,14 @@ pub static EXTRA_ONTOLOGIES: &[(&str, &str)] = &[
         include_str!("../config/expanded_ontology.json"),
     ),
     (
+        "agent_world",
+        include_str!("../config/agent_world_ontology.json"),
+    ),
+    (
+        "grid_completion",
+        include_str!("../config/grid_completion_ontology.json"),
+    ),
+    (
         "software_dev",
         include_str!("../config/software_dev_ontology.json"),
     ),
@@ -393,6 +401,13 @@ impl OntologyLoader {
                     }
                 }
                 Err(e) => eprintln!("Warning: failed to parse built-in ontology '{kind}': {e}"),
+            }
+        }
+
+        // Entries learned at runtime (auto-expansion or the studio).
+        if let Ok(body) = std::fs::read_to_string(crate::store::custom_ontology_path()) {
+            if let Ok(map) = serde_json::from_str::<HashMap<String, DomainDef>>(&body) {
+                loader.merge_custom("learned", map);
             }
         }
 

@@ -1,0 +1,395 @@
+{
+  "kind": "grid_completion",
+  "domains": [
+    {
+      "name": "Mentoring",
+      "domain": "BOND",
+      "mode": "TEACH",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Mentoring",
+      "unit": "",
+      "hints": [
+        "coach",
+        "junior",
+        "guidance"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Pair Programming",
+      "domain": "BOND",
+      "mode": "TEACH",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Pair Programming",
+      "unit": "",
+      "hints": [
+        "together",
+        "navigate",
+        "review"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Architecture Proposal",
+      "domain": "CONSTRUCT",
+      "mode": "PERSUADE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Architecture Proposal",
+      "unit": "",
+      "hints": [
+        "design doc",
+        "tradeoffs",
+        "buy-in"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Attack Tree Ideation",
+      "domain": "DEFEND",
+      "mode": "BRAINSTORM",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Attack Tree Ideation",
+      "unit": "",
+      "hints": [
+        "threats",
+        "paths",
+        "red team"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Security Policy",
+      "domain": "DEFEND",
+      "mode": "CREATE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Security Policy",
+      "unit": "",
+      "hints": [
+        "rule",
+        "control",
+        "standard"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Security Runbook",
+      "domain": "DEFEND",
+      "mode": "GUIDE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Security Runbook",
+      "unit": "",
+      "hints": [
+        "playbook",
+        "response",
+        "steps"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Advisory Review",
+      "domain": "DEFEND",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Advisory Review",
+      "unit": "",
+      "hints": [
+        "advisory",
+        "CVE",
+        "briefing"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Access Elevation",
+      "domain": "DEFEND",
+      "mode": "LIFT",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Access Elevation",
+      "unit": "",
+      "hints": [
+        "sudo",
+        "admin",
+        "elevate"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Failover",
+      "domain": "DEFEND",
+      "mode": "MOVE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Failover",
+      "unit": "",
+      "hints": [
+        "backup site",
+        "switch",
+        "resilience"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Risk Sign-off",
+      "domain": "DEFEND",
+      "mode": "PERSUADE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Risk Sign-off",
+      "unit": "",
+      "hints": [
+        "sign-off",
+        "residual risk",
+        "case"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Scenario Drill",
+      "domain": "DEFEND",
+      "mode": "PLAY",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Scenario Drill",
+      "unit": "",
+      "hints": [
+        "simulation",
+        "drill",
+        "scenario"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "On-call Recovery",
+      "domain": "DEFEND",
+      "mode": "REST",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "On-call Recovery",
+      "unit": "",
+      "hints": [
+        "sleep",
+        "handoff",
+        "recover"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Routine Inspection",
+      "domain": "DEFEND",
+      "mode": "WALK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Routine Inspection",
+      "unit": "",
+      "hints": [
+        "inspect",
+        "rounds",
+        "watch"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Interface Design Session",
+      "domain": "EXCHANGE",
+      "mode": "BRAINSTORM",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Interface Design Session",
+      "unit": "",
+      "hints": [
+        "shape",
+        "endpoints",
+        "ideas"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Agreement Termination",
+      "domain": "EXCHANGE",
+      "mode": "DESTROY",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Agreement Termination",
+      "unit": "",
+      "hints": [
+        "offboard",
+        "cancel",
+        "exit"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Integration Retrospective",
+      "domain": "EXCHANGE",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Integration Retrospective",
+      "unit": "",
+      "hints": [
+        "feedback",
+        "retro",
+        "what worked"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Plan Upgrade",
+      "domain": "EXCHANGE",
+      "mode": "LIFT",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Plan Upgrade",
+      "unit": "",
+      "hints": [
+        "plan change",
+        "upsell",
+        "capacity"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Custody Transfer",
+      "domain": "EXCHANGE",
+      "mode": "MOVE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Custody Transfer",
+      "unit": "",
+      "hints": [
+        "transfer",
+        "handover",
+        "custody"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Pricing Model",
+      "domain": "EXCHANGE",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Pricing Model",
+      "unit": "",
+      "hints": [
+        "tiers",
+        "quote",
+        "forecast"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Negotiation Practice",
+      "domain": "EXCHANGE",
+      "mode": "PLAY",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Negotiation Practice",
+      "unit": "",
+      "hints": [
+        "roleplay",
+        "practice",
+        "objection"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Funds Hold",
+      "domain": "EXCHANGE",
+      "mode": "REST",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Funds Hold",
+      "unit": "",
+      "hints": [
+        "escrow",
+        "pending",
+        "pause"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Enablement Session",
+      "domain": "EXCHANGE",
+      "mode": "TEACH",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Enablement Session",
+      "unit": "",
+      "hints": [
+        "enablement",
+        "certification",
+        "onboarding"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Site Visit",
+      "domain": "EXCHANGE",
+      "mode": "WALK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Site Visit",
+      "unit": "",
+      "hints": [
+        "onsite",
+        "walkthrough",
+        "discovery"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Assembly Workshop",
+      "domain": "FABRICATE",
+      "mode": "TEACH",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Assembly Workshop",
+      "unit": "",
+      "hints": [
+        "hands-on",
+        "assembly",
+        "training"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Recovery Story",
+      "domain": "HEAL",
+      "mode": "PERSUADE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Recovery Story",
+      "unit": "",
+      "hints": [
+        "outcome story",
+        "why it works",
+        "support"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Wellbeing Guidance",
+      "domain": "HEAL",
+      "mode": "TEACH",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Wellbeing Guidance",
+      "unit": "",
+      "hints": [
+        "sleep",
+        "stress",
+        "habit"
+      ],
+      "facets": {}
+    }
+  ]
+}

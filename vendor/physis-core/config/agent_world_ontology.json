@@ -1,0 +1,920 @@
+{
+  "kind": "agent_world",
+  "domains": [
+    {
+      "name": "Observation Record",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Observation Record",
+      "unit": "",
+      "hints": [
+        "what was seen",
+        "timestamped",
+        "source"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Evidence Bundle",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Evidence Bundle",
+      "unit": "",
+      "hints": [
+        "support",
+        "cite",
+        "proof"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Hypothesis",
+      "domain": "STUDY",
+      "mode": "BRAINSTORM",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Hypothesis",
+      "unit": "",
+      "hints": [
+        "claim to test",
+        "assumption",
+        "prediction"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Prediction",
+      "domain": "STUDY",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Prediction",
+      "unit": "",
+      "hints": [
+        "expected outcome",
+        "score later",
+        "forecast"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Claim",
+      "domain": "BOND",
+      "mode": "PERSUADE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Claim",
+      "unit": "",
+      "hints": [
+        "assertion",
+        "statement",
+        "position"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Contradiction",
+      "domain": "STUDY",
+      "mode": "DESTROY",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Contradiction",
+      "unit": "",
+      "hints": [
+        "conflict",
+        "counter-evidence",
+        "refute"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Receipt",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Receipt",
+      "unit": "",
+      "hints": [
+        "proof of execution",
+        "audit trail",
+        "idempotent"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Trace",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Trace",
+      "unit": "",
+      "hints": [
+        "span",
+        "timeline",
+        "causal path"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Invariant",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Invariant",
+      "unit": "",
+      "hints": [
+        "must hold",
+        "check",
+        "assert"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Proof",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Proof",
+      "unit": "",
+      "hints": [
+        "verify",
+        "demonstrate",
+        "certify"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Schema",
+      "domain": "CONSTRUCT",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Schema",
+      "unit": "",
+      "hints": [
+        "types",
+        "fields",
+        "contract"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Tool",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Tool",
+      "unit": "",
+      "hints": [
+        "function",
+        "call",
+        "capability"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Task",
+      "domain": "CONSTRUCT",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Task",
+      "unit": "",
+      "hints": [
+        "work item",
+        "steps",
+        "owner"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Process",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Process",
+      "unit": "",
+      "hints": [
+        "running work",
+        "lifecycle",
+        "pid"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Service",
+      "domain": "EXCHANGE",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Service",
+      "unit": "",
+      "hints": [
+        "endpoint",
+        "uptime",
+        "health"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Transaction",
+      "domain": "EXCHANGE",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Transaction",
+      "unit": "",
+      "hints": [
+        "commit",
+        "rollback",
+        "ledger"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Decision",
+      "domain": "STUDY",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Decision",
+      "unit": "",
+      "hints": [
+        "choice",
+        "rationale",
+        "tradeoff"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Revision",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Revision",
+      "unit": "",
+      "hints": [
+        "edit",
+        "version",
+        "supersede"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Delta",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Delta",
+      "unit": "",
+      "hints": [
+        "change",
+        "diff",
+        "what moved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Corpus",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Corpus",
+      "unit": "",
+      "hints": [
+        "documents",
+        "body of text",
+        "training set"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Document",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Document",
+      "unit": "",
+      "hints": [
+        "file",
+        "page",
+        "reference"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Symbol",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Symbol",
+      "unit": "",
+      "hints": [
+        "function",
+        "type",
+        "definition"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Module",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Module",
+      "unit": "",
+      "hints": [
+        "package boundary",
+        "unit",
+        "api"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Dependency",
+      "domain": "EXCHANGE",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Dependency",
+      "unit": "",
+      "hints": [
+        "depends on",
+        "upgrade",
+        "lockfile"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Route",
+      "domain": "EXCHANGE",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Route",
+      "unit": "",
+      "hints": [
+        "path",
+        "handler",
+        "dispatch"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Agent",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Agent",
+      "unit": "",
+      "hints": [
+        "assistant",
+        "delegate",
+        "worker"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Executor",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Executor",
+      "unit": "",
+      "hints": [
+        "runner",
+        "sandbox",
+        "job"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Adapter",
+      "domain": "EXCHANGE",
+      "mode": "GUIDE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Adapter",
+      "unit": "",
+      "hints": [
+        "bridge",
+        "connector",
+        "integration"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Concept",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Concept",
+      "unit": "",
+      "hints": [
+        "idea",
+        "term",
+        "definition"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Fact",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Fact",
+      "unit": "",
+      "hints": [
+        "observed truth",
+        "record",
+        "source"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Resource",
+      "domain": "EXCHANGE",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Resource",
+      "unit": "",
+      "hints": [
+        "quota",
+        "capacity",
+        "allocation"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Location",
+      "domain": "EXCHANGE",
+      "mode": "MOVE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Location",
+      "unit": "",
+      "hints": [
+        "where",
+        "region",
+        "path"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "World State",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "World State",
+      "unit": "",
+      "hints": [
+        "current condition",
+        "snapshot",
+        "reality"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Prompt",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Prompt",
+      "unit": "",
+      "hints": [
+        "instruction",
+        "context",
+        "request"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Context Window",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Context Window",
+      "unit": "",
+      "hints": [
+        "tokens",
+        "budget",
+        "packet"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Memory",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Memory",
+      "unit": "",
+      "hints": [
+        "recall",
+        "store",
+        "remember"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Checkpoint",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Checkpoint",
+      "unit": "",
+      "hints": [
+        "save point",
+        "resume",
+        "snapshot"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Rollback",
+      "domain": "CONSTRUCT",
+      "mode": "DESTROY",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Rollback",
+      "unit": "",
+      "hints": [
+        "undo",
+        "revert",
+        "restore"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Delegation",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Delegation",
+      "unit": "",
+      "hints": [
+        "hand off",
+        "subagent",
+        "assign"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Escalation",
+      "domain": "DEFEND",
+      "mode": "MOVE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Escalation",
+      "unit": "",
+      "hints": [
+        "raise",
+        "page",
+        "hand to human"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Quarantine",
+      "domain": "DEFEND",
+      "mode": "REST",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Quarantine",
+      "unit": "",
+      "hints": [
+        "isolate",
+        "hold",
+        "blocked"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Audit",
+      "domain": "DEFEND",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Audit",
+      "unit": "",
+      "hints": [
+        "review",
+        "trail",
+        "compliance"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Certification",
+      "domain": "BOND",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Certification",
+      "unit": "",
+      "hints": [
+        "signed",
+        "trusted",
+        "approved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Benchmark",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Benchmark",
+      "unit": "",
+      "hints": [
+        "measure",
+        "baseline",
+        "score"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Evaluation",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Evaluation",
+      "unit": "",
+      "hints": [
+        "grade",
+        "rubric",
+        "judge"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Regression",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Regression",
+      "unit": "",
+      "hints": [
+        "broke before",
+        "guard",
+        "test"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Refactor",
+      "domain": "CONSTRUCT",
+      "mode": "MOVE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Refactor",
+      "unit": "",
+      "hints": [
+        "restructure",
+        "rename",
+        "behavior preserved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Migration",
+      "domain": "EXCHANGE",
+      "mode": "MOVE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Migration",
+      "unit": "",
+      "hints": [
+        "move data",
+        "cutover",
+        "compat"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Incident",
+      "domain": "DEFEND",
+      "mode": "WORK",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Incident",
+      "unit": "",
+      "hints": [
+        "outage",
+        "severity",
+        "response"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Incident Review",
+      "domain": "DEFEND",
+      "mode": "LEARN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Incident Review",
+      "unit": "",
+      "hints": [
+        "root cause",
+        "lessons",
+        "actions"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Runbook",
+      "domain": "DEFEND",
+      "mode": "GUIDE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Runbook",
+      "unit": "",
+      "hints": [
+        "procedure",
+        "steps",
+        "on-call"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Risk Model",
+      "domain": "DEFEND",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Risk Model",
+      "unit": "",
+      "hints": [
+        "attack surface",
+        "trust boundary",
+        "risk"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Credential Rotation",
+      "domain": "DEFEND",
+      "mode": "DESTROY",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Credential Rotation",
+      "unit": "",
+      "hints": [
+        "revoke",
+        "rotate",
+        "leak"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Access Review",
+      "domain": "DEFEND",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Access Review",
+      "unit": "",
+      "hints": [
+        "permissions",
+        "least privilege",
+        "audit"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "API Contract",
+      "domain": "EXCHANGE",
+      "mode": "CREATE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "API Contract",
+      "unit": "",
+      "hints": [
+        "endpoint",
+        "schema",
+        "version"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Rate Limit",
+      "domain": "EXCHANGE",
+      "mode": "REST",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Rate Limit",
+      "unit": "",
+      "hints": [
+        "quota",
+        "429",
+        "backoff"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "SLA",
+      "domain": "EXCHANGE",
+      "mode": "MAINTAIN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "SLA",
+      "unit": "",
+      "hints": [
+        "uptime",
+        "latency",
+        "commitment"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Changelog",
+      "domain": "STUDY",
+      "mode": "TEACH",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Changelog",
+      "unit": "",
+      "hints": [
+        "release notes",
+        "what changed",
+        "users"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Tutorial",
+      "domain": "STUDY",
+      "mode": "TEACH",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Tutorial",
+      "unit": "",
+      "hints": [
+        "step by step",
+        "example",
+        "learn"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Test Plan",
+      "domain": "CONSTRUCT",
+      "mode": "PLAN",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Test Plan",
+      "unit": "",
+      "hints": [
+        "cases",
+        "coverage",
+        "acceptance"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Fixture",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "category": "agent",
+      "axis_kind": "operation",
+      "axis_name": "Fixture",
+      "unit": "",
+      "hints": [
+        "sample data",
+        "deterministic",
+        "test"
+      ],
+      "facets": {}
+    }
+  ]
+}

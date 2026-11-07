@@ -204,6 +204,50 @@ GRID = {
     "parameters": {"type": "object", "properties": {}, "required": []},
 }
 
+INGEST = {
+    "name": "physis_ingest",
+    "description": (
+        "Append observations to the engine log from a real source: fs (file "
+        "changes), git (commits), terminal (shell history), agent (session "
+        "turns), process (long-lived processes), browser (history) or all. "
+        "Append-only and idempotent per source; dry_run shows without writing."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "source": {
+                "type": "string",
+                "enum": ["fs", "git", "terminal", "agent", "process", "browser", "all"],
+                "description": "Observation source (default: fs)",
+            },
+            "path": {"type": "string", "description": "Path for fs/git sources"},
+            "max": {"type": "integer", "description": "Maximum observations (default 500)"},
+            "dry_run": {"type": "boolean", "description": "Show what would be appended"},
+        },
+        "required": [],
+    },
+}
+
+OBSERVED = {
+    "name": "physis_observed",
+    "description": (
+        "Read the observation log: what was seen, by which source, and when. "
+        "Use it after physis_ingest to verify what actually entered the world."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "source": {"type": "string", "description": "Only this source bucket"},
+            "limit": {"type": "integer", "description": "Maximum observations (default 20)"},
+            "concurrent": {
+                "type": "string",
+                "description": "What overlapped this observation in time",
+            },
+        },
+        "required": [],
+    },
+}
+
 COMMAND = {
     "name": "physis_command",
     "description": (
@@ -340,6 +384,8 @@ ALL_SCHEMAS = [
     CLASSIFY,
     CHAIN,
     GRID,
+    INGEST,
+    OBSERVED,
     COMMAND,
     REPLANT_RUN,
     REPLANT_RECORD,
