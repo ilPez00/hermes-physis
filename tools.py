@@ -478,6 +478,11 @@ def physis_chain(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     payload = _json_payload(result)
     if payload:
         result.update(payload)
+        # chain uses a non-zero exit to encode its verdict; valid JSON is the
+        # result, not an engine failure.
+        if result.get("returncode") not in (0, None) and not (result.get("stderr") or "").strip():
+            result["ok"] = True
+            result["note"] = "non-zero exit encodes the verdict; JSON payload is valid"
     return result
 
 
@@ -524,9 +529,6 @@ def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
-    if not pool.supports("run"):
-        return _unsupported(pool, "run")
-
     value = str(merged.get("input") or merged.get("value") or "").strip()
     if not value:
         return {"ok": False, "error": "input is required"}
@@ -535,6 +537,8 @@ def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return {"ok": False, "error": "tools registry path is required (tools=...)"}
     if not Path(tools).expanduser().is_file():
         return {"ok": False, "error": f"tools registry not found: {tools}"}
+    if not pool.supports("run"):
+        return _unsupported(pool, "run")
 
     stdin = json.dumps({"prompt": value, "input": {}, "context": {}})
     result = _run(
@@ -554,9 +558,6 @@ def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
-    if not pool.supports("record"):
-        return _unsupported(pool, "record")
-
     value = str(merged.get("input") or merged.get("value") or "").strip()
     if not value:
         return {"ok": False, "error": "input is required"}
@@ -580,6 +581,8 @@ def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
             trace = json.loads(trace)
         except (ValueError, TypeError):
             return {"ok": False, "error": "trace must be valid JSON"}
+    if not pool.supports("record"):
+        return _unsupported(pool, "record")
     stdin = json.dumps(
         {
             "request": {"prompt": value, "input": {}, "context": {}},

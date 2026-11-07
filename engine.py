@@ -289,10 +289,12 @@ def discover_engines(binary: Any = None, timeout: int = DEFAULT_TIMEOUT) -> Engi
 
     engines: list[PhysisEngine] = []
     seen: set[str] = set()
+    errors: list[str] = []
     for item in binaries:
         try:
             resolved = str(Path(PhysisEngine.resolve_binary(item)).resolve())
-        except EngineError:
+        except EngineError as exc:
+            errors.append(str(exc))
             continue
         if resolved in seen:
             continue
@@ -300,6 +302,10 @@ def discover_engines(binary: Any = None, timeout: int = DEFAULT_TIMEOUT) -> Engi
         engines.append(PhysisEngine(resolved, timeout=timeout))
 
     if not engines:
+        # An explicit operator path must fail with that path in the message,
+        # not a generic "nothing found".
+        if errors and (isinstance(binary, str) and binary.strip() or binary is not None):
+            raise EngineError(errors[0])
         raise EngineError(
             "no Physis engines found; expected bundled bin/physis-core and bin/replant, "
             "or set PHYSIS_BIN/PHYSIS_BINS"

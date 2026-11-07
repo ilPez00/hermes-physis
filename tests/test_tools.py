@@ -169,6 +169,22 @@ def test_chain_passes_through_json(tmp_path):
     assert result["gaps"] == ["gap-a"]
 
 
+def test_missing_engine_is_actionable(tmp_path):
+    result = HANDLERS["physis_engine_status"]({"engine_bin": str(tmp_path / "nope")})
+    assert result["ok"] is False
+    assert "not found" in result["error"]
+    assert result["hint"] == "run physis_engine_status"
+
+
+def test_replant_run_requires_existing_registry(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["replant_run"](
+        {"engine_bin": binary, "path": str(tmp_path), "input": "x", "tools": str(tmp_path / "missing.json")}
+    )
+    assert result["ok"] is False
+    assert "tools registry not found" in result["error"]
+
+
 def test_unsupported_command_is_reported(tmp_path):
     binary = make_binary(tmp_path, {"search"})
     result = HANDLERS["physis_observe"]({"engine_bin": binary, "path": str(tmp_path)})
