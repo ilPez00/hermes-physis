@@ -74,6 +74,19 @@ def test_run_timeout(tmp_path):
     assert result["timed_out"] is True
 
 
+def test_bundled_model_dir_is_injected(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_MODEL_DIR", raising=False)
+    binary = make_binary(
+        tmp_path,
+        "  scan  Scan\n",
+        'import os; print("MODEL=" + os.environ.get("PHYSIS_MODEL_DIR", ""))',
+    )
+    engine = PhysisEngine(binary=binary, timeout=5)
+    result = engine.run(["scan", "."])
+    assert result["ok"] is True
+    assert "models/minilm" in result["stdout"].replace("\\", "/")
+
+
 def test_missing_binary_raises():
     with pytest.raises(EngineError):
         PhysisEngine(binary="/definitely/not/here")

@@ -185,6 +185,7 @@ pub mod becoming;
 pub mod bench;
 pub mod chain;
 pub mod classify;
+pub mod grid;
 pub mod coherence_dimensions;
 pub mod coherence_query;
 pub mod config_run;
@@ -250,6 +251,7 @@ pub mod studio_lab;
 pub mod embed_onnx;
 
 pub use classify::{CellClassifier, CellScore, TopKStrategy};
+pub use grid::{GridCellView, GridView};
 pub use coherence_dimensions::{CoherenceDimension, CoherenceProfile};
 pub use coherence_query::{
     EpistemicQuery, EpistemicQueryResult, FailedPredictionSummary, HypothesisSummary,

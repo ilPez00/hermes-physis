@@ -16,6 +16,7 @@ CORE_COMMANDS = {
     "context",
     "direction",
     "chain",
+    "grid",
     "assert",
     "facet",
 }
@@ -53,6 +54,9 @@ def make_binary(tmp_path: Path, supported: set[str]) -> str:
     if argv and argv[0] == "node-search":
         print('Fixed-token search: 2 results (120 tokens, budget 300)')
         print('  1. 0.9  src/auth.py: def rotate_token()')
+        raise SystemExit(0)
+    if argv and argv[0] == "grid":
+        print('{{"domains": ["DEFEND", "HEAL"], "modes": ["TEACH", "WORK"], "shape": [2, 2], "total_cells": 4, "populated_cells": 3, "entries": 9, "expanded": true, "embedder": {{"kind": "onnx-explicit", "dimension": 384}}}}')
         raise SystemExit(0)
     if argv and argv[0] == "chain":
         print('{{"gaps": ["gap-a"], "control": {{"permuted": true}}, "drift": []}}')
@@ -173,6 +177,15 @@ def test_diff_uses_native_direction(tmp_path):
     assert result["argv"][1] == "direction"
     assert result["moved"] is True
     assert result["direction"] == "shorter"
+
+
+def test_grid_reports_axes_and_shape(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_grid"]({"engine_bin": binary})
+    assert result["ok"] is True
+    assert result["shape"] == [2, 2]
+    assert result["expanded"] is True
+    assert result["embedder"]["kind"] == "onnx-explicit"
 
 
 def test_chain_passes_through_json(tmp_path):

@@ -24,6 +24,7 @@ DEFAULT_STORE = ".replant"
 
 DEFAULTS: dict[str, Any] = {
     "engine_bin": "",
+    "model_dir": "",
     "timeout": 20,
     "budget": 800,
     "auto_observe": False,
@@ -39,6 +40,8 @@ _SNAPSHOT_COHERENCE_RE = re.compile(r"coherence index:\s*([0-9.]+)")
 _SNAPSHOT_HIGH_RE = re.compile(r"high/mid/low:\s*(\d+)/(\d+)/(\d+)")
 _CELL_RE = re.compile(r"^\s{2}([A-Z][A-Z_-]*)\s+[×x]\s+([A-Z][A-Z_-]*)\s+([0-9.]+)")
 _MARGIN_RE = re.compile(r"Margin over runner-up:\s*([0-9.]+)")
+_GRID_LINE_RE = re.compile(r"Grid:\s*(\d+)×(\d+)")
+_EMBEDDER_LINE_RE = re.compile(r"Embedder:\s*([^\s(]+)")
 
 
 # --------------------------------------------------------------------------- #
@@ -113,6 +116,13 @@ def _store(args: dict[str, Any]) -> str:
     return str(Path(_path(args)) / DEFAULT_STORE)
 
 
+def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
+    model_dir = str(args.get("model_dir") or "").strip()
+    if model_dir:
+        return {"PHYSIS_MODEL_DIR": model_dir, "PHYSIS_MODEL_DIM": "384"}
+    return None
+
+
 def _run(
     pool: EnginePool,
     argv: list[str],
@@ -121,12 +131,15 @@ def _run(
     env: dict[str, str] | None = None,
     engine: str | None = None,
 ) -> dict[str, Any]:
+    call_env = _model_env(args)
+    if env:
+        call_env = {**(call_env or {}), **env}
     return pool.run(
         argv,
         cwd=_path(args),
         timeout=args.get("timeout"),
         stdin=stdin,
-        env=env,
+        env=call_env,
         engine=engine,
     )
 
@@ -476,6 +489,12 @@ def physis_classify(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if margin:
         result["margin"] = float(margin.group(1))
     result["tie"] = "effectively a tie" in (result.get("stdout") or "")
+    shape = _GRID_LINE_RE.search(result.get("stdout", ""))
+    if shape:
+        result["grid_shape"] = [int(shape.group(1)), int(shape.group(2))]
+    embedder = _EMBEDDER_LINE_RE.search(result.get("stdout", ""))
+    if embedder:
+        result["embedder_kind"] = embedder.group(1)
     return result
 
 
@@ -571,6 +590,34 @@ def physis_chain(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         if result.get("returncode") not in (0, None) and not (result.get("stderr") or "").strip():
             result["ok"] = True
             result["note"] = "non-zero exit encodes the verdict; JSON payload is valid"
+    return result
+
+
+def physis_grid(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """The adaptive grid: axes and shape from the loaded ontologies."""
+    merged = _with_defaults(_merge(args, kwargs))
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    if not pool.supports("grid"):
+        return _unsupported(pool, "grid")
+    result = _run(pool, ["grid", "--json"], merged)
+    payload = _json_payload(result)
+    if payload:
+        for key in (
+            "domains",
+            "modes",
+            "shape",
+            "total_cells",
+            "populated_cells",
+            "entries",
+            "expanded",
+            "embedder",
+        ):
+            if key in payload:
+                result[key] = payload[key]
+        result.pop("stdout", None)
     return result
 
 
@@ -822,6 +869,7 @@ HANDLERS = {
     "physis_diff": physis_diff,
     "physis_classify": physis_classify,
     "physis_chain": physis_chain,
+    "physis_grid": physis_grid,
     "physis_command": physis_command,
     "replant_run": replant_run,
     "replant_record": replant_record,

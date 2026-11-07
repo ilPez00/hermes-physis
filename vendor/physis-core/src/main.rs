@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
-use physis_core::classify::{CellClassifier, CellScore};
+use physis_core::classify::CellScore;
 use physis_core::contradiction::{Contradiction, ContradictionParty, ResolutionStatus};
 use physis_core::core::PhysisCore;
 use physis_core::embed::VectorEmbed;
@@ -36,6 +36,15 @@ enum Command {
     Classify { text: String },
     /// Show ontology stats.
     Ontology,
+    /// Show the adaptive semiotic grid (axes, shape, populated cells).
+    Grid {
+        /// Machine-readable output
+        #[arg(long)]
+        json: bool,
+        /// Include every populated cell with its entry names (large)
+        #[arg(long)]
+        cells: bool,
+    },
     /// Query ontology entries by orthogonal facets.
     Facet {
         /// Filter by lifecycle phase: DESIGN | FABRICATE | OPERATE | MAINTAIN | RETIRE
@@ -344,7 +353,7 @@ enum Command {
     },
     /// One-command offline demo: corpus → map → ngram table → model answer.
     Demo {
-        /// Corpus directory (markdown/txt).
+        /// Corpus directory (any text file; binaries and build dirs are skipped).
         #[arg(long, default_value = "examples")]
         dir: PathBuf,
         /// Query whose continuation the local model completes.
@@ -536,6 +545,7 @@ fn main() -> anyhow::Result<()> {
     match cli.command {
         Command::Classify { text } => run_classify(&text),
         Command::Ontology => run_ontology(),
+        Command::Grid { json, cells } => run_grid(json, cells),
         Command::Facet {
             lifecycle,
             agency,
@@ -675,15 +685,42 @@ fn main() -> anyhow::Result<()> {
 /// passes the semantic probe, and falls back to random projection *labelled as
 /// such* when it is not.
 fn load_embedder() -> Box<dyn physis_core::embed::VectorEmbed> {
+    load_embedder_kind().0
+}
+
+/// The embedder plus the label describing what actually loaded.
+fn load_embedder_kind() -> (Box<dyn physis_core::embed::VectorEmbed>, &'static str) {
     let (e, kind) = physis_core::embed::select(384);
     if kind == "random-projection" {
         eprintln!(
             "warning: embedder is random-projection (non-semantic). \
-Similarity here is lexical, not meaning-based. Set PHYSIS_MODEL_DIR \
-or build with --features embed-onnx and real weights for semantic scores."
+Similarity here is lexical, not meaning-based. Put a model in \
+~/.physis/models/minilm (model.onnx + tokenizer.json) or set PHYSIS_MODEL_DIR."
         );
     }
-    e
+    (e, kind)
+}
+
+/// Build the classifier through the on-disk embedding cache.
+///
+/// Embedding ~760 ontology entries costs seconds on CPU; the CLI is invoked as
+/// a subprocess, so without a cache every classify/grid/context call paid it
+/// again. Keyed by model + ontology text, so upgrades invalidate it.
+fn build_classifier(
+    ontology: &OntologyLoader,
+    embedder: &dyn physis_core::embed::VectorEmbed,
+    kind: &str,
+) -> physis_core::classify::CellClassifier {
+    let cache_dir = std::env::var("PHYSIS_CACHE_DIR")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| physis_core::store::data_dir().join("cache"));
+    let model_key = format!(
+        "{kind}|{}",
+        std::env::var("PHYSIS_MODEL_DIR").unwrap_or_default()
+    );
+    physis_core::classify::CellClassifier::build_cached(ontology, embedder, &cache_dir, &model_key)
 }
 
 fn load_quality() -> QualityTracker {
@@ -692,8 +729,8 @@ fn load_quality() -> QualityTracker {
 
 fn run_classify(text: &str) -> anyhow::Result<()> {
     let ontology = OntologyLoader::load_all();
-    let embedder = load_embedder();
-    let classifier = CellClassifier::build(&ontology, &embedder);
+    let (embedder, embedder_kind) = load_embedder_kind();
+    let classifier = build_classifier(&ontology, embedder.as_ref(), embedder_kind);
     let quality = load_quality();
 
     let results = classifier.classify_text(text, &embedder);
@@ -708,7 +745,20 @@ fn run_classify(text: &str) -> anyhow::Result<()> {
         .collect();
 
     println!("Query: {text}");
-    println!("Cells populated: {}", classifier.cell_count());
+    let grid = physis_core::GridView::from_classifier(&classifier);
+    println!(
+        "Grid: {}×{} = {} cells ({} populated, {} entries){}",
+        grid.shape[0],
+        grid.shape[1],
+        grid.total_cells,
+        grid.populated_cells,
+        grid.entries,
+        if grid.is_expanded() {
+            " — expanded beyond 5×14 by the loaded ontologies"
+        } else {
+            ""
+        }
+    );
 
     // Scores cluster in the top few percent, so a bar drawn against an absolute
     // 0..1 scale saturates and paints every row a full block — the strongest and
@@ -755,15 +805,64 @@ fn run_classify(text: &str) -> anyhow::Result<()> {
     if let Some((sim, domain, mode)) = classifier.best_entry_sim(&embedder.embed(text)) {
         println!("Best entry cosine: {sim:.3} ({domain}×{mode})");
     }
-    // The CLI builds a RandomProjectionEmbedder unconditionally (see
-    // `load_embedder`), so these scores are never meaning-based. The web
-    // surfaces say so on screen; saying nothing here made the CLI the only
-    // surface that presents feature-hashing output as if it were semantic.
+    let semantic = embedder_kind != "random-projection";
     println!(
-        "Embedder: random-projection ({}d) — deterministic feature hashing, \
-         reproducible but NOT semantic.",
-        embedder.dimension()
+        "Embedder: {} ({}d) — {}.",
+        embedder_kind,
+        embedder.dimension(),
+        if semantic {
+            "semantic model; similarity is meaning-based"
+        } else {
+            "deterministic feature hashing, reproducible but NOT semantic"
+        }
     );
+    Ok(())
+}
+
+/// Print the adaptive grid: every distinct domain/mode the ontologies define.
+fn run_grid(as_json: bool, include_cells: bool) -> anyhow::Result<()> {
+    let ontology = OntologyLoader::load_all();
+    let (embedder, kind) = load_embedder_kind();
+    let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
+    let grid = physis_core::GridView::from_classifier(&classifier);
+
+    if as_json {
+        let mut payload = serde_json::json!({
+            "domains": grid.domains,
+            "modes": grid.modes,
+            "shape": grid.shape,
+            "total_cells": grid.total_cells,
+            "populated_cells": grid.populated_cells,
+            "entries": grid.entries,
+            "expanded": grid.is_expanded(),
+            "embedder": {"kind": kind, "dimension": embedder.dimension()},
+        });
+        if include_cells {
+            payload["cells"] = serde_json::json!(grid.cells);
+        }
+        println!("{}", serde_json::to_string_pretty(&payload)?);
+        return Ok(());
+    }
+
+    println!(
+        "Semiotic grid: {} domains × {} modes = {} cells ({} populated, {} entries)",
+        grid.shape[0], grid.shape[1], grid.total_cells, grid.populated_cells, grid.entries
+    );
+    if grid.is_expanded() {
+        println!("Expanded beyond the classic 5×14: the axes are whatever the loaded ontologies define.");
+    }
+    println!("Domains: {}", grid.domains.join(", "));
+    println!("Modes: {}", grid.modes.join(", "));
+    println!("Populated cells:");
+    for cell in &grid.cells {
+        println!(
+            "  {:<11} × {:<10} {:>3} entries",
+            cell.domain,
+            cell.mode,
+            cell.entries.len()
+        );
+    }
+    println!("Embedder: {} ({}d)", kind, embedder.dimension());
     Ok(())
 }
 
@@ -1198,8 +1297,8 @@ fn run_quality(cmd: QualityCmd) -> anyhow::Result<()> {
         }
         QualityCmd::Fail { feedback } => {
             let ontology = OntologyLoader::load_all();
-            let embedder = load_embedder();
-            let classifier = CellClassifier::build(&ontology, &embedder);
+            let (embedder, kind) = load_embedder_kind();
+            let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
             let centroids = classifier.cell_centroids();
             let f = quality.report_failure(&feedback, &centroids, None);
             println!(
@@ -1679,9 +1778,9 @@ fn resolve_hypothesis_id(core: &PhysisCore, needle: &str) -> IdMatch {
 }
 
 fn run_discover(dir: Option<&std::path::Path>, min_cluster: usize) -> anyhow::Result<()> {
-    let embedder = load_embedder();
+    let (embedder, kind) = load_embedder_kind();
     let ontology = OntologyLoader::load_all();
-    let classifier = CellClassifier::build(&ontology, &embedder);
+    let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
     let mut texts = Vec::new();
 
     if let Some(d) = dir {
@@ -1966,9 +2065,8 @@ fn cmd_ngram(cmd: NGramCmd) -> anyhow::Result<()> {
                 // with a schema, and every downstream order-5 count estimates a
                 // distribution over misfilings. This was the last site still
                 // constructing its own RandomProjectionEmbedder directly.
-                let embedder = load_embedder();
-                let clf =
-                    physis_core::classify::CellClassifier::build(&ontology, embedder.as_ref());
+                let (embedder, kind) = load_embedder_kind();
+                let clf = build_classifier(&ontology, embedder.as_ref(), kind);
                 ngram_table::build_structural(&docs, cfg, |seg| {
                     let emb = embedder.as_ref().embed(seg);
                     clf.best_entry_sim(&emb)
@@ -2380,9 +2478,9 @@ fn cmd_chain(
         "no corpus documents under {}",
         corpus.display()
     );
-    let (embedder, kind) = physis_core::embed::select(384);
+    let (embedder, kind) = load_embedder_kind();
     let ontology = physis_core::ontology::OntologyLoader::load_all();
-    let clf = physis_core::classify::CellClassifier::build(&ontology, embedder.as_ref());
+    let clf = build_classifier(&ontology, embedder.as_ref(), kind);
     // An empty query still needs something to compile context against; the
     // corpus's own first title is a neutral default that keeps the run
     // reproducible instead of erroring on a flag the user did not need.
@@ -2484,9 +2582,9 @@ fn cmd_ngram_cells(
         "no corpus documents under {}",
         input.display()
     );
-    let embedder = load_embedder();
+    let (embedder, kind) = load_embedder_kind();
     let ontology = physis_core::ontology::OntologyLoader::load_all();
-    let clf = physis_core::classify::CellClassifier::build(&ontology, embedder.as_ref());
+    let clf = build_classifier(&ontology, embedder.as_ref(), kind);
 
     // One ordered symbol run per document: these are transitions, and a set
     // would lose exactly the information the tables are for.

@@ -216,6 +216,10 @@ pub static BUILTIN_ONTOLOGIES: &[(&str, &str, &str)] = &[
 /// To add one: drop a JSON file in `config/` using the grid vocabulary.
 pub static EXTRA_ONTOLOGIES: &[(&str, &str)] = &[
     (
+        "expanded",
+        include_str!("../config/expanded_ontology.json"),
+    ),
+    (
         "software_dev",
         include_str!("../config/software_dev_ontology.json"),
     ),
@@ -392,7 +396,65 @@ impl OntologyLoader {
             }
         }
 
+        // Runtime expansion: point at your own ontology files and the grid
+        // grows to whatever axes they define. No rebuild, no code change.
+        Self::load_env_ontologies(&mut loader);
+
         loader
+    }
+
+    /// Load operator-supplied ontologies.
+    ///
+    /// * `PHYSIS_ONTOLOGY_DIR` — a directory (searched recursively) of `*.json`
+    ///   ontology files.
+    /// * `PHYSIS_ONTOLOGY_FILES` — `:`-separated file paths.
+    ///
+    /// Every entry lands in `custom_domains` under an `env:<file>:` prefix, so
+    /// new domain/mode strings become new rows/columns of the semiotic grid.
+    fn load_env_ontologies(loader: &mut Self) {
+        let mut paths: Vec<std::path::PathBuf> = Vec::new();
+        if let Ok(dir) = std::env::var("PHYSIS_ONTOLOGY_DIR") {
+            let dir = dir.trim();
+            if !dir.is_empty() {
+                let mut stack = vec![std::path::PathBuf::from(dir)];
+                while let Some(d) = stack.pop() {
+                    let Ok(entries) = std::fs::read_dir(&d) else {
+                        continue;
+                    };
+                    for entry in entries.flatten() {
+                        let p = entry.path();
+                        if p.is_dir() {
+                            stack.push(p);
+                        } else if p.extension().and_then(|e| e.to_str()) == Some("json") {
+                            paths.push(p);
+                        }
+                    }
+                }
+            }
+        }
+        if let Ok(files) = std::env::var("PHYSIS_ONTOLOGY_FILES") {
+            for f in files.split(':').map(str::trim).filter(|f| !f.is_empty()) {
+                paths.push(std::path::PathBuf::from(f));
+            }
+        }
+        paths.sort();
+        paths.dedup();
+        for path in paths {
+            let Ok(body) = std::fs::read_to_string(&path) else {
+                eprintln!("Warning: cannot read ontology {}", path.display());
+                continue;
+            };
+            match Self::load_from_str(&body) {
+                Ok(map) => {
+                    let label = path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("custom");
+                    loader.merge_custom(&format!("env:{label}"), map);
+                }
+                Err(e) => eprintln!("Warning: cannot parse ontology {}: {e}", path.display()),
+            }
+        }
     }
 
     /// Merge a custom ontology (e.g. hand-edited in the studio) into custom_domains.

@@ -1,0 +1,456 @@
+{
+  "kind": "expanded",
+  "domains": [
+    {
+      "name": "Threat Detection",
+      "domain": "DEFEND",
+      "mode": "SENSE",
+      "category": "security",
+      "hints": [
+        "intrusion",
+        "anomaly",
+        "alert",
+        "log monitoring"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Threat Detection",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Vulnerability Scan",
+      "domain": "DEFEND",
+      "mode": "SENSE",
+      "category": "security",
+      "hints": [
+        "CVE",
+        "dependency audit",
+        "exposure"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Vulnerability Scan",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Incident Containment",
+      "domain": "DEFEND",
+      "mode": "DESTROY",
+      "category": "security",
+      "hints": [
+        "isolate host",
+        "block traffic",
+        "quarantine"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Incident Containment",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Credential Revocation",
+      "domain": "DEFEND",
+      "mode": "DESTROY",
+      "category": "security",
+      "hints": [
+        "rotate keys",
+        "revoke token",
+        "disable account"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Credential Revocation",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Patch Management",
+      "domain": "DEFEND",
+      "mode": "MAINTAIN",
+      "category": "security",
+      "hints": [
+        "upgrade",
+        "security fix",
+        "regression test"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Patch Management",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Access Review",
+      "domain": "DEFEND",
+      "mode": "MAINTAIN",
+      "category": "security",
+      "hints": [
+        "least privilege",
+        "permissions",
+        "audit"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Access Review",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Threat Model",
+      "domain": "DEFEND",
+      "mode": "PLAN",
+      "category": "security",
+      "hints": [
+        "attack surface",
+        "trust boundary",
+        "STRIDE"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Threat Model",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Incident Response Plan",
+      "domain": "DEFEND",
+      "mode": "PLAN",
+      "category": "security",
+      "hints": [
+        "runbook",
+        "escalation",
+        "on-call"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Incident Response Plan",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Security Audit",
+      "domain": "DEFEND",
+      "mode": "WORK",
+      "category": "security",
+      "hints": [
+        "code review",
+        "secret scan",
+        "compliance"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Security Audit",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Penetration Test",
+      "domain": "DEFEND",
+      "mode": "WORK",
+      "category": "security",
+      "hints": [
+        "exploit",
+        "red team",
+        "attack simulation"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Penetration Test",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Security Training",
+      "domain": "DEFEND",
+      "mode": "TEACH",
+      "category": "security",
+      "hints": [
+        "phishing drill",
+        "awareness",
+        "safe practice"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Security Training",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "API Contract",
+      "domain": "EXCHANGE",
+      "mode": "CREATE",
+      "category": "software",
+      "hints": [
+        "schema",
+        "OpenAPI",
+        "request response"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "API Contract",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Webhook Payload",
+      "domain": "EXCHANGE",
+      "mode": "CREATE",
+      "category": "software",
+      "hints": [
+        "event",
+        "signature",
+        "retry"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Webhook Payload",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Data Schema",
+      "domain": "EXCHANGE",
+      "mode": "CREATE",
+      "category": "software",
+      "hints": [
+        "migration",
+        "field",
+        "serialization"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Data Schema",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "API Documentation",
+      "domain": "EXCHANGE",
+      "mode": "GUIDE",
+      "category": "software",
+      "hints": [
+        "endpoint",
+        "example",
+        "reference"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "API Documentation",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Integration Guide",
+      "domain": "EXCHANGE",
+      "mode": "GUIDE",
+      "category": "software",
+      "hints": [
+        "SDK",
+        "auth",
+        "quickstart"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Integration Guide",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Pricing Proposal",
+      "domain": "EXCHANGE",
+      "mode": "PERSUADE",
+      "category": "commerce",
+      "hints": [
+        "plan",
+        "quote",
+        "value"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Pricing Proposal",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Contract Negotiation",
+      "domain": "EXCHANGE",
+      "mode": "PERSUADE",
+      "category": "commerce",
+      "hints": [
+        "terms",
+        "counter-offer",
+        "close"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Contract Negotiation",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Rate Limit Monitoring",
+      "domain": "EXCHANGE",
+      "mode": "SENSE",
+      "category": "software",
+      "hints": [
+        "quota",
+        "429",
+        "throttle"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Rate Limit Monitoring",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Usage Metering",
+      "domain": "EXCHANGE",
+      "mode": "SENSE",
+      "category": "software",
+      "hints": [
+        "billing",
+        "tokens",
+        "events"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Usage Metering",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Version Deprecation",
+      "domain": "EXCHANGE",
+      "mode": "MAINTAIN",
+      "category": "software",
+      "hints": [
+        "sunset",
+        "migration window",
+        "breaking change"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Version Deprecation",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Payment Reconciliation",
+      "domain": "EXCHANGE",
+      "mode": "WORK",
+      "category": "commerce",
+      "hints": [
+        "ledger",
+        "invoice",
+        "settlement"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Payment Reconciliation",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Data Sync",
+      "domain": "EXCHANGE",
+      "mode": "WORK",
+      "category": "software",
+      "hints": [
+        "replication",
+        "idempotent",
+        "conflict"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Data Sync",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Tutorial",
+      "domain": "STUDY",
+      "mode": "TEACH",
+      "category": "education",
+      "hints": [
+        "step by step",
+        "example",
+        "walkthrough"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Tutorial",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Onboarding Walkthrough",
+      "domain": "STUDY",
+      "mode": "TEACH",
+      "category": "education",
+      "hints": [
+        "setup",
+        "first run",
+        "getting started"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Onboarding Walkthrough",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Code Walkthrough",
+      "domain": "STUDY",
+      "mode": "TEACH",
+      "category": "software",
+      "hints": [
+        "architecture",
+        "module",
+        "explain"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Code Walkthrough",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Conference Talk",
+      "domain": "STUDY",
+      "mode": "PERSUADE",
+      "category": "communication",
+      "hints": [
+        "abstract",
+        "slides",
+        "audience"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Conference Talk",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Community Pitch",
+      "domain": "BOND",
+      "mode": "PERSUADE",
+      "category": "communication",
+      "hints": [
+        "outreach",
+        "community",
+        "adoption"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Community Pitch",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Product Demo",
+      "domain": "FABRICATE",
+      "mode": "PERSUADE",
+      "category": "commerce",
+      "hints": [
+        "showcase",
+        "value",
+        "live demo"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Product Demo",
+      "unit": "",
+      "facets": {}
+    },
+    {
+      "name": "Workshop Build",
+      "domain": "CONSTRUCT",
+      "mode": "TEACH",
+      "category": "education",
+      "hints": [
+        "hands-on",
+        "exercise",
+        "build together"
+      ],
+      "axis_kind": "operation",
+      "axis_name": "Workshop Build",
+      "unit": "",
+      "facets": {}
+    }
+  ]
+}

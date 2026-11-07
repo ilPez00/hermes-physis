@@ -1,10 +1,11 @@
 name: physis
-version: 1.1.0
+version: 1.2.0
 description: >
   Evidence-backed code context with two bundled offline engines: physis-core
-  (coherence index, structural search, fixed-token context packets, semiotic
-  classification) and replant (verified tool-recipe replay with zero provider
-  calls). No API key, no network, no Python dependencies.
+  (adaptive semiotic grid, semantic embeddings, coherence index, structural
+  search, fixed-token context over any text file) and replant (verified
+  tool-recipe replay with zero provider calls). No API key, no network, no
+  Python dependencies.
 author: Giovanni Pezzulli
 requires_hermes: ">=0.23.0"
 provides_tools:
@@ -17,6 +18,7 @@ provides_tools:
   - physis_diff
   - physis_classify
   - physis_chain
+  - physis_grid
   - physis_command
   - replant_run
   - replant_record
@@ -30,6 +32,10 @@ config_schema:
     type: str
     default: ""
     description: "Optional override: path to physis-core, replant or a compatible engine (comma-separated allowed)"
+  model_dir:
+    type: str
+    default: ""
+    description: "Optional ONNX embedding model directory; empty = bundled MiniLM"
   auto_observe:
     type: bool
     default: false

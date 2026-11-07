@@ -1,8 +1,8 @@
 [package]
 name = "physis-core"
-version = "0.1.26"
+version = "0.2.0"
 edition = "2021"
-description = "Ontology and classification primitives on a 5x14 semiotic grid: deterministic structural mapping (repeats, differences, contradictions), token-fixed RAG, interchangeable model/n-gram backends. Offline, no API key."
+description = "Ontology and classification primitives on an adaptive semiotic grid: deterministic structural mapping (repeats, differences, contradictions), token-fixed RAG, semantic embeddings, interchangeable model/n-gram backends. Offline, no API key."
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/ilPez00/physis-core"
@@ -29,8 +29,8 @@ axum = { version = "0.7", features = ["json", "macros"], optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"], optional = true }
 ureq = { version = "2.2", optional = true }
 
-# Production semantic embeddings (optional — off by default so the package
-# builds anywhere without model files). Enable with --features embed-onnx.
+# Production semantic embeddings. On by default: builds without a model file
+# fall back at runtime, with a warning, to deterministic random projection.
 ort = { version = "2.0.0-rc.13", optional = true }
 tokenizers = { version = "0.21", optional = true }
 
@@ -41,7 +41,7 @@ tokenizers = { version = "0.21", optional = true }
 regex = { version = "1", optional = true }
 
 [features]
-default = ["cli", "studio"]
+default = ["cli", "studio", "embed-onnx"]
 cli = ["dep:clap"]
 studio = ["dep:axum", "dep:tokio"]
 # ONNX MiniLM embedder via the `ort` runtime. Requires model.onnx +

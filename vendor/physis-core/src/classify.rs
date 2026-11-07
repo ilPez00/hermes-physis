@@ -268,6 +268,28 @@ impl FacetFilter {
     }
 }
 
+/// On-disk shape of a cached classifier. Embeddings dominate the size; the
+/// metadata keeps the grid inspectable without recomputing anything.
+#[derive(Debug, Serialize, Deserialize)]
+struct CachedCell {
+    domain: String,
+    mode: String,
+    entries: Vec<String>,
+    embeddings: Vec<Vec<f32>>,
+    #[serde(default)]
+    facets: Vec<Facets>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CachedClassifier {
+    version: u32,
+    dim: usize,
+    model: String,
+    cells: Vec<CachedCell>,
+}
+
+const CACHE_VERSION: u32 = 1;
+
 impl CellClassifier {
     /// Embed every entry seed (its `text`), group embeddings by DOMAIN×MODE cell.
     /// Takes an embed closure instead of the `VectorEmbed` trait so external
@@ -308,26 +330,145 @@ impl CellClassifier {
 
     /// Embed every classification ontology entry ("name + hints") and group the
     /// embeddings by DOMAIN×MODE cell, carrying each entry's facets.
-    pub fn build(ontology: &OntologyLoader, embedder: &dyn VectorEmbed) -> Self {
-        let seeds = ontology.classification_domains().filter_map(|def| {
-            let (domain, mode) = match (def.domain.as_deref(), def.mode.as_deref()) {
-                (Some(d), Some(m)) => (d.to_string(), m.to_string()),
-                _ => return None,
-            };
-            let mut text = def.name.clone();
-            for hint in &def.hints {
-                text.push(' ');
-                text.push_str(hint);
+    /// Every classification entry as an [`EntrySeed`], deterministic order.
+    pub fn seeds_from_ontology(ontology: &OntologyLoader) -> Vec<EntrySeed> {
+        ontology
+            .classification_domains()
+            .filter_map(|def| {
+                let (domain, mode) = match (def.domain.as_deref(), def.mode.as_deref()) {
+                    (Some(d), Some(m)) => (d.to_string(), m.to_string()),
+                    _ => return None,
+                };
+                let mut text = def.name.clone();
+                for hint in &def.hints {
+                    text.push(' ');
+                    text.push_str(hint);
+                }
+                Some(EntrySeed {
+                    name: def.name.clone(),
+                    domain,
+                    mode,
+                    text,
+                    facets: def.facets.clone(),
+                })
+            })
+            .collect()
+    }
+
+    /// Build from seeds, batching the embedder.
+    pub fn build_seeds_batched(seeds: &[EntrySeed], embedder: &dyn VectorEmbed) -> Self {
+        const EMBED_BATCH: usize = 32;
+        type Acc = (Vec<Vec<f32>>, Vec<String>, Vec<Facets>);
+        let mut acc: HashMap<(String, String), Acc> = HashMap::new();
+        for batch in seeds.chunks(EMBED_BATCH) {
+            let texts: Vec<&str> = batch.iter().map(|s| s.text.as_str()).collect();
+            let embeddings = embedder.embed_batch(&texts);
+            for (seed, emb) in batch.iter().zip(embeddings) {
+                let entry = acc
+                    .entry((seed.domain.clone(), seed.mode.clone()))
+                    .or_insert_with(|| (Vec::new(), Vec::new(), Vec::new()));
+                entry.0.push(emb);
+                entry.1.push(seed.name.clone());
+                entry.2.push(seed.facets.clone());
             }
-            Some(EntrySeed {
-                name: def.name.clone(),
+        }
+        let cells = acc
+            .into_iter()
+            .map(|((domain, mode), (embeddings, entries, facets))| Cell {
                 domain,
                 mode,
-                text,
-                facets: def.facets.clone(),
+                embeddings,
+                entries,
+                facets,
             })
-        });
-        Self::build_seeds(seeds, |t| embedder.embed(t))
+            .collect();
+        Self { cells }
+    }
+
+    pub fn build(ontology: &OntologyLoader, embedder: &dyn VectorEmbed) -> Self {
+        let seeds = Self::seeds_from_ontology(ontology);
+        Self::build_seeds_batched(&seeds, embedder)
+    }
+
+    /// Build once, then reuse across CLI invocations.
+    ///
+    /// Embedding ~760 ontology entries costs seconds on CPU; every `classify`,
+    /// `grid` or `context` invocation paid it again. The cache is keyed by
+    /// model identity + every seed text, so a new ontology or model
+    /// invalidates it automatically. A corrupt/unreadable cache falls back to
+    /// a normal build.
+    pub fn build_cached(
+        ontology: &OntologyLoader,
+        embedder: &dyn VectorEmbed,
+        cache_dir: &std::path::Path,
+        model_key: &str,
+    ) -> Self {
+        use sha2::{Digest, Sha256};
+
+        let seeds = Self::seeds_from_ontology(ontology);
+        if seeds.is_empty() {
+            return Self { cells: Vec::new() };
+        }
+        let mut hasher = Sha256::new();
+        hasher.update(model_key.as_bytes());
+        hasher.update((embedder.dimension() as u64).to_le_bytes());
+        for seed in &seeds {
+            hasher.update(seed.domain.as_bytes());
+            hasher.update([0u8]);
+            hasher.update(seed.mode.as_bytes());
+            hasher.update([0u8]);
+            hasher.update(seed.text.as_bytes());
+            hasher.update([0u8]);
+        }
+        let digest = hasher.finalize();
+        let key: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+        let path = cache_dir.join(format!("classifier-{key}.json"));
+
+        if let Ok(body) = std::fs::read_to_string(&path) {
+            if let Ok(cache) = serde_json::from_str::<CachedClassifier>(&body) {
+                if cache.version == CACHE_VERSION && cache.dim == embedder.dimension() {
+                    let cells = cache
+                        .cells
+                        .into_iter()
+                        .map(|c| Cell {
+                            domain: c.domain,
+                            mode: c.mode,
+                            embeddings: c.embeddings,
+                            entries: c.entries,
+                            facets: c.facets,
+                        })
+                        .collect();
+                    return Self { cells };
+                }
+            }
+        }
+
+        let classifier = Self::build_seeds_batched(&seeds, embedder);
+        let cache = CachedClassifier {
+            version: CACHE_VERSION,
+            dim: embedder.dimension(),
+            model: model_key.to_string(),
+            cells: classifier
+                .cells
+                .iter()
+                .map(|c| CachedCell {
+                    domain: c.domain.clone(),
+                    mode: c.mode.clone(),
+                    entries: c.entries.clone(),
+                    embeddings: c.embeddings.clone(),
+                    facets: c.facets.clone(),
+                })
+                .collect(),
+        };
+        if std::fs::create_dir_all(cache_dir).is_ok() {
+            if let Ok(json) = serde_json::to_string(&cache) {
+                let tmp = path.with_extension("tmp");
+                if std::fs::write(&tmp, json).is_ok() {
+                    let _ = std::fs::rename(&tmp, &path);
+                }
+            }
+        }
+        classifier
     }
 
     /// Number of populated cells.

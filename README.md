@@ -24,13 +24,15 @@ label-permuted control - when a task needs an overview rather than one query.
 
 | Engine | Version | License | Role |
 |---|---:|---|---|
-| `bin/physis-core` | 0.1.26 | Apache-2.0 | scan, search, node-search, classify, snapshot, ontology |
+| `bin/physis-core` | 0.2.0 | Apache-2.0 | scan, search, node-search, context, classify, grid, snapshot |
 | `bin/replant` | 0.3.0 | Apache-2.0 | verified tool-recipe replay |
-| `vendor/physis-core` | 0.1.26 | Apache-2.0 | full source snapshot used to build the binary |
+| `vendor/physis-core` | 0.2.0 | Apache-2.0 | full source snapshot used to build the binary |
 | `vendor/physis-replant` | 0.3.0 | Apache-2.0 | full source snapshot used to build the binary |
 
 The binaries are Linux x86_64 and are used by default. `PHYSIS_BIN` or the
 `engine_bin` setting overrides discovery; a comma-separated list is accepted.
+`models/minilm/` ships the Apache-2.0 all-MiniLM-L6-v2 uint8 ONNX export, so
+semantic embeddings are on with no download and no network.
 
 ## Install
 
@@ -52,11 +54,13 @@ the graph node count.
 
 ```
 physis_engine_status()                     # engines + store + node count
+physis_grid()                              # adaptive grid: 7x16, 87 cells, semantic
 physis_observe(path="/path/to/repo")       # index the repo
 physis_query(question="where is auth")     # scored matches
-physis_context(task="add token rotation", budget=600)
+physis_context(task="add token rotation", budget=600)   # code, auto-indexed
+physis_context(task="what does the runbook say", mode="docs")
 physis_chain(task="coverage gaps in auth", budget=1200)
-physis_classify(file="src/auth.py")        # structural profile
+physis_classify(file="src/auth.py")        # adaptive grid cells
 replant_demo()                             # record once, replay twice, 0 provider calls
 ```
 
@@ -69,10 +73,11 @@ replant_demo()                             # record once, replay twice, 0 provid
 | `physis_engine_status` | - | versions, capabilities, store path, node count |
 | `physis_observe` | `scan <dir>` | index a repo (run first) |
 | `physis_snapshot` | `snapshot` | graph health: nodes, coherence index, high/mid/low |
-| `physis_context` | `context` | fixed-token packet + compression stats for a task |
+| `physis_context` | `context` (docs) / `node-search` (code) | fixed-token packet + compression stats |
 | `physis_query` | `search` | similarity search over indexed nodes |
 | `physis_why` | `node-search` | evidence/coherence around a named object |
-| `physis_classify` | `classify` | 5x14 semiotic grid cells for text or a file |
+| `physis_classify` | `classify` | adaptive-grid cells for text or a file |
+| `physis_grid` | `grid` | axes, shape, populated cells, active embedder |
 | `physis_diff` | `direction` | did the change move as asked, versus the null |
 | `physis_chain` | `chain` | one pass: structure, gaps, drift, control |
 | `physis_command` | any advertised | escape hatch for advanced commands |
@@ -100,12 +105,17 @@ replant_demo()                             # record once, replay twice, 0 provid
 
 ## Honest limits
 
-- The bundled physis-core uses a **random-projection embedder**. Similarity is
-  lexical, not semantic; the engine prints that warning on every search. Set
-  `PHYSIS_MODEL_DIR` to real weights only if you have an ONNX-enabled build.
-- `physis_context` defaults to `mode=code` (the scanned graph, sees source
-  files). The engine's `context` compiler only ingests markdown/text, so it is
-  exposed as `mode=docs`.
+- The bundled embedder is **semantic** (MiniLM uint8, 384d) and on by default.
+  The first classifier build on a machine takes ~6 s; it caches the ontology
+  embeddings under `PHYSIS_CORE_DIR/cache` (override with `PHYSIS_CACHE_DIR`),
+  so later calls take ~0.2 s.
+- The grid is **adaptive**: it is whatever the loaded ontologies define. The
+  bundle ships 7 domains x 16 modes (112 cells, 87 populated); add axes at
+  runtime with `PHYSIS_ONTOLOGY_DIR` or `PHYSIS_ONTOLOGY_FILES`.
+- `physis_context` defaults to `mode=code` (the scanned graph). `mode=docs`
+  runs the compiler, which now ingests **any text file** (source included),
+  skips binaries and build dirs, and chunks documents so a file larger than
+  the budget can still contribute.
 - The index is **global** (`~/.physis`, or `PHYSIS_CORE_DIR`). Scanning two
   repos puts both in one graph; queries can surface nodes from either.
 - Auto-indexing is bounded: `physis_context` refuses to scan a corpus over
@@ -118,7 +128,7 @@ replant_demo()                             # record once, replay twice, 0 provid
 ## Development
 
 ```bash
-python3.13 -m pytest          # 34 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # 41 tests: unit + integration against the bundled binaries
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
 

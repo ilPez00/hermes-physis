@@ -193,6 +193,17 @@ CHAIN = {
     },
 }
 
+GRID = {
+    "name": "physis_grid",
+    "description": (
+        "Show the adaptive semiotic grid: every domain and mode the loaded "
+        "ontologies define, the shape, how many cells are populated, and which "
+        "embedder is active. The grid is not fixed at 5x14; extra ontologies "
+        "(built-in or PHYSIS_ONTOLOGY_DIR) add axes."
+    ),
+    "parameters": {"type": "object", "properties": {}, "required": []},
+}
+
 COMMAND = {
     "name": "physis_command",
     "description": (
@@ -328,6 +339,7 @@ ALL_SCHEMAS = [
     DIFF,
     CLASSIFY,
     CHAIN,
+    GRID,
     COMMAND,
     REPLANT_RUN,
     REPLANT_RECORD,

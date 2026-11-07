@@ -285,14 +285,37 @@ fn onnx_candidates() -> Vec<(
             let dim = std::env::var("PHYSIS_MODEL_DIM")
                 .ok()
                 .and_then(|v| v.trim().parse().ok())
-                .unwrap_or(768);
+                .unwrap_or(384);
             return vec![(dir, dim, Mean, "onnx-explicit")];
         }
     }
-    vec![
-        ("./models/bge-base-en-v1.5".into(), 768, Mean, "bge-base"),
-        ("./models".into(), 384, Mean, "minilm"),
-    ]
+    let mut candidates: Vec<(String, usize, crate::embed_onnx::PoolingStrategy, &'static str)> = Vec::new();
+    // A per-user model installed once serves every checkout.
+    if let Ok(home) = std::env::var("HOME") {
+        let home = home.trim();
+        if !home.is_empty() {
+            candidates.push((
+                format!("{home}/.physis/models/minilm"),
+                384,
+                Mean,
+                "minilm-home",
+            ));
+            let xdg = std::env::var("XDG_DATA_HOME")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+                .unwrap_or_else(|| format!("{home}/.local/share"));
+            candidates.push((
+                format!("{xdg}/physis/models/minilm"),
+                384,
+                Mean,
+                "minilm-xdg",
+            ));
+        }
+    }
+    candidates.push(("./models/bge-base-en-v1.5".into(), 768, Mean, "bge-base"));
+    candidates.push(("./models/minilm".into(), 384, Mean, "minilm"));
+    candidates.push(("./models".into(), 384, Mean, "minilm"));
+    candidates
 }
 
 #[cfg(test)]

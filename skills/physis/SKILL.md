@@ -12,6 +12,7 @@ codebase, or when the same verified workflow will run again.
 
 1. `physis_engine_status` if anything looks off (missing engine, zero nodes).
 2. `physis_observe` on the repo before querying it. Re-run after large changes.
+   `physis_grid` shows the current axes/shape and the active embedder.
 3. `physis_query` for "where is X" questions; `physis_context` when you need a
    packet under a token budget (compiles straight from the corpus);
    `physis_snapshot` for graph health; `physis_chain` for a gap/drift overview.
@@ -25,8 +26,8 @@ codebase, or when the same verified workflow will run again.
 - Never invent evidence Physis did not return. If the index is empty or the
   object is absent, say so and run `physis_observe` or widen the query.
 - `physis_why` returns evidence around a label, not a causal story.
-- The bundled embedder is lexical (random projection). Treat similarity as
-  "shares tokens/structure", not "means the same thing".
+- The bundled embedder is semantic (MiniLM) and on by default. A cold first
+  build takes seconds, then the ontology cache makes calls fast.
 - `replant_demo` is the fastest proof the engine works; use it before wiring a
   custom registry.
 - replant tools require an operator-owned registry (`tools=...`); a model may

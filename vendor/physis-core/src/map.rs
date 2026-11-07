@@ -390,9 +390,54 @@ pub fn build_map(
     })
 }
 
-/// Load a corpus directory: markdown/txt files, recursively, deterministic
+/// Directories that are never corpus sources: VCS metadata, build output,
+/// dependency trees and caches. They add noise and can dwarf the real corpus.
+const CORPUS_SKIP_DIRS: &[&str] = &[
+    ".git",
+    ".hg",
+    ".svn",
+    "target",
+    "node_modules",
+    "vendor",
+    "dist",
+    "build",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".next",
+    ".cache",
+    ".tox",
+];
+
+/// Default per-file cap (1 MiB). Override with `PHYSIS_CORPUS_MAX_BYTES`.
+const DEFAULT_CORPUS_MAX_BYTES: u64 = 1024 * 1024;
+/// Default corpus cap. Override with `PHYSIS_CORPUS_MAX_FILES`.
+const DEFAULT_CORPUS_MAX_FILES: usize = 20_000;
+
+/// A file is treated as binary when a NUL byte appears in its first 8 KiB.
+/// That catches ELF/Mach-O/images/PDF while keeping UTF-8, UTF-16-with-BOM and
+/// source files.
+fn looks_binary(bytes: &[u8]) -> bool {
+    bytes.iter().take(8192).any(|b| *b == 0)
+}
+
+/// Load a corpus directory: **any text file**, recursively, deterministic
 /// order (sorted paths). Returns (path, body).
+///
+/// Formerly filtered to `md|txt|json`, which made the context compiler blind
+/// to source code — a code question over a repository could only see its
+/// README. The loader now accepts every text file and rejects binaries by
+/// content, with size/count caps so a huge tree cannot stall a caller.
 pub fn load_corpus(dir: &Path) -> anyhow::Result<Vec<(String, String)>> {
+    let max_bytes: u64 = std::env::var("PHYSIS_CORPUS_MAX_BYTES")
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .unwrap_or(DEFAULT_CORPUS_MAX_BYTES);
+    let max_files: usize = std::env::var("PHYSIS_CORPUS_MAX_FILES")
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .unwrap_or(DEFAULT_CORPUS_MAX_FILES);
+
     let mut out: Vec<(String, String)> = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(d) = stack.pop() {
@@ -401,17 +446,31 @@ pub fn load_corpus(dir: &Path) -> anyhow::Result<Vec<(String, String)>> {
             .collect();
         entries.sort();
         for p in entries {
+            if out.len() >= max_files {
+                break;
+            }
             if p.is_dir() {
-                stack.push(p);
-            } else if matches!(
-                p.extension().and_then(|e| e.to_str()),
-                Some("md" | "txt" | "json")
-            ) {
-                if let Ok(body) = std::fs::read_to_string(&p) {
-                    if body.trim().len() > 40 {
-                        out.push((p.display().to_string(), body));
-                    }
+                let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if !CORPUS_SKIP_DIRS.contains(&name) {
+                    stack.push(p);
                 }
+                continue;
+            }
+            let Ok(meta) = std::fs::metadata(&p) else {
+                continue;
+            };
+            if !meta.is_file() || meta.len() < 40 || meta.len() > max_bytes {
+                continue;
+            }
+            let Ok(bytes) = std::fs::read(&p) else {
+                continue;
+            };
+            if looks_binary(&bytes) {
+                continue;
+            }
+            let body = String::from_utf8_lossy(&bytes).to_string();
+            if body.trim().len() > 40 {
+                out.push((p.display().to_string(), body));
             }
         }
     }
@@ -565,6 +624,35 @@ mod tests {
         assert_eq!(docs.len(), 2);
         assert!(docs[0].0.ends_with("b.txt"), "sorted: b before sub/a");
     }
+
+    #[test]
+    fn corpus_loader_takes_any_text_file_and_skips_binaries() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("auth.py"),
+            "def rotate_token(token):\n    return token[::-1]  # long enough body\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("lib.rs"),
+            "pub fn rotate_token(token: &str) -> String { token.chars().rev().collect() }\n",
+        )
+        .unwrap();
+        // NUL byte in the first block => binary, not corpus text.
+        std::fs::write(tmp.path().join("blob.bin"), [0u8, 1, 2, 3, 0, 5, 6, 7]).unwrap();
+        std::fs::create_dir(tmp.path().join("target")).unwrap();
+        std::fs::write(
+            tmp.path().join("target/generated.rs"),
+            "fn generated() { /* build output should not enter the corpus */ }\n",
+        )
+        .unwrap();
+        let docs = load_corpus(tmp.path()).unwrap();
+        let paths: Vec<&str> = docs.iter().map(|d| d.0.as_str()).collect();
+        assert!(paths.iter().any(|p| p.ends_with("auth.py")), "python included: {paths:?}");
+        assert!(paths.iter().any(|p| p.ends_with("lib.rs")), "rust included: {paths:?}");
+        assert!(!paths.iter().any(|p| p.ends_with("blob.bin")), "binary excluded");
+        assert!(!paths.iter().any(|p| p.contains("target/")), "build dir skipped");
+    }
 }
 
 // ── Demo B — PHYSIS CONTEXT COMPILER ─────────────────────────────────────────
@@ -610,6 +698,65 @@ impl ContextReport {
 }
 
 /// Compile a fixed-budget, structure-tagged context for `query` over `docs`.
+/// Split one document into pieces that can actually fit a token budget.
+///
+/// Whole-file packing silently dropped every document larger than the budget:
+/// a 300-token request over a source tree returned an empty context because
+/// every `.rs` file was bigger than 300 tokens. Chunking keeps the file in play
+/// and the `#partN` suffix preserves provenance.
+fn split_document(path: &str, body: &str, max_tokens: usize) -> Vec<(String, String)> {
+    let max_tokens = max_tokens.max(64);
+    if crate::rag::count_tokens(body) <= max_tokens {
+        return vec![(path.to_string(), body.to_string())];
+    }
+    let mut pieces: Vec<(String, String)> = Vec::new();
+    let mut current = String::new();
+    for line in body.lines() {
+        let candidate = if current.is_empty() {
+            line.to_string()
+        } else {
+            format!("{current}\n{line}")
+        };
+        if !current.is_empty() && crate::rag::count_tokens(&candidate) > max_tokens {
+            let n = pieces.len() + 1;
+            pieces.push((format!("{path}#part{n}"), std::mem::take(&mut current)));
+        }
+        if crate::rag::count_tokens(&line) > max_tokens {
+            // A single enormous line (minified JS, one-line JSON): cut on
+            // whitespace so it can still contribute.
+            let mut buf = String::new();
+            for word in line.split_whitespace() {
+                let cand = if buf.is_empty() { word.to_string() } else { format!("{buf} {word}") };
+                if !buf.is_empty() && crate::rag::count_tokens(&cand) > max_tokens {
+                    let n = pieces.len() + 1;
+                    pieces.push((format!("{path}#part{n}"), std::mem::take(&mut buf)));
+                }
+                if !buf.is_empty() {
+                    buf.push(' ');
+                }
+                buf.push_str(word);
+            }
+            if !buf.is_empty() {
+                current = buf;
+            }
+        } else if current.is_empty() {
+            current = line.to_string();
+        } else {
+            current.push('\n');
+            current.push_str(line);
+        }
+    }
+    if !current.trim().is_empty() {
+        let n = pieces.len() + 1;
+        pieces.push((format!("{path}#part{n}"), current));
+    }
+    if pieces.is_empty() {
+        vec![(path.to_string(), body.to_string())]
+    } else {
+        pieces
+    }
+}
+
 pub fn compile_context(
     docs: &[(String, String)],
     embedder: &dyn crate::embed::VectorEmbed,
@@ -617,7 +764,14 @@ pub fn compile_context(
     budget: usize,
 ) -> anyhow::Result<ContextReport> {
     anyhow::ensure!(!docs.is_empty(), "no documents to compile context from");
-    let texts: Vec<String> = docs.iter().map(|(_, b)| b.clone()).collect();
+    // Retrieval packs whole chunks, so a document must be split to fit the
+    // budget or it can never be selected (the old whole-file behaviour made a
+    // 300-token request over a source tree return an empty context).
+    let chunked: Vec<(String, String)> = docs
+        .iter()
+        .flat_map(|(p, b)| split_document(p, b, budget.max(64)))
+        .collect();
+    let texts: Vec<String> = chunked.iter().map(|(_, b)| b.clone()).collect();
 
     // Baseline: a conventional retrieval that discards nothing (generous
     // budget, top documents). Its token count is the honest denominator.
@@ -626,7 +780,7 @@ pub fn compile_context(
         query,
         embedder,
         usize::MAX / 2,
-        docs.len().min(12),
+        chunked.len().min(12),
     );
     // Count the ASSEMBLED baseline, not the sum of its chunk tokens.
     //
@@ -644,7 +798,7 @@ pub fn compile_context(
     let baseline_tokens = crate::rag::count_tokens(&baseline_context);
 
     // Physis: the same retriever, but capped at the fixed budget.
-    let top_k = docs.len().clamp(3, 8);
+    let top_k = chunked.len().clamp(3, 8);
     let (_res, physis_context) =
         crate::rag::retrieve_from_texts(&texts, query, embedder, budget.max(64), top_k);
     let physis_tokens = crate::rag::count_tokens(&physis_context);

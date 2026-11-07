@@ -123,6 +123,32 @@ def test_chain_runs_on_real_corpus(isolated_store, repo):
     assert result["argv"][1] == "chain"
 
 
+def test_grid_is_expanded_and_semantic(isolated_store):
+    result = HANDLERS["physis_grid"]({"timeout": 120})
+    assert result["ok"] is True
+    assert result["shape"][0] >= 7 and result["shape"][1] >= 16
+    assert result["expanded"] is True
+    assert result["populated_cells"] > 70
+    assert result["embedder"]["kind"] != "random-projection", result["embedder"]
+
+
+def test_context_docs_includes_code(isolated_store, repo):
+    result = HANDLERS["physis_context"](
+        {"path": str(repo), "task": "rotate an expired token", "budget": 300, "mode": "docs", "timeout": 120}
+    )
+    assert result["ok"] is True
+    assert result["source_documents"] >= 3  # .py files are corpus now, not just docs
+    assert result["physis_tokens"] >= 32
+
+
+def test_classify_uses_semantic_embedder(isolated_store):
+    result = HANDLERS["physis_classify"]({"text": "revoke the leaked token", "timeout": 120})
+    assert result["ok"] is True
+    assert "onnx" in result["stdout"], result["stdout"]
+    assert result["embedder_kind"].startswith("onnx")
+    assert result["grid_shape"] == [7, 16]
+
+
 def test_replant_demo_records_then_replays(tmp_path):
     store = tmp_path / "replant-store"
     result = HANDLERS["replant_demo"]({"path": str(tmp_path), "store": str(store), "timeout": 60})

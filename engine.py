@@ -27,6 +27,7 @@ MAX_OUTPUT = 16000
 
 PLUGIN_DIR = Path(__file__).resolve().parent
 BUNDLED_BIN_DIR = PLUGIN_DIR / "bin"
+BUNDLED_MODEL_DIR = PLUGIN_DIR / "models" / "minilm"
 
 # Names looked up on PATH when no bundled binary is present.
 CANDIDATES = ("physis-core", "replant", "physis-replant", "physis", "physis-next")
@@ -131,9 +132,18 @@ class PhysisEngine:
         argv = [self.binary, *[str(a) for a in args]]
         effective_timeout = self.timeout if timeout is None else max(1, int(timeout))
         workdir = cwd if cwd and Path(cwd).is_dir() else None
-        run_env = None
-        if env:
-            run_env = {**os.environ, **{str(k): str(v) for k, v in env.items()}}
+        extra_env = {str(k): str(v) for k, v in (env or {}).items()}
+        # Semantic embeddings by default: point the engine at the bundled
+        # MiniLM model unless the operator already chose one.
+        if (
+            "PHYSIS_MODEL_DIR" not in extra_env
+            and not os.environ.get("PHYSIS_MODEL_DIR")
+            and _is_executable(BUNDLED_BIN_DIR / "physis-core")
+            and (BUNDLED_MODEL_DIR / "model.onnx").is_file()
+        ):
+            extra_env["PHYSIS_MODEL_DIR"] = str(BUNDLED_MODEL_DIR)
+            extra_env.setdefault("PHYSIS_MODEL_DIM", "384")
+        run_env = {**os.environ, **extra_env} if extra_env else None
         try:
             proc = subprocess.run(
                 argv,
