@@ -1,0 +1,655 @@
+{
+  "kind": "engineering",
+  "domains": [
+    {
+      "name": "Requirements Engineering",
+      "category": "Software Engineering",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "comprehension",
+      "unit": "stories",
+      "hints": ["spec", "user story", "acceptance criteria", "stakeholder", "traceability", "validation", "scope"]
+    },
+    {
+      "name": "Architecture Design",
+      "category": "Software Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "structure",
+      "unit": "patterns",
+      "hints": ["pattern", "layer", "module", "dependency", "separation of concerns", "coupling", "abstraction"]
+    },
+    {
+      "name": "API Design",
+      "category": "Software Engineering",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "interface",
+      "unit": "endpoints",
+      "hints": ["endpoint", "contract", "version", "schema", "protocol", "idempotency", "pagination"]
+    },
+    {
+      "name": "Database Engineering",
+      "category": "Software Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "persistence",
+      "unit": "schemas",
+      "hints": ["schema", "index", "query", "normalization", "transaction", "ACID", "shard"]
+    },
+    {
+      "name": "Testing & QA",
+      "category": "Software Engineering",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "verification",
+      "unit": "cases",
+      "hints": ["unit", "integration", "e2e", "mock", "coverage", "regression", "fuzz"]
+    },
+    {
+      "name": "DevOps",
+      "category": "Software Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "operations",
+      "unit": "pipelines",
+      "hints": ["deploy", "monitor", "automate", "CI/CD", "infrastructure", "configuration", "observability"]
+    },
+    {
+      "name": "Security Engineering",
+      "category": "Software Engineering",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "defense",
+      "unit": "controls",
+      "hints": ["auth", "cipher", "audit", "threat model", "OWASP", "zero trust", "secrets management"]
+    },
+    {
+      "name": "Performance Engineering",
+      "category": "Software Engineering",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "efficiency",
+      "unit": "percentiles",
+      "hints": ["profile", "optimize", "benchmark", "latency", "throughput", "bottleneck", "caching strategy"]
+    },
+    {
+      "name": "Distributed Systems",
+      "category": "Software Engineering",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "coordination",
+      "unit": "nodes",
+      "hints": ["consensus", "partition", "replication", "CAP theorem", "gossip", "vector clock", "distributed consensus"]
+    },
+    {
+      "name": "Microservices",
+      "category": "Software Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "decomposition",
+      "unit": "services",
+      "hints": ["service", "boundary", "orchestration", "choreography", "bounded context", "API gateway", "service mesh"]
+    },
+    {
+      "name": "User Interface Engineering",
+      "category": "Software Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "presentation",
+      "unit": "components",
+      "hints": ["component", "layout", "interaction", "accessibility", "responsive", "state management", "rendering"]
+    },
+    {
+      "name": "Data Engineering",
+      "category": "Software Engineering",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "data flow",
+      "unit": "pipelines",
+      "hints": ["pipeline", "ETL", "warehouse", "lake", "schema evolution", "data quality", "orchestration"]
+    },
+    {
+      "name": "Structural Engineering",
+      "category": "Civil Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "load bearing",
+      "unit": "newtons",
+      "hints": ["beam", "column", "load", "truss", "moment", "deflection", "factor of safety"]
+    },
+    {
+      "name": "Geotechnical Engineering",
+      "category": "Civil Engineering",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "subsurface",
+      "unit": "meters",
+      "hints": ["soil", "foundation", "slope", "bearing capacity", "consolidation", "permeability", "liquefaction"]
+    },
+    {
+      "name": "Transportation Engineering",
+      "category": "Civil Engineering",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "mobility",
+      "unit": "lane-km",
+      "hints": ["road", "rail", "traffic", "intersection", "pavement", "level of service", "pavement design"]
+    },
+    {
+      "name": "Environmental Engineering",
+      "category": "Civil Engineering",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "remediation",
+      "unit": "ppm",
+      "hints": ["water", "waste", "treatment", "effluent", "contaminant", "remediation", "sustainability"]
+    },
+    {
+      "name": "Hydraulic Engineering",
+      "category": "Civil Engineering",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "fluid conveyance",
+      "unit": "CMS",
+      "hints": ["canal", "dam", "flow", "weir", "flood control", "scour", "hydrostatic"]
+    },
+    {
+      "name": "Surveying",
+      "category": "Civil Engineering",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "measurement",
+      "unit": "arcseconds",
+      "hints": ["measure", "boundary", "terrain", "geodesy", "triangulation", "benchmark", "GIS"]
+    },
+    {
+      "name": "Machine Design",
+      "category": "Mechanical Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "mechanism",
+      "unit": "Nm",
+      "hints": ["gear", "bearing", "shaft", "cam", "linkage", "tolerance", "fatigue"]
+    },
+    {
+      "name": "Thermodynamics",
+      "category": "Mechanical Engineering",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "energy transfer",
+      "unit": "joules",
+      "hints": ["heat", "cycle", "efficiency", "entropy", "enthalpy", "Carnot", "Rankine"]
+    },
+    {
+      "name": "Fluid Mechanics",
+      "category": "Mechanical Engineering",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "fluid motion",
+      "unit": "Reynolds",
+      "hints": ["pump", "pipe", "flow", "turbulence", "boundary layer", "Bernoulli", "viscosity"]
+    },
+    {
+      "name": "Materials Science",
+      "category": "Mechanical Engineering",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "engineering",
+      "axis_name": "material properties",
+      "unit": "GPa",
+      "hints": ["metal", "ceramic", "composite", "polymer", "phase diagram", "hardness", "toughness"]
+    },
+    {
+      "name": "Manufacturing Processes",
+      "category": "Mechanical Engineering",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "production",
+      "unit": "units/hr",
+      "hints": ["cast", "forge", "machine", "weld", "injection mold", "CNC", "tolerance stack-up"]
+    },
+    {
+      "name": "Finite Element Analysis",
+      "category": "Mechanical Engineering",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "simulation",
+      "unit": "elements",
+      "hints": ["mesh", "stress", "simulation", "convergence", "node", "stiffness matrix", "boundary condition"]
+    },
+    {
+      "name": "Vibrations",
+      "category": "Mechanical Engineering",
+      "domain": "HEAL",
+      "mode": "LEARN",
+      "axis_kind": "engineering",
+      "axis_name": "oscillation",
+      "unit": "Hz",
+      "hints": ["frequency", "mode", "damping", "resonance", "harmonic", "isolation", "Fourier"]
+    },
+    {
+      "name": "Robotics",
+      "category": "Mechanical Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "automation",
+      "unit": "DOF",
+      "hints": ["kinematics", "gripper", "path", "actuator", "sensor fusion", "inverse kinematics", "trajectory planning"]
+    },
+    {
+      "name": "Circuit Design",
+      "category": "Electrical Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "topology",
+      "unit": "volts",
+      "hints": ["resistor", "transistor", "IC", "amplifier", "oscillator", "feedback", "impedance matching"]
+    },
+    {
+      "name": "Power Engineering",
+      "category": "Electrical Engineering",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "power flow",
+      "unit": "MVA",
+      "hints": ["grid", "transformer", "distribution", "load flow", "fault analysis", "protection", "renewable integration"]
+    },
+    {
+      "name": "Control Systems",
+      "category": "Electrical Engineering",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "regulation",
+      "unit": "dB",
+      "hints": ["PID", "state-space", "stability", "Nyquist", "Bode", "lead-lag", "robustness"]
+    },
+    {
+      "name": "Signal Processing",
+      "category": "Electrical Engineering",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "information extraction",
+      "unit": "dB SNR",
+      "hints": ["filter", "transform", "convolution", "FFT", "wavelet", "sampling", "aliasing"]
+    },
+    {
+      "name": "Telecommunications",
+      "category": "Electrical Engineering",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "connectivity",
+      "unit": "bps",
+      "hints": ["modulate", "code", "channel", "multiplex", "OFDM", "MIMO", "error correction"]
+    },
+    {
+      "name": "Embedded Systems",
+      "category": "Electrical Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "integration",
+      "unit": "MIPS",
+      "hints": ["firmware", "RTOS", "GPIO", "interrupt", "memory map", "bootloader", "watchdog"]
+    },
+    {
+      "name": "Microelectronics",
+      "category": "Electrical Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "miniaturization",
+      "unit": "nanometers",
+      "hints": ["semiconductor", "doping", "lithography", "CMOS", "wafer", "etching", "deposition"]
+    },
+    {
+      "name": "RF Engineering",
+      "category": "Electrical Engineering",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "radiation",
+      "unit": "dBm",
+      "hints": ["antenna", "impedance", "propagation", "VSWR", "Smith chart", "matching network", "far field"]
+    },
+    {
+      "name": "Reaction Engineering",
+      "category": "Chemical Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "conversion",
+      "unit": "mol/s",
+      "hints": ["reactor", "kinetics", "catalyst", "rate law", "conversion", "selectivity", "Arrhenius"]
+    },
+    {
+      "name": "Separation Processes",
+      "category": "Chemical Engineering",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "purification",
+      "unit": "purity %",
+      "hints": ["distill", "filter", "extract", "crystallize", "adsorb", "membrane", "counter-current"]
+    },
+    {
+      "name": "Process Control",
+      "category": "Chemical Engineering",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "regulation",
+      "unit": "percent",
+      "hints": ["PID", "cascade", "feedforward", "loop tuning", "setpoint", "disturbance", "override"]
+    },
+    {
+      "name": "Transport Phenomena",
+      "category": "Chemical Engineering",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "engineering",
+      "axis_name": "flux",
+      "unit": "W/m2K",
+      "hints": ["momentum", "heat", "mass", "diffusion", "convection", "Navier-Stokes", "Fourier's law"]
+    },
+    {
+      "name": "Plant Design",
+      "category": "Chemical Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "facility",
+      "unit": "P&IDs",
+      "hints": ["piping", "instrumentation", "layout", "P&ID", "relief valve", "HAZOP", "plot plan"]
+    },
+    {
+      "name": "Process Safety",
+      "category": "Chemical Engineering",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "risk reduction",
+      "unit": "LOPA",
+      "hints": ["hazard", "relief", "containment", "HAZOP", "layer of protection", "inherent safety", "runaway"]
+    },
+    {
+      "name": "Aerodynamics",
+      "category": "Aerospace Engineering",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "engineering",
+      "axis_name": "flow physics",
+      "unit": "Mach",
+      "hints": ["lift", "drag", "boundary layer", "shock wave", "stall", "vorticity", "CFD"]
+    },
+    {
+      "name": "Propulsion",
+      "category": "Aerospace Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "thrust",
+      "unit": "kN",
+      "hints": ["jet", "rocket", "combustion", "nozzle", "specific impulse", "turbofan", "afterburner"]
+    },
+    {
+      "name": "Flight Mechanics",
+      "category": "Aerospace Engineering",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "motion",
+      "unit": "g",
+      "hints": ["stability", "control", "trajectory", "trim", "maneuver", "phugoid", "autorotation"]
+    },
+    {
+      "name": "Structures & Materials",
+      "category": "Aerospace Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "airframe",
+      "unit": "MPa",
+      "hints": ["wing", "fuselage", "composite", "skin", "rib", "spar", "buckling"]
+    },
+    {
+      "name": "Avionics",
+      "category": "Aerospace Engineering",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "guidance",
+      "unit": "channels",
+      "hints": ["navigation", "communication", "display", "GPS", "INS", "transponder", "fly-by-wire"]
+    },
+    {
+      "name": "Orbital Mechanics",
+      "category": "Aerospace Engineering",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "engineering",
+      "axis_name": "celestial motion",
+      "unit": "km/s",
+      "hints": ["orbit", "maneuver", "transfer", "Hohmann", "delta-v", "perturbation", "Lagrange point"]
+    },
+    {
+      "name": "Biomechanics",
+      "category": "Biomedical Engineering",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "biological motion",
+      "unit": "N/m",
+      "hints": ["gait", "joint", "implant", "prosthesis", "kinematics", "tissue stress", "orthopedic"]
+    },
+    {
+      "name": "Medical Imaging",
+      "category": "Biomedical Engineering",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "visualization",
+      "unit": "resolution",
+      "hints": ["MRI", "CT", "ultrasound", "PET", "reconstruction", "contrast", "beamforming"]
+    },
+    {
+      "name": "Biomaterials",
+      "category": "Biomedical Engineering",
+      "domain": "HEAL",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "compatibility",
+      "unit": "biocompatibility",
+      "hints": ["tissue", "scaffold", "biocompatible", "degradation", "hydrogel", "ECM", "cytotoxicity"]
+    },
+    {
+      "name": "Neural Engineering",
+      "category": "Biomedical Engineering",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "neural interface",
+      "unit": "spikes/s",
+      "hints": ["BCI", "electrode", "stimulation", "neural recording", "neuroprosthetic", "plasticity", "spike sorting"]
+    },
+    {
+      "name": "Drug Delivery",
+      "category": "Biomedical Engineering",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "therapeutic",
+      "unit": "mg/mL",
+      "hints": ["formulation", "release", "targeting", "nanocarrier", "diffusion", "bioavailability", "controlled release"]
+    },
+    {
+      "name": "Operations Research",
+      "category": "Industrial Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "optimization",
+      "unit": "objective value",
+      "hints": ["optimize", "schedule", "queue", "linear programming", "simulation", "heuristic", "integer programming"]
+    },
+    {
+      "name": "Supply Chain",
+      "category": "Industrial Engineering",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "engineering",
+      "axis_name": "logistics",
+      "unit": "units",
+      "hints": ["logistics", "inventory", "distribution", "EOQ", "bullwhip", "lead time", "warehousing"]
+    },
+    {
+      "name": "Quality Engineering",
+      "category": "Industrial Engineering",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "conformance",
+      "unit": "sigma",
+      "hints": ["six sigma", "SPC", "control", "DMAIC", "Pareto", "capability", "acceptance sampling"]
+    },
+    {
+      "name": "Human Factors",
+      "category": "Industrial Engineering",
+      "domain": "BOND",
+      "mode": "LEARN",
+      "axis_kind": "engineering",
+      "axis_name": "human-system",
+      "unit": "task time",
+      "hints": ["ergonomics", "usability", "interface", "workload", "situation awareness", "anthropometry", "human error"]
+    },
+    {
+      "name": "Systems Engineering",
+      "category": "Industrial Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "integration",
+      "unit": "requirements",
+      "hints": ["requirement", "V-model", "trade", "verification", "validation", "interface", "risk"]
+    },
+    {
+      "name": "Project Management",
+      "category": "Industrial Engineering",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "execution",
+      "unit": "milestones",
+      "hints": ["plan", "track", "milestone", "critical path", "earned value", "Gantt", "resource leveling"]
+    },
+    {
+      "name": "Nanotechnology",
+      "category": "Emerging Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "atomic precision",
+      "unit": "nanometers",
+      "hints": ["nano", "self-assembly", "quantum dot", "nanoparticle", "top-down", "bottom-up", "STM"]
+    },
+    {
+      "name": "Photonics",
+      "category": "Emerging Engineering",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "light control",
+      "unit": "THz",
+      "hints": ["laser", "fiber", "waveguide", "modulator", "photodetector", "nonlinear", "Bragg grating"]
+    },
+    {
+      "name": "Quantum Engineering",
+      "category": "Emerging Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "quantum state",
+      "unit": "qubits",
+      "hints": ["qubit", "gate", "error correct", "entanglement", "superposition", "decoherence", "surface code"]
+    },
+    {
+      "name": "Synthetic Biology",
+      "category": "Emerging Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "biological design",
+      "unit": "base pairs",
+      "hints": ["genome", "circuit", "organism", "CRISPR", "promoter", "gene expression", "biobrick"]
+    },
+    {
+      "name": "Additive Manufacturing",
+      "category": "Emerging Engineering",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "layer deposition",
+      "unit": "layers",
+      "hints": ["3D print", "powder", "sinter", "FDM", "SLA", "recoat", "supports"]
+    },
+    {
+      "name": "Renewable Energy",
+      "category": "Emerging Engineering",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "generation",
+      "unit": "MWh",
+      "hints": ["solar", "wind", "hydro", "geothermal", "photovoltaic", "capacity factor", "grid integration"]
+    },
+    {
+      "name": "Automotive Engineering",
+      "category": "Mechanical Engineering",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "engineering",
+      "axis_name": "vehicle dynamics",
+      "unit": "km/h",
+      "hints": ["chassis", "drivetrain", "suspension", "brake", "steering", "NVH", "crashworthiness"]
+    },
+    {
+      "name": "Ocean Engineering",
+      "category": "Civil Engineering",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "engineering",
+      "axis_name": "marine structures",
+      "unit": "meters",
+      "hints": ["hull", "propeller", "buoyancy", "offshore", "mooring", "seakeeping", "corrosion"]
+    }
+  ]
+}

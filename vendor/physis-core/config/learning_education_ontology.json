@@ -1,0 +1,13 @@
+{
+  "kind": "learning_education",
+  "domains": [
+    {"name":"Active Reading","category":"Learning","domain":"STUDY","mode":"LEARN","axis_kind":"learning_education","axis_name":"reader","unit":"chapters","hints":["read","book","article","highlight","annotate","summarize","comprehension","textbook","skim","note"]},
+    {"name":"Note-Taking","category":"Learning","domain":"STUDY","mode":"CREATE","axis_kind":"learning_education","axis_name":"scribe","unit":"notes","hints":["notes","zettelkasten","outline","mind map","summary","cornell","obsidian","link","capture","synthesize"]},
+    {"name":"Spaced Repetition","category":"Learning","domain":"STUDY","mode":"MAINTAIN","axis_kind":"learning_education","axis_name":"reviewer","unit":"cards","hints":["flashcard","anki","spaced repetition","review","recall","memorize","retention","srs","quiz","drill"]},
+    {"name":"Skill Practice","category":"Learning","domain":"STUDY","mode":"LEARN","axis_kind":"learning_education","axis_name":"practitioner","unit":"sessions","hints":["practice","exercise","drill","apply","hands-on","project","repetition","deliberate practice","feedback"]},
+    {"name":"Deep Focus Study","category":"Learning","domain":"STUDY","mode":"LIFT","axis_kind":"learning_education","axis_name":"scholar","unit":"sessions","hints":["focus","deep work","concentrate","pomodoro","study session","cram","intensive","flow","distraction-free"]},
+    {"name":"Teaching & Explaining","category":"Learning","domain":"STUDY","mode":"GUIDE","axis_kind":"learning_education","axis_name":"teacher","unit":"lessons","hints":["teach","explain","feynman","tutor","present","mentor","share knowledge","lecture","demonstrate","clarify"]},
+    {"name":"Course Completion","category":"Learning","domain":"STUDY","mode":"LEARN","axis_kind":"learning_education","axis_name":"student","unit":"modules","hints":["course","mooc","module","lecture","assignment","certificate","curriculum","syllabus","enroll","complete"]},
+    {"name":"Reflection & Synthesis","category":"Learning","domain":"STUDY","mode":"REST","axis_kind":"learning_education","axis_name":"thinker","unit":"reflections","hints":["reflect","synthesize","connect","journal","insight","review","metacognition","consolidate","integrate"]}
+  ]
+}

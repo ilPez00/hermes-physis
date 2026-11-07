@@ -1,0 +1,12 @@
+{
+  "kind": "travel",
+  "domains": [
+    {"name":"Trip Planning","category":"Travel","domain":"HEAL","mode":"PLAN","axis_kind":"travel","axis_name":"planner","unit":"itineraries","hints":["itinerary","plan","route","booking","destination","schedule","map","reserve","research trip","logistics"]},
+    {"name":"Booking & Logistics","category":"Travel","domain":"HEAL","mode":"MOVE","axis_kind":"travel","axis_name":"coordinator","unit":"bookings","hints":["flight","hotel","book","reservation","ticket","rental","visa","insurance","transfer","confirm"]},
+    {"name":"Exploration","category":"Travel","domain":"STUDY","mode":"PLAY","axis_kind":"travel","axis_name":"explorer","unit":"places","hints":["explore","sightsee","wander","discover","landmark","museum","local","neighborhood","hike","tour"]},
+    {"name":"Cultural Immersion","category":"Travel","domain":"STUDY","mode":"LEARN","axis_kind":"travel","axis_name":"immerser","unit":"experiences","hints":["culture","language","local food","custom","tradition","meet locals","festival","immersion","authentic"]},
+    {"name":"Adventure","category":"Travel","domain":"HEAL","mode":"PLAY","axis_kind":"travel","axis_name":"adventurer","unit":"trips","hints":["adventure","trek","dive","climb","safari","backpack","expedition","wild","challenge","outdoor"]},
+    {"name":"Relaxation Travel","category":"Travel","domain":"HEAL","mode":"REST","axis_kind":"travel","axis_name":"unwinder","unit":"getaways","hints":["relax","beach","resort","spa","retreat","staycation","unwind","leisure","slow travel","escape"]},
+    {"name":"Travel Documentation","category":"Travel","domain":"STUDY","mode":"CREATE","axis_kind":"travel","axis_name":"chronicler","unit":"entries","hints":["journal","photo","blog","memory","capture","postcard","vlog","scrapbook","document trip","share"]}
+  ]
+}

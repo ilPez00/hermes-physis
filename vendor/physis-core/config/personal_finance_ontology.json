@@ -1,0 +1,13 @@
+{
+  "kind": "personal_finance",
+  "domains": [
+    {"name":"Budgeting","category":"Personal Finance","domain":"CONSTRUCT","mode":"PLAN","axis_kind":"personal_finance","axis_name":"planner","unit":"budgets","hints":["budget","expense","income","track spending","categorize","monthly","allocate","envelope","cash flow"]},
+    {"name":"Saving","category":"Personal Finance","domain":"HEAL","mode":"MAINTAIN","axis_kind":"personal_finance","axis_name":"saver","unit":"savings","hints":["save","emergency fund","goal","automate","deposit","nest egg","reserve","rainy day","sinking fund"]},
+    {"name":"Investing","category":"Personal Finance","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"personal_finance","axis_name":"investor","unit":"positions","hints":["invest","stock","etf","index fund","portfolio","compound","dividend","brokerage","asset allocation","crypto","risk"]},
+    {"name":"Debt Management","category":"Personal Finance","domain":"HEAL","mode":"WORK","axis_kind":"personal_finance","axis_name":"reducer","unit":"payments","hints":["debt","loan","credit card","interest","payoff","snowball","avalanche","refinance","balance","apr"]},
+    {"name":"Tax Planning","category":"Personal Finance","domain":"CONSTRUCT","mode":"PLAN","axis_kind":"personal_finance","axis_name":"optimizer","unit":"filings","hints":["tax","deduction","filing","return","withholding","bracket","capital gains","write-off","irs","quarterly"]},
+    {"name":"Income & Career","category":"Personal Finance","domain":"BOND","mode":"WORK","axis_kind":"personal_finance","axis_name":"earner","unit":"streams","hints":["salary","raise","side hustle","freelance","negotiate","income stream","invoice","client","rate","revenue"]},
+    {"name":"Financial Literacy","category":"Personal Finance","domain":"STUDY","mode":"LEARN","axis_kind":"personal_finance","axis_name":"learner","unit":"topics","hints":["learn","finance","compound interest","inflation","net worth","credit score","insurance","retirement","read","course"]},
+    {"name":"Retirement Planning","category":"Personal Finance","domain":"CONSTRUCT","mode":"PLAN","axis_kind":"personal_finance","axis_name":"architect","unit":"plans","hints":["retirement","401k","ira","pension","fire","long-term","compound","withdrawal","annuity","nest egg"]}
+  ]
+}

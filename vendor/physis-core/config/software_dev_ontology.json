@@ -1,0 +1,280 @@
+{
+  "kind": "software_dev",
+  "interpretant": {
+    "confirms": [
+      "success"
+    ],
+    "refutes": [
+      "failure"
+    ],
+    "half_life_days": 60,
+    "weight": 1.0,
+    "note": "A passing test or a landed change confirms. Code moves fast: a 60-day half-life stops last quarter's stack from outranking this quarter's."
+  },
+  "domains": [
+    {
+      "name": "Debugging",
+      "category": "Software Development",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "software_dev",
+      "axis_name": "diagnosis",
+      "unit": "bugs",
+      "hints": [
+        "bug",
+        "stack trace",
+        "breakpoint",
+        "reproduce",
+        "root cause",
+        "panic",
+        "exception",
+        "null pointer",
+        "segfault",
+        "debugger",
+        "gdb",
+        "logging"
+      ]
+    },
+    {
+      "name": "Refactoring",
+      "category": "Software Development",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "software_dev",
+      "axis_name": "hygiene",
+      "unit": "refactors",
+      "hints": [
+        "refactor",
+        "rename",
+        "extract function",
+        "dedupe",
+        "simplify",
+        "cleanup",
+        "tech debt",
+        "code smell",
+        "restructure",
+        "inline"
+      ]
+    },
+    {
+      "name": "Feature Implementation",
+      "category": "Software Development",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "software_dev",
+      "axis_name": "builder",
+      "unit": "features",
+      "hints": [
+        "implement",
+        "feature",
+        "build",
+        "add",
+        "new endpoint",
+        "function",
+        "component",
+        "module",
+        "ship",
+        "scaffold"
+      ]
+    },
+    {
+      "name": "Code Review",
+      "category": "Software Development",
+      "domain": "CONSTRUCT",
+      "mode": "SENSE",
+      "axis_kind": "software_dev",
+      "axis_name": "reviewer",
+      "unit": "reviews",
+      "hints": [
+        "review",
+        "pull request",
+        "pr",
+        "diff",
+        "approve",
+        "comment",
+        "feedback",
+        "nit",
+        "lgtm",
+        "merge request",
+        "blocker"
+      ]
+    },
+    {
+      "name": "Testing",
+      "category": "Software Development",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "software_dev",
+      "axis_name": "verifier",
+      "unit": "tests",
+      "hints": [
+        "test",
+        "unit test",
+        "integration test",
+        "assert",
+        "mock",
+        "coverage",
+        "fixture",
+        "jest",
+        "pytest",
+        "cargo test",
+        "e2e",
+        "tdd"
+      ]
+    },
+    {
+      "name": "Version Control",
+      "category": "Software Development",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "software_dev",
+      "axis_name": "historian",
+      "unit": "commits",
+      "hints": [
+        "git",
+        "commit",
+        "branch",
+        "merge",
+        "rebase",
+        "cherry-pick",
+        "stash",
+        "conflict",
+        "push",
+        "pull",
+        "tag",
+        "revert"
+      ]
+    },
+    {
+      "name": "API Integration",
+      "category": "Software Development",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "software_dev",
+      "axis_name": "integrator",
+      "unit": "endpoints",
+      "hints": [
+        "api",
+        "rest",
+        "graphql",
+        "endpoint",
+        "request",
+        "response",
+        "webhook",
+        "sdk",
+        "client",
+        "payload",
+        "auth token",
+        "rate limit"
+      ]
+    },
+    {
+      "name": "Performance Optimization",
+      "category": "Software Development",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "software_dev",
+      "axis_name": "optimizer",
+      "unit": "speedups",
+      "hints": [
+        "optimize",
+        "performance",
+        "latency",
+        "throughput",
+        "profile",
+        "cache",
+        "memoize",
+        "bottleneck",
+        "benchmark",
+        "hot path",
+        "allocation"
+      ]
+    },
+    {
+      "name": "Documentation",
+      "category": "Software Development",
+      "domain": "STUDY",
+      "mode": "GUIDE",
+      "axis_kind": "software_dev",
+      "axis_name": "scribe",
+      "unit": "docs",
+      "hints": [
+        "docs",
+        "readme",
+        "comment",
+        "docstring",
+        "changelog",
+        "wiki",
+        "guide",
+        "example",
+        "tutorial",
+        "api reference"
+      ]
+    },
+    {
+      "name": "Architecture Design",
+      "category": "Software Development",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "software_dev",
+      "axis_name": "architect",
+      "unit": "designs",
+      "hints": [
+        "architecture",
+        "design",
+        "pattern",
+        "module",
+        "layer",
+        "coupling",
+        "cohesion",
+        "interface",
+        "abstraction",
+        "diagram",
+        "trade-off"
+      ]
+    },
+    {
+      "name": "Dependency Management",
+      "category": "Software Development",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "software_dev",
+      "axis_name": "curator",
+      "unit": "packages",
+      "hints": [
+        "dependency",
+        "package",
+        "npm",
+        "cargo",
+        "pip",
+        "version",
+        "lockfile",
+        "upgrade",
+        "vulnerability",
+        "semver",
+        "vendor"
+      ]
+    },
+    {
+      "name": "Learning a Codebase",
+      "category": "Software Development",
+      "domain": "CONSTRUCT",
+      "mode": "LEARN",
+      "axis_kind": "software_dev",
+      "axis_name": "explorer",
+      "unit": "modules",
+      "hints": [
+        "explore",
+        "understand",
+        "read code",
+        "trace",
+        "onboard",
+        "navigate",
+        "grep",
+        "call graph",
+        "entry point",
+        "convention"
+      ]
+    }
+  ]
+}

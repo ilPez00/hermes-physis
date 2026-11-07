@@ -1,0 +1,12 @@
+{
+  "kind": "outdoors_sports",
+  "domains": [
+    {"name":"Hiking & Trekking","category":"Outdoors","domain":"HEAL","mode":"MOVE","axis_kind":"outdoors_sports","axis_name":"hiker","unit":"trails","hints":["hike","trail","trek","summit","elevation","backpack","nature","mountain","route","gear"]},
+    {"name":"Team Sports","category":"Outdoors","domain":"HEAL","mode":"PLAY","axis_kind":"outdoors_sports","axis_name":"teammate","unit":"matches","hints":["soccer","basketball","team","match","game","league","pass","tactic","practice","tournament"]},
+    {"name":"Endurance Sports","category":"Outdoors","domain":"HEAL","mode":"WALK","axis_kind":"outdoors_sports","axis_name":"athlete","unit":"races","hints":["marathon","triathlon","cycling","race","endurance","training plan","pace","distance","split","pr"]},
+    {"name":"Water Sports","category":"Outdoors","domain":"HEAL","mode":"PLAY","axis_kind":"outdoors_sports","axis_name":"waterman","unit":"sessions","hints":["surf","swim","kayak","paddle","dive","sail","wave","stroke","current","board"]},
+    {"name":"Climbing","category":"Outdoors","domain":"HEAL","mode":"LIFT","axis_kind":"outdoors_sports","axis_name":"climber","unit":"routes","hints":["climb","boulder","route","grade","belay","crag","hold","send","crux","technique"]},
+    {"name":"Winter Sports","category":"Outdoors","domain":"HEAL","mode":"PLAY","axis_kind":"outdoors_sports","axis_name":"snowrider","unit":"runs","hints":["ski","snowboard","slope","powder","piste","lift","carve","resort","run","gear"]},
+    {"name":"Skill & Conditioning","category":"Outdoors","domain":"HEAL","mode":"LEARN","axis_kind":"outdoors_sports","axis_name":"coach","unit":"drills","hints":["technique","conditioning","drill","coaching","form","mobility","cross-training","skill","practice","recovery"]}
+  ]
+}

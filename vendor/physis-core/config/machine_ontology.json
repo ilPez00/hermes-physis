@@ -1,0 +1,1947 @@
+{
+  "kind": "machine",
+  "interpretant": {
+    "confirms": [
+      "success",
+      "inert"
+    ],
+    "refutes": [
+      "failure"
+    ],
+    "half_life_days": 0,
+    "weight": 1.0,
+    "note": "An inspection that found nothing still confirms the routine. Plant reality changes slowly, so salience does not decay."
+  },
+  "domains": [
+    {
+      "name": "Spindle & Tooling",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "feedrate",
+      "hints": [
+        "spindle",
+        "chuck",
+        "tool",
+        "bit",
+        "endmill",
+        "collet",
+        "cutter"
+      ]
+    },
+    {
+      "name": "Axis & Positioning",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "mm",
+      "hints": [
+        "axis",
+        "servo",
+        "stepper",
+        "encoder",
+        "ballscrew",
+        "linear",
+        "position"
+      ]
+    },
+    {
+      "name": "Coolant & Lubrication",
+      "category": "Machine",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "flow",
+      "hints": [
+        "coolant",
+        "lubricant",
+        "oil",
+        "mist",
+        "pump",
+        "nozzle",
+        "lube"
+      ]
+    },
+    {
+      "name": "Workpiece Fixturing",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "clamp",
+      "hints": [
+        "vise",
+        "fixture",
+        "chuck",
+        "jig",
+        "clamp",
+        "table",
+        "workholding"
+      ]
+    },
+    {
+      "name": "Tool Change & Carousel",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "tools",
+      "hints": [
+        "toolchanger",
+        "carousel",
+        "magazine",
+        "turret",
+        "atc",
+        "tool change"
+      ]
+    },
+    {
+      "name": "Chip Management",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "kg",
+      "hints": [
+        "chip",
+        "swarf",
+        "conveyor",
+        "auger",
+        "vacuum",
+        "chip management"
+      ]
+    },
+    {
+      "name": "Extrusion & Deposition",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "layer",
+      "hints": [
+        "extruder",
+        "nozzle",
+        "filament",
+        "melt",
+        "deposition",
+        "fdm",
+        "sla"
+      ]
+    },
+    {
+      "name": "Build Platform & Bed",
+      "category": "Machine",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "°C",
+      "hints": [
+        "bed",
+        "platform",
+        "buildplate",
+        "adhesion",
+        "level",
+        "heated",
+        "build surface"
+      ]
+    },
+    {
+      "name": "Gantry & Kinematics",
+      "category": "Machine",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "kinematics",
+      "hints": [
+        "gantry",
+        "corexy",
+        "delta",
+        "scara",
+        "parallel",
+        "kinematic",
+        "cartesian"
+      ]
+    },
+    {
+      "name": "Control & Motion Planner",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "PLAN",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "hz",
+      "hints": [
+        "controller",
+        "motion planner",
+        "gcode",
+        "acceleration",
+        "jerk",
+        "cnc controller"
+      ]
+    },
+    {
+      "name": "Propulsion & Thrust",
+      "category": "Vehicle",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "thrust",
+      "hints": [
+        "motor",
+        "propeller",
+        "turbine",
+        "engine",
+        "thruster",
+        "esc",
+        "drive"
+      ]
+    },
+    {
+      "name": "Flight Controller",
+      "category": "Vehicle",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "hz",
+      "hints": [
+        "flight controller",
+        "pid",
+        "attitude",
+        "stabilize",
+        "px4",
+        "ardupilot",
+        "fc"
+      ]
+    },
+    {
+      "name": "Navigation & Guidance",
+      "category": "Vehicle",
+      "domain": "HEAL",
+      "mode": "MOVE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "waypoints",
+      "hints": [
+        "gps",
+        "gnss",
+        "imu",
+        "compass",
+        "nav",
+        "route",
+        "guidance"
+      ]
+    },
+    {
+      "name": "Energy Storage",
+      "category": "Vehicle",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "kWh",
+      "hints": [
+        "battery",
+        "lipo",
+        "fuel cell",
+        "bms",
+        "cell",
+        "voltage",
+        "capacity",
+        "pack"
+      ]
+    },
+    {
+      "name": "Telemetry & Link",
+      "category": "Vehicle",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "baud",
+      "hints": [
+        "telemetry",
+        "radio",
+        "mavlink",
+        "crtp",
+        "antenna",
+        "rssi",
+        "link",
+        "datalink"
+      ]
+    },
+    {
+      "name": "Payload & Cargo",
+      "category": "Vehicle",
+      "domain": "FABRICATE",
+      "mode": "MOVE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "kg",
+      "hints": [
+        "payload",
+        "cargo",
+        "gimbal",
+        "mount",
+        "bay",
+        "release",
+        "drogue",
+        "payload bay"
+      ]
+    },
+    {
+      "name": "Chassis & Suspension",
+      "category": "Vehicle",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "mm",
+      "hints": [
+        "chassis",
+        "frame",
+        "arm",
+        "landing gear",
+        "suspension",
+        "damper",
+        "strut"
+      ]
+    },
+    {
+      "name": "Ground Control Station",
+      "category": "Vehicle",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "stations",
+      "hints": [
+        "gcs",
+        "ground station",
+        "mission planner",
+        "qgroundcontrol",
+        "mavlink"
+      ]
+    },
+    {
+      "name": "Sense & Avoid",
+      "category": "Vehicle",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "range",
+      "hints": [
+        "collision",
+        "avoid",
+        "obstacle",
+        "lidar",
+        "optical flow",
+        "sonar",
+        "sense"
+      ]
+    },
+    {
+      "name": "Tree & Hierarchy",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "depth",
+      "hints": [
+        "tree",
+        "bst",
+        "trie",
+        "heap",
+        "b-tree",
+        "r-tree",
+        "octree",
+        "kd-tree",
+        "hierarchy"
+      ]
+    },
+    {
+      "name": "Graph & Network",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "edges",
+      "hints": [
+        "graph",
+        "adjacency",
+        "dag",
+        "weighted",
+        "directed",
+        "digraph",
+        "vertex"
+      ]
+    },
+    {
+      "name": "Hash & Map",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "buckets",
+      "hints": [
+        "hash",
+        "map",
+        "dict",
+        "set",
+        "hash table",
+        "bloom filter",
+        "cuckoo",
+        "hashmap"
+      ]
+    },
+    {
+      "name": "Array & Vector",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "index",
+      "hints": [
+        "array",
+        "vector",
+        "slice",
+        "buffer",
+        "deque",
+        "ring buffer",
+        "dynamic array"
+      ]
+    },
+    {
+      "name": "Stack & Queue",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "pushpop",
+      "hints": [
+        "stack",
+        "queue",
+        "fifo",
+        "lifo",
+        "deque",
+        "priority queue",
+        "circular buffer"
+      ]
+    },
+    {
+      "name": "Linked Structure",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "links",
+      "hints": [
+        "linked list",
+        "skip list",
+        "xor list",
+        "intrusive list",
+        "doubly linked"
+      ]
+    },
+    {
+      "name": "Sort & Search",
+      "category": "DataStructure",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "complexity",
+      "hints": [
+        "sort",
+        "search",
+        "quicksort",
+        "binary search",
+        "merge",
+        "radix",
+        "quicksort"
+      ]
+    },
+    {
+      "name": "Lock & Concurrency",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "contention",
+      "hints": [
+        "mutex",
+        "rwlock",
+        "semaphore",
+        "barrier",
+        "atomic",
+        "spinlock",
+        "lock"
+      ]
+    },
+    {
+      "name": "Persistence & Index",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "keys",
+      "hints": [
+        "b+tree",
+        "lsm tree",
+        "bit index",
+        "inverted index",
+        "hash index",
+        "persist"
+      ]
+    },
+    {
+      "name": "Cache & Buffer",
+      "category": "DataStructure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "latency",
+      "hints": [
+        "cache",
+        "lru",
+        "lfu",
+        "ttl",
+        "buffer",
+        "ring",
+        "slab",
+        "pool",
+        "caching"
+      ]
+    },
+    {
+      "name": "Log & Journal",
+      "category": "DataStructure",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "entries",
+      "hints": [
+        "wal",
+        "journal",
+        "log",
+        "audit",
+        "changelog",
+        "sled",
+        "append-only",
+        "write-ahead"
+      ]
+    },
+    {
+      "name": "Bus & Backplane",
+      "category": "Network",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "bandwidth",
+      "hints": [
+        "bus",
+        "pcie",
+        "spi",
+        "i2c",
+        "can",
+        "sata",
+        "usb",
+        "thunderbolt",
+        "backplane"
+      ]
+    },
+    {
+      "name": "Wireless Link",
+      "category": "Network",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "dBm",
+      "hints": [
+        "wifi",
+        "bluetooth",
+        "lora",
+        "zigbee",
+        "nfc",
+        "radio",
+        "iridium",
+        "wireless"
+      ]
+    },
+    {
+      "name": "Protocol Stack",
+      "category": "Network",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "layers",
+      "hints": [
+        "tcp/ip",
+        "mqtt",
+        "http",
+        "grpc",
+        "websocket",
+        "mavlink",
+        "canopen",
+        "protocol"
+      ]
+    },
+    {
+      "name": "Mesh & Topology",
+      "category": "Network",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "hops",
+      "hints": [
+        "mesh",
+        "star",
+        "ring",
+        "mesh network",
+        "relay",
+        "repeater",
+        "node",
+        "topology"
+      ]
+    },
+    {
+      "name": "Switch & Router",
+      "category": "Network",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "ports",
+      "hints": [
+        "switch",
+        "router",
+        "bridge",
+        "gateway",
+        "firewall",
+        "nat",
+        "vlan",
+        "hub"
+      ]
+    },
+    {
+      "name": "Power Source",
+      "category": "Energy",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "W",
+      "hints": [
+        "battery",
+        "solar",
+        "generator",
+        "psu",
+        "harvester",
+        "fuel cell",
+        "power supply"
+      ]
+    },
+    {
+      "name": "Power Regulation",
+      "category": "Energy",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "V",
+      "hints": [
+        "regulator",
+        "converter",
+        "buck",
+        "boost",
+        "ldo",
+        "smps",
+        "inverter",
+        "voltage"
+      ]
+    },
+    {
+      "name": "Power Distribution",
+      "category": "Energy",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "A",
+      "hints": [
+        "bus bar",
+        "fuse",
+        "breaker",
+        "pdb",
+        "trace",
+        "wire",
+        "gauge",
+        "pcb",
+        "power bus"
+      ]
+    },
+    {
+      "name": "Thermal Management",
+      "category": "Energy",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "°C",
+      "hints": [
+        "heatsink",
+        "fan",
+        "peltier",
+        "radiator",
+        "thermal paste",
+        "heat pipe",
+        "cooling"
+      ]
+    },
+    {
+      "name": "Harvesting & Scavenging",
+      "category": "Energy",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "µW",
+      "hints": [
+        "solar cell",
+        "piezo",
+        "thermoelectric",
+        "inductive",
+        "rf harvesting",
+        "energy harvesting"
+      ]
+    },
+    {
+      "name": "Vision & Imaging",
+      "category": "Sensor",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "pixels",
+      "hints": [
+        "camera",
+        "lidar",
+        "radar",
+        "sonar",
+        "infrared",
+        "hyperspectral",
+        "imaging"
+      ]
+    },
+    {
+      "name": "Inertial & Motion",
+      "category": "Sensor",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "dof",
+      "hints": [
+        "imu",
+        "accelerometer",
+        "gyroscope",
+        "magnetometer",
+        "ahrs",
+        "inertial"
+      ]
+    },
+    {
+      "name": "Environmental",
+      "category": "Sensor",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "ppm",
+      "hints": [
+        "temperature",
+        "humidity",
+        "pressure",
+        "gas",
+        "aqi",
+        "co2",
+        "pm",
+        "environmental"
+      ]
+    },
+    {
+      "name": "Proximity & Range",
+      "category": "Sensor",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "mm",
+      "hints": [
+        "ultrasonic",
+        "infrared",
+        "time-of-flight",
+        "lidar",
+        "capacitive",
+        "proximity"
+      ]
+    },
+    {
+      "name": "Current & Voltage",
+      "category": "Sensor",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "mV",
+      "hints": [
+        "current sensor",
+        "voltage divider",
+        "hall effect",
+        "shunt",
+        "adc",
+        "current sense"
+      ]
+    },
+    {
+      "name": "Rotary Actuator",
+      "category": "Actuator",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "Nm",
+      "hints": [
+        "servo",
+        "dc motor",
+        "brushless",
+        "stepper",
+        "torque",
+        "rpm",
+        "rotary actuator"
+      ]
+    },
+    {
+      "name": "Linear Actuator",
+      "category": "Actuator",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "N",
+      "hints": [
+        "piston",
+        "solenoid",
+        "linear actuator",
+        "lead screw",
+        "voice coil",
+        "linear"
+      ]
+    },
+    {
+      "name": "Valve & Regulator",
+      "category": "Actuator",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "psi",
+      "hints": [
+        "valve",
+        "solenoid valve",
+        "regulator",
+        "throttle",
+        "nozzle",
+        "flow control"
+      ]
+    },
+    {
+      "name": "Vibro-Acoustic",
+      "category": "Actuator",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "hz",
+      "hints": [
+        "piezo",
+        "speaker",
+        "transducer",
+        "vibrator",
+        "buzzer",
+        "resonator",
+        "acoustic"
+      ]
+    },
+    {
+      "name": "Frame & Chassis",
+      "category": "Structure",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "kg",
+      "hints": [
+        "frame",
+        "chassis",
+        "housing",
+        "bracket",
+        "mount",
+        "rail",
+        "extrusion"
+      ]
+    },
+    {
+      "name": "Sealing & Protection",
+      "category": "Structure",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "ip",
+      "hints": [
+        "seal",
+        "gasket",
+        "o-ring",
+        "enclosure",
+        "ip67",
+        "conformal coating",
+        "waterproof"
+      ]
+    },
+    {
+      "name": "Cable & Routing",
+      "category": "Structure",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "mm²",
+      "hints": [
+        "cable",
+        "wire",
+        "harness",
+        "conduit",
+        "routing",
+        "strain relief",
+        "loom"
+      ]
+    },
+    {
+      "name": "Fastener & Joint",
+      "category": "Structure",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "Nm",
+      "hints": [
+        "bolt",
+        "screw",
+        "nut",
+        "washer",
+        "rivet",
+        "weld",
+        "solder",
+        "crimp",
+        "fastener"
+      ]
+    },
+    {
+      "name": "Machine Vision",
+      "category": "Sensor",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "pixels",
+      "hints": [
+        "machine vision",
+        "inspection",
+        "pattern",
+        "recognition",
+        "ocr",
+        "defect",
+        "vision system"
+      ]
+    },
+    {
+      "name": "Industrial Robotics",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "cycles",
+      "hints": [
+        "robot arm",
+        "manipulator",
+        "6-axis",
+        "payload",
+        "reach",
+        "repeatability",
+        "automation"
+      ]
+    },
+    {
+      "name": "Collaborative Robots",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "tasks",
+      "hints": [
+        "cobot",
+        "collaborative",
+        "safe",
+        "force limiting",
+        "hand guiding",
+        "cage-free"
+      ]
+    },
+    {
+      "name": "PLC & Industrial Control",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "scan-time",
+      "hints": [
+        "plc",
+        "ladder logic",
+        "relay",
+        "discrete",
+        "programmable",
+        "io",
+        "scan cycle"
+      ]
+    },
+    {
+      "name": "SCADA & Monitoring",
+      "category": "Machine",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "points",
+      "hints": [
+        "scada",
+        "hmi",
+        "historian",
+        "alarm",
+        "trend",
+        "remote",
+        "supervisory"
+      ]
+    },
+    {
+      "name": "Hydraulics",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "psi",
+      "hints": [
+        "hydraulic",
+        "pump",
+        "cylinder",
+        "valve",
+        "actuator",
+        "fluid",
+        "pressure",
+        "reservoir"
+      ]
+    },
+    {
+      "name": "Pneumatics",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "psi",
+      "hints": [
+        "pneumatic",
+        "air",
+        "compressor",
+        "cylinder",
+        "solenoid",
+        "festo",
+        "smc",
+        "actuator"
+      ]
+    },
+    {
+      "name": "Conveyors & Material Handling",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "MOVE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "m-min",
+      "hints": [
+        "conveyor",
+        "belt",
+        "roller",
+        "sortation",
+        "pallet",
+        "transfer",
+        "material handling"
+      ]
+    },
+    {
+      "name": "Packaging Machinery",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "ppm",
+      "hints": [
+        "packaging",
+        "wrapper",
+        "sealer",
+        "labeler",
+        "cartoner",
+        "case packer",
+        "flow wrap"
+      ]
+    },
+    {
+      "name": "Laser Processing",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "power",
+      "hints": [
+        "laser",
+        "cut",
+        "engrave",
+        "mark",
+        "weld",
+        "coherent",
+        "fiber",
+        "co2"
+      ]
+    },
+    {
+      "name": "Plasma Cutting",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "amps",
+      "hints": [
+        "plasma",
+        "cutting",
+        "torch",
+        "arc",
+        "gouging",
+        "hypertherm",
+        "cnc plasma"
+      ]
+    },
+    {
+      "name": "Waterjet Cutting",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "psi",
+      "hints": [
+        "waterjet",
+        "abrasive",
+        "cut",
+        "nozzle",
+        "garnet",
+        "intensifier",
+        "pump"
+      ]
+    },
+    {
+      "name": "EDM Machining",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "spark",
+      "hints": [
+        "edm",
+        "sinker",
+        "wire edm",
+        "spark",
+        "dielectric",
+        "electrode",
+        "burn"
+      ]
+    },
+    {
+      "name": "Welding Systems",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "joints",
+      "hints": [
+        "weld",
+        "mig",
+        "tig",
+        "stick",
+        "laser weld",
+        "seam",
+        "filler",
+        "fuse"
+      ]
+    },
+    {
+      "name": "Inspection & Metrology",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "microns",
+      "hints": [
+        "cmm",
+        "gauge",
+        "caliper",
+        "micrometer",
+        "probe",
+        "inspect",
+        "measure"
+      ]
+    },
+    {
+      "name": "Vibration Analysis",
+      "category": "Machine",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "hz",
+      "hints": [
+        "vibration",
+        "fft",
+        "spectrum",
+        "bearing",
+        "imbalance",
+        "fft analysis",
+        "accelerometer"
+      ]
+    },
+    {
+      "name": "Predictive Maintenance",
+      "category": "Machine",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "alerts",
+      "hints": [
+        "predictive",
+        "maintenance",
+        "trend",
+        "wear",
+        "remaining life",
+        "condition based"
+      ]
+    },
+    {
+      "name": "Condition Monitoring",
+      "category": "Machine",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "signals",
+      "hints": [
+        "condition",
+        "monitor",
+        "realtime",
+        "threshold",
+        "sensor fusion",
+        "health index"
+      ]
+    },
+    {
+      "name": "Industrial IoT",
+      "category": "Network",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "nodes",
+      "hints": [
+        "iiot",
+        "opc-ua",
+        "mqtt",
+        "industry 4.0",
+        "edge",
+        "gateway",
+        "sensor network"
+      ]
+    },
+    {
+      "name": "Digital Twin",
+      "category": "Machine",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "models",
+      "hints": [
+        "digital twin",
+        "simulation",
+        "virtual",
+        "mirror",
+        "model",
+        "simulink",
+        "emulate"
+      ]
+    },
+    {
+      "name": "Actuator Systems",
+      "category": "Actuator",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "Nm",
+      "hints": [
+        "actuator",
+        "linear actuator",
+        "rotary",
+        "electric cylinder",
+        "thruster",
+        "push-pull"
+      ]
+    },
+    {
+      "name": "Sensor Fusion",
+      "category": "Sensor",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "inputs",
+      "hints": [
+        "sensor fusion",
+        "kalman",
+        "complementary",
+        "filter",
+        "multi-sensor",
+        "estimate"
+      ]
+    },
+    {
+      "name": "Calibration",
+      "category": "Machine",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "accuracy",
+      "hints": [
+        "calibrate",
+        "tram",
+        "zero",
+        "offset",
+        "probe",
+        "compensation",
+        "reference"
+      ]
+    },
+    {
+      "name": "Safety Systems",
+      "category": "Machine",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "circuits",
+      "hints": [
+        "safety",
+        "light curtain",
+        "e-stop",
+        "relay",
+        "guard",
+        "safety plc",
+        "safety rated"
+      ]
+    },
+    {
+      "name": "EMC & Shielding",
+      "category": "Machine",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "dB",
+      "hints": [
+        "emc",
+        "shield",
+        "ferrite",
+        "ground",
+        "filter",
+        "noise",
+        "suppression",
+        "emission"
+      ]
+    },
+    {
+      "name": "PCB Design",
+      "category": "Machine",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "layers",
+      "hints": [
+        "pcb",
+        "board",
+        "layout",
+        "schematic",
+        "trace",
+        "via",
+        "gerber",
+        "kicad",
+        "altium"
+      ]
+    },
+    {
+      "name": "Firmware Engineering",
+      "category": "Machine",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "firmware",
+      "hints": [
+        "firmware",
+        "rtos",
+        "bare metal",
+        "driver",
+        "microcontroller",
+        "embedded",
+        "flash"
+      ]
+    },
+    {
+      "name": "Real-Time Systems",
+      "category": "Machine",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "deadline",
+      "hints": [
+        "real-time",
+        "deterministic",
+        "latency",
+        "jitter",
+        "scheduler",
+        "preempt",
+        "interrupt"
+      ]
+    },
+    {
+      "name": "Power Electronics",
+      "category": "Energy",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "efficiency",
+      "hints": [
+        "inverter",
+        "rectifier",
+        "converter",
+        "mosfet",
+        "igbt",
+        "switching",
+        "gate driver"
+      ]
+    },
+    {
+      "name": "Battery Management",
+      "category": "Energy",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "SoC",
+      "hints": [
+        "bms",
+        "balancing",
+        "protection",
+        "charge",
+        "cell monitoring",
+        "fuel gauge",
+        "battery pack"
+      ]
+    },
+    {
+      "name": "Motor Control",
+      "category": "Machine",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "rpm",
+      "hints": [
+        "motor control",
+        "foc",
+        "pwm",
+        "vfd",
+        "drive",
+        "vector control",
+        "current loop"
+      ]
+    },
+    {
+      "name": "Thermal Zone Monitoring",
+      "category": "ProcessMonitoring",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "°C",
+      "hints": [
+        "temperature",
+        "thermal",
+        "zone",
+        "furnace",
+        "kiln",
+        "oven",
+        "heat profile",
+        "zone temperature"
+      ]
+    },
+    {
+      "name": "Pressure Regulation",
+      "category": "ProcessMonitoring",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "psi",
+      "hints": [
+        "pressure",
+        "regulator",
+        "gauge",
+        "relief",
+        "pneumatic",
+        "hydraulic",
+        "setpoint"
+      ]
+    },
+    {
+      "name": "Torque & Force",
+      "category": "ProcessMonitoring",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "Nm",
+      "hints": [
+        "torque",
+        "force",
+        "load cell",
+        "strain",
+        "tension",
+        "compression",
+        "shear",
+        "moment"
+      ]
+    },
+    {
+      "name": "Speed Monitoring",
+      "category": "ProcessMonitoring",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "rpm",
+      "hints": [
+        "speed",
+        "rpm",
+        "velocity",
+        "ramp rate",
+        "acceleration",
+        "deceleration",
+        "spindle speed"
+      ]
+    },
+    {
+      "name": "Flow Monitoring",
+      "category": "ProcessMonitoring",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "L/min",
+      "hints": [
+        "flow",
+        "coolant flow",
+        "airflow",
+        "mass flow",
+        "volumetric",
+        "rate",
+        "circulation"
+      ]
+    },
+    {
+      "name": "Level Monitoring",
+      "category": "ProcessMonitoring",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "mm",
+      "hints": [
+        "level",
+        "tank level",
+        "fill level",
+        "hopper",
+        "reservoir",
+        "liquid level",
+        "ullage"
+      ]
+    },
+    {
+      "name": "Material Feed",
+      "category": "ProcessMonitoring",
+      "domain": "FABRICATE",
+      "mode": "MOVE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "feedrate",
+      "hints": [
+        "feed",
+        "material",
+        "stock",
+        "feeder",
+        "loading",
+        "infeed",
+        "bar feeder",
+        "conveyor feed"
+      ]
+    },
+    {
+      "name": "Power Draw",
+      "category": "ProcessMonitoring",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "kW",
+      "hints": [
+        "power",
+        "energy",
+        "consumption",
+        "demand",
+        "power draw",
+        "wattage",
+        "power factor"
+      ]
+    },
+    {
+      "name": "Machine Mode",
+      "category": "MachineHealth",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "mode",
+      "hints": [
+        "manual",
+        "auto",
+        "setup",
+        "idle",
+        "maintenance",
+        "alarm",
+        "jog",
+        "home",
+        "reference"
+      ]
+    },
+    {
+      "name": "Startup Sequence",
+      "category": "MachineHealth",
+      "domain": "FABRICATE",
+      "mode": "PLAN",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "steps",
+      "hints": [
+        "startup",
+        "boot",
+        "initialize",
+        "home",
+        "reference",
+        "warmup",
+        "sequence"
+      ]
+    },
+    {
+      "name": "Changeover",
+      "category": "ProductionMetrics",
+      "domain": "FABRICATE",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "minutes",
+      "hints": [
+        "changeover",
+        "setup",
+        "swap",
+        "die change",
+        "tool change",
+        "format",
+        "conversion"
+      ]
+    },
+    {
+      "name": "Batch Tracking",
+      "category": "ProcessMonitoring",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "batch",
+      "hints": [
+        "batch",
+        "lot",
+        "serial",
+        "traceability",
+        "genealogy",
+        "heat lot",
+        "production order"
+      ]
+    },
+    {
+      "name": "Machine Health State",
+      "category": "MachineHealth",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "status",
+      "hints": [
+        "health",
+        "online",
+        "offline",
+        "warning",
+        "critical",
+        "degraded",
+        "faulted"
+      ]
+    },
+    {
+      "name": "Remaining Useful Life",
+      "category": "MachineHealth",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "hours",
+      "hints": [
+        "rul",
+        "remaining life",
+        "wear",
+        "degradation",
+        "end of life",
+        "prognosis"
+      ]
+    },
+    {
+      "name": "Safety Interlock",
+      "category": "MachineHealth",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "structural",
+      "unit": "circuits",
+      "hints": [
+        "interlock",
+        "guard",
+        "light curtain",
+        "e-stop",
+        "door switch",
+        "safe zone"
+      ]
+    },
+    {
+      "name": "Environmental Condition",
+      "category": "ProcessMonitoring",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "energetic",
+      "unit": "conditions",
+      "hints": [
+        "humidity",
+        "ambient",
+        "cleanroom",
+        "dust",
+        "fume",
+        "ventilation",
+        "room temp"
+      ]
+    },
+    {
+      "name": "Alarm Categorization",
+      "category": "MachineHealth",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "alarms",
+      "hints": [
+        "alarm",
+        "priority",
+        "acknowledge",
+        "escalation",
+        "active",
+        "history",
+        "shelved"
+      ]
+    },
+    {
+      "name": "Anomaly Detection",
+      "category": "MachineHealth",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "alerts",
+      "hints": [
+        "anomaly",
+        "outlier",
+        "deviation",
+        "spike",
+        "dropout",
+        "glitch",
+        "fault"
+      ]
+    },
+    {
+      "name": "Production Throughput",
+      "category": "ProductionMetrics",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "units/hr",
+      "hints": [
+        "throughput",
+        "production rate",
+        "output",
+        "parts per hour",
+        "count"
+      ]
+    },
+    {
+      "name": "OEE Metrics",
+      "category": "ProductionMetrics",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "percent",
+      "hints": [
+        "oee",
+        "availability",
+        "performance",
+        "quality",
+        "overall equipment"
+      ]
+    },
+    {
+      "name": "Cycle Time",
+      "category": "ProductionMetrics",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "seconds",
+      "hints": [
+        "cycle time",
+        "takt time",
+        "processing time",
+        "runtime",
+        "uptime"
+      ]
+    },
+    {
+      "name": "Yield & Scrap Rate",
+      "category": "ProductionMetrics",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "percent",
+      "hints": [
+        "yield",
+        "scrap",
+        "reject",
+        "rework",
+        "first pass yield",
+        "defect rate"
+      ]
+    },
+    {
+      "name": "SPC Quality",
+      "category": "ProductionMetrics",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "machine",
+      "axis_name": "informational",
+      "unit": "sigma",
+      "hints": [
+        "spc",
+        "control chart",
+        "specification limit",
+        "cpk",
+        "variation",
+        "trend"
+      ]
+    }
+  ]
+}

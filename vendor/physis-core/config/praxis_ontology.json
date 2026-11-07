@@ -1,0 +1,545 @@
+{
+  "kind": "human",
+  "domains": [
+    {
+      "name": "Body & Fitness",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "LIFT",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "reps",
+      "hints": ["gym", "lift weights", "strength workout", "resistance training", "exercise", "squat", "deadlift", "press"]
+    },
+    {
+      "name": "Rest & Recovery",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "hours",
+      "hints": ["sleep", "rest", "nap", "recovery", "break"]
+    },
+    {
+      "name": "Mental Balance",
+      "category": "Psychological",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "human",
+      "axis_name": "psychological",
+      "unit": "min",
+      "hints": ["meditation", "journal", "breathe", "calm", "mindfulness"]
+    },
+    {
+      "name": "Environment & Home",
+      "category": "Psychological",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "psychological",
+      "unit": "tasks",
+      "hints": ["tidy the home", "clean the house", "declutter", "organize a room", "homemaking", "arrange the space"]
+    },
+    {
+      "name": "Health & Longevity",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "steps",
+      "hints": ["walk", "outside", "doctor", "pharmacy", "checkup"]
+    },
+    {
+      "name": "Financial Security",
+      "category": "Economic",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "economic",
+      "unit": "budget",
+      "hints": ["bank", "budget", "finance", "invoice", "spreadsheet", "bill"]
+    },
+    {
+      "name": "Friendship & Social",
+      "category": "Psychological",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "human",
+      "axis_name": "psychological",
+      "unit": "contacts",
+      "hints": ["friend", "call", "meet", "social", "message", "hangout"]
+    },
+    {
+      "name": "Romance & Intimacy",
+      "category": "Psychological",
+      "domain": "BOND",
+      "mode": "LIFT",
+      "axis_kind": "human",
+      "axis_name": "psychological",
+      "unit": "quality-time",
+      "hints": ["partner", "date", "intimacy", "together", "relationship"]
+    },
+    {
+      "name": "Community & Contribution",
+      "category": "Psychological",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "axis_kind": "human",
+      "axis_name": "psychological",
+      "unit": "hours",
+      "hints": ["volunteer", "community", "contribute", "teach", "mentor"]
+    },
+    {
+      "name": "Career & Craft",
+      "category": "Intellectual",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "deliverables",
+      "hints": ["desk", "ide", "code", "work", "project", "office", "career"]
+    },
+    {
+      "name": "Wealth & Assets",
+      "category": "Economic",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "economic",
+      "unit": "portfolio",
+      "hints": ["invest", "trading", "portfolio", "asset", "crypto", "real estate"]
+    },
+    {
+      "name": "Gaming & Esports",
+      "category": "Intellectual",
+      "domain": "STUDY",
+      "mode": "PLAY",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "hours",
+      "hints": ["game", "esports", "ranked", "practice", "stream", "gaming"]
+    },
+    {
+      "name": "Impact & Legacy",
+      "category": "Intellectual",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "projects",
+      "hints": ["legacy", "lasting impact", "life work", "mission", "leave a mark", "magnum opus", "found an institution"]
+    },
+    {
+      "name": "Spirit & Purpose",
+      "category": "Psychological",
+      "domain": "STUDY",
+      "mode": "REST",
+      "axis_kind": "human",
+      "axis_name": "psychological",
+      "unit": "pages",
+      "hints": ["read", "philosophy", "reflect", "meaning", "purpose", "spiritual"]
+    },
+    {
+      "name": "Nutrition & Diet",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "calories",
+      "hints": ["meal", "nutrition", "diet", "protein", "carbs", "vitamin", "macro"]
+    },
+    {
+      "name": "Hydration & Metabolism",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "ml",
+      "hints": ["water", "hydrate", "drink", "electrolyte", "metabolism"]
+    },
+    {
+      "name": "Injury Rehab",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "sessions",
+      "hints": ["rehab", "physio", "therapy", "stretch", "recovery", "injury"]
+    },
+    {
+      "name": "Personal Hygiene",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "tasks",
+      "hints": ["shower", "brush", "groom", "hygiene", "skincare", "routine"]
+    },
+    {
+      "name": "First Aid & Safety",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "skills",
+      "hints": ["first aid", "cpr", "emergency", "safety", "response", "kit"]
+    },
+    {
+      "name": "Home Infrastructure",
+      "category": "Physical",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "tasks",
+      "hints": ["plumbing", "electric", "hvac", "repair", "maintenance", "home"]
+    },
+    {
+      "name": "Workshop & Tools",
+      "category": "Physical",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "tools",
+      "hints": ["workshop", "tool", "drill", "saw", "measure", "bench", "garage"]
+    },
+    {
+      "name": "Digital Workspace",
+      "category": "Intellectual",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "files",
+      "hints": ["desktop", "folder", "file", "organize", "digital", "backup", "cloud"]
+    },
+    {
+      "name": "Space Design",
+      "category": "Creative",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "layouts",
+      "hints": ["interior", "decor", "furniture", "layout", "design", "space"]
+    },
+    {
+      "name": "Systems Building",
+      "category": "Intellectual",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "systems",
+      "hints": ["system", "workflow", "automation", "pipeline", "integration"]
+    },
+    {
+      "name": "Culinary Arts",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "recipes",
+      "hints": ["cook", "recipe", "chef", "cuisine", "flavor", "dish", "gourmet"]
+    },
+    {
+      "name": "Visual Arts",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "pieces",
+      "hints": ["paint", "draw", "sculpt", "illustrate", "art", "canvas", "sketch"]
+    },
+    {
+      "name": "Music & Performance",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "songs",
+      "hints": ["music", "instrument", "sing", "perform", "band", "practice", "gig"]
+    },
+    {
+      "name": "Clothing & Style",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "outfits",
+      "hints": ["fashion", "style", "outfit", "wardrobe", "dress", "sew", "tailor"]
+    },
+    {
+      "name": "Writing & Expression",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "words",
+      "hints": ["write", "journal", "blog", "poem", "essay", "express", "draft"]
+    },
+    {
+      "name": "Family & Parenting",
+      "category": "Social",
+      "domain": "BOND",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "hours",
+      "hints": ["family", "parent", "child", "care", "homework", "quality time"]
+    },
+    {
+      "name": "Pets & Animals",
+      "category": "Social",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "tasks",
+      "hints": ["pet", "dog", "cat", "walk", "feed", "vet", "groom", "animal"]
+    },
+    {
+      "name": "Mentoring & Teaching",
+      "category": "Social",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "sessions",
+      "hints": ["mentor", "teach", "coach", "tutor", "guide", "student", "lesson"]
+    },
+    {
+      "name": "Collaboration & Teamwork",
+      "category": "Social",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "tasks",
+      "hints": ["team", "collaborate", "meeting", "sync", "pair", "brainstorm"]
+    },
+    {
+      "name": "Conflict Resolution",
+      "category": "Social",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "resolutions",
+      "hints": ["mediation", "conflict", "resolve", "compromise", "negotiate", "heal"]
+    },
+    {
+      "name": "Negotiation",
+      "category": "Social",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "deals",
+      "hints": ["negotiate", "deal", "agree", "terms", "bargain", "settle"]
+    },
+    {
+      "name": "Networking",
+      "category": "Social",
+      "domain": "BOND",
+      "mode": "MOVE",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "contacts",
+      "hints": ["network", "connect", "introduce", "linkedin", "event", "referral"]
+    },
+    {
+      "name": "Research & Analysis",
+      "category": "Intellectual",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "sources",
+      "hints": ["research", "analyze", "data", "report", "study", "insight"]
+    },
+    {
+      "name": "Education & Learning",
+      "category": "Intellectual",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "courses",
+      "hints": ["learn", "course", "class", "lecture", "study", "homework", "exam"]
+    },
+    {
+      "name": "Experimentation",
+      "category": "Intellectual",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "experiments",
+      "hints": ["experiment", "test", "hypothesis", "trial", "prototype", "lab"]
+    },
+    {
+      "name": "Travel & Exploration",
+      "category": "Intellectual",
+      "domain": "HEAL",
+      "mode": "MOVE",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "destinations",
+      "hints": ["travel", "explore", "trip", "adventure", "journey", "culture"]
+    },
+    {
+      "name": "Language Learning",
+      "category": "Intellectual",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "words",
+      "hints": ["language", "vocab", "grammar", "speak", "translate", "fluent"]
+    },
+    {
+      "name": "Strategy & Planning",
+      "category": "Intellectual",
+      "domain": "CONSTRUCT",
+      "mode": "PLAN",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "plans",
+      "hints": ["plan", "strategy", "goal", "roadmap", "timeline", "priority"]
+    },
+    {
+      "name": "Entrepreneurship",
+      "category": "Economic",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "economic",
+      "unit": "ventures",
+      "hints": ["startup", "business", "venture", "founder", "pitch", "scale"]
+    },
+    {
+      "name": "Hobbies & Crafts",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "PLAY",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "projects",
+      "hints": ["craft", "diy", "knit", "woodwork", "model", "maker", "project"]
+    },
+    {
+      "name": "Gardening & Nature",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "plants",
+      "hints": ["garden", "plant", "grow", "soil", "harvest", "nature", "flower"]
+    },
+    {
+      "name": "Adventure & Risk",
+      "category": "Physical",
+      "domain": "HEAL",
+      "mode": "PLAY",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "expeditions",
+      "hints": ["climb", "hike", "camp", "survive", "outdoor", "wilderness"]
+    },
+    {
+      "name": "Ceremony & Ritual",
+      "category": "Spiritual",
+      "domain": "BOND",
+      "mode": "MAINTAIN",
+      "axis_kind": "human",
+      "axis_name": "spiritual",
+      "unit": "events",
+      "hints": ["ceremony", "ritual", "tradition", "celebration", "worship", "holiday"]
+    },
+    {
+      "name": "Storytelling",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "stories",
+      "hints": ["story", "narrative", "tell", "myth", "legend", "folklore"]
+    },
+    {
+      "name": "Play & Recreation",
+      "category": "Social",
+      "domain": "HEAL",
+      "mode": "PLAY",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "hours",
+      "hints": ["play", "game", "recreation", "fun", "leisure", "sport"]
+    },
+    {
+      "name": "Goal Setting",
+      "category": "Intellectual",
+      "domain": "CONSTRUCT",
+      "mode": "PLAN",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "goals",
+      "hints": ["goal", "target", "okr", "kpi", "milestone", "commitment"]
+    },
+    {
+      "name": "Self-Tracking & Quantified Self",
+      "category": "Intellectual",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "human",
+      "axis_name": "intellectual",
+      "unit": "metrics",
+      "hints": ["track", "log", "metric", "quantify", "dashboard", "habit", "data"]
+    },
+    {
+      "name": "Mindfulness & Meditation",
+      "category": "Psychological",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "human",
+      "axis_name": "psychological",
+      "unit": "minutes",
+      "hints": ["meditate", "mindful", "breathe", "present", "awareness", "focus"]
+    },
+    {
+      "name": "Volunteering",
+      "category": "Social",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "social",
+      "unit": "hours",
+      "hints": ["volunteer", "serve", "charity", "give", "help", "cause", "nonprofit"]
+    },
+    {
+      "name": "Cooking & Meal Prep",
+      "category": "Creative",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "human",
+      "axis_name": "creative",
+      "unit": "meals",
+      "hints": ["cook", "meal prep", "kitchen", "bake", "ingredient", "nutrition"]
+    }
+  ]
+}

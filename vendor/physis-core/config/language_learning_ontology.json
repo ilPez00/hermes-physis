@@ -1,0 +1,12 @@
+{
+  "kind": "language_learning",
+  "domains": [
+    {"name":"Vocabulary Building","category":"Language","domain":"STUDY","mode":"MAINTAIN","axis_kind":"language_learning","axis_name":"collector","unit":"words","hints":["vocabulary","word","flashcard","anki","memorize","review","srs","lexicon","definition","retain"]},
+    {"name":"Grammar Study","category":"Language","domain":"STUDY","mode":"LEARN","axis_kind":"language_learning","axis_name":"grammarian","unit":"rules","hints":["grammar","conjugation","tense","syntax","rule","case","declension","structure","exercise","pattern"]},
+    {"name":"Listening Practice","category":"Language","domain":"STUDY","mode":"LEARN","axis_kind":"language_learning","axis_name":"listener","unit":"hours","hints":["listen","podcast","audio","comprehension","immersion","native","accent","dictation","music","film"]},
+    {"name":"Speaking Practice","category":"Language","domain":"STUDY","mode":"LEARN","axis_kind":"language_learning","axis_name":"speaker","unit":"conversations","hints":["speak","conversation","pronunciation","tutor","exchange","fluency","tandem","practice","output","accent"]},
+    {"name":"Reading","category":"Language","domain":"STUDY","mode":"WALK","axis_kind":"language_learning","axis_name":"reader","unit":"texts","hints":["read","text","graded reader","article","novel","comprehension","extensive reading","context","decode"]},
+    {"name":"Writing Practice","category":"Language","domain":"STUDY","mode":"LEARN","axis_kind":"language_learning","axis_name":"writer","unit":"texts","hints":["write","composition","essay","journal","correct","output","sentence","translate","express","draft"]},
+    {"name":"Immersion","category":"Language","domain":"STUDY","mode":"LEARN","axis_kind":"language_learning","axis_name":"immerser","unit":"experiences","hints":["immersion","travel","native speaker","live abroad","culture","total immersion","environment","real world"]}
+  ]
+}

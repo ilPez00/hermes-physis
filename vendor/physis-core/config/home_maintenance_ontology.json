@@ -1,0 +1,13 @@
+{
+  "kind": "home_maintenance",
+  "domains": [
+    {"name":"Cleaning","category":"Home","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"home_maintenance","axis_name":"cleaner","unit":"chores","hints":["clean","vacuum","dust","mop","laundry","dishes","tidy","wipe","scrub","declutter"]},
+    {"name":"Repairs","category":"Home","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"home_maintenance","axis_name":"fixer","unit":"repairs","hints":["repair","fix","leak","plumbing","electrical","patch","replace","broken","handyman","maintenance"]},
+    {"name":"Organization","category":"Home","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"home_maintenance","axis_name":"organizer","unit":"spaces","hints":["organize","storage","declutter","sort","label","shelf","closet","minimize","system","tidy up"]},
+    {"name":"DIY Projects","category":"Home","domain":"CONSTRUCT","mode":"WORK","axis_kind":"home_maintenance","axis_name":"builder","unit":"projects","hints":["diy","build","assemble","woodwork","paint wall","install","craft","renovate","project","tools"]},
+    {"name":"Gardening","category":"Home","domain":"HEAL","mode":"MAINTAIN","axis_kind":"home_maintenance","axis_name":"gardener","unit":"plants","hints":["garden","plant","water","prune","soil","seed","weed","harvest","lawn","compost"]},
+    {"name":"Seasonal Maintenance","category":"Home","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"home_maintenance","axis_name":"keeper","unit":"tasks","hints":["seasonal","gutter","hvac","filter","winterize","inspect","service","prevent","checklist","upkeep"]},
+    {"name":"Home Improvement","category":"Home","domain":"CONSTRUCT","mode":"WORK","axis_kind":"home_maintenance","axis_name":"renovator","unit":"upgrades","hints":["renovate","remodel","upgrade","kitchen","bathroom","floor","contractor","permit","budget","design"]},
+    {"name":"Energy & Sustainability","category":"Home","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"home_maintenance","axis_name":"steward","unit":"improvements","hints":["energy","efficiency","solar","insulation","sustainable","recycle","water saving","eco","utility","reduce"]}
+  ]
+}

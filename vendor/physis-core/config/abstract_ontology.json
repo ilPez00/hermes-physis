@@ -1,0 +1,565 @@
+{
+  "kind": "abstract",
+  "domains": [
+    {
+      "name": "Arithmetic",
+      "category": "Pure Mathematics",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "number",
+      "unit": "operation",
+      "hints": ["natural number", "integer", "rational", "addition", "multiplication", "division", "prime factorization", "modular arithmetic"]
+    },
+    {
+      "name": "Algebra",
+      "category": "Pure Mathematics",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "structure",
+      "unit": "operation",
+      "hints": ["group", "ring", "field", "vector space", "polynomial", "equation solving", "homomorphism", "galois theory"]
+    },
+    {
+      "name": "Geometry",
+      "category": "Pure Mathematics",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "space",
+      "unit": "shape",
+      "hints": ["euclidean", "non-euclidean", "manifold", "curvature", "symmetry", "transformation", "tessellation", "projective"]
+    },
+    {
+      "name": "Topology",
+      "category": "Pure Mathematics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "continuity",
+      "unit": "space",
+      "hints": ["open set", "compactness", "connectedness", "homeomorphism", "homotopy", "fundamental group", "knot", "manifold"]
+    },
+    {
+      "name": "Analysis",
+      "category": "Pure Mathematics",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "limit",
+      "unit": "function",
+      "hints": ["convergence", "continuity", "derivative", "integral", "series", "metric space", "measure", "banach space"]
+    },
+    {
+      "name": "Number Theory",
+      "category": "Pure Mathematics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "integer",
+      "unit": "prime",
+      "hints": ["prime distribution", "congruence", "diophantine", "modular form", "riemann zeta", "elliptic curve", "quadratic reciprocity", "additive"]
+    },
+    {
+      "name": "Logic",
+      "category": "Pure Mathematics",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "truth",
+      "unit": "proposition",
+      "hints": ["deduction", "completeness", "consistency", "model theory", "proof theory", "sequent calculus", "resolution", "godel"]
+    },
+    {
+      "name": "Set Theory",
+      "category": "Pure Mathematics",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "membership",
+      "unit": "set",
+      "hints": ["union", "intersection", "cardinality", "ordinal", "choice axiom", "continuum hypothesis", "forcing", "zermelo-fraenkel"]
+    },
+    {
+      "name": "Combinatorics",
+      "category": "Pure Mathematics",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "count",
+      "unit": "configuration",
+      "hints": ["permutation", "combination", "graph", "design", "partition", "generating function", "extremal", "ramsey theory"]
+    },
+    {
+      "name": "Probability",
+      "category": "Pure Mathematics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "randomness",
+      "unit": "event",
+      "hints": ["sample space", "expectation", "variance", "martingale", "markov chain", "convergence", "brownian motion", "bayesian"]
+    },
+    {
+      "name": "Statistics",
+      "category": "Pure Mathematics",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "inference",
+      "unit": "estimate",
+      "hints": ["hypothesis test", "confidence interval", "regression", "likelihood", "p-value", "bayesian inference", "sampling", "experimental design"]
+    },
+    {
+      "name": "Category Theory",
+      "category": "Pure Mathematics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "morphism",
+      "unit": "diagram",
+      "hints": ["object", "functor", "natural transformation", "adjunction", "limit", "colimit", "universal property", "yoneda"]
+    },
+    {
+      "name": "Dynamical Systems",
+      "category": "Applied Mathematics",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "flow",
+      "unit": "trajectory",
+      "hints": ["phase space", "attractor", "bifurcation", "limit cycle", "stability", "poincare map", "lyapunov exponent", "synchronization"]
+    },
+    {
+      "name": "Game Theory",
+      "category": "Applied Mathematics",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "strategy",
+      "unit": "game",
+      "hints": ["nash equilibrium", "pareto optimum", "zero-sum", "prisoner dilemma", "signaling", "auction", "cooperative", "evolutionary"]
+    },
+    {
+      "name": "Optimization",
+      "category": "Applied Mathematics",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "optimum",
+      "unit": "objective",
+      "hints": ["gradient descent", "convexity", "linear programming", "lagrange multiplier", "simplex", "duality", "stochastic", "constraint satisfaction"]
+    },
+    {
+      "name": "Graph Theory",
+      "category": "Applied Mathematics",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "connection",
+      "unit": "edge",
+      "hints": ["vertex coloring", "matching", "planarity", "hamiltonian path", "flow network", "spanning tree", "clique", "spectral"]
+    },
+    {
+      "name": "Information Theory",
+      "category": "Applied Mathematics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "entropy",
+      "unit": "bit",
+      "hints": ["shannon entropy", "mutual information", "channel capacity", "source coding", "redundancy", "kl divergence", "compression", "rate distortion"]
+    },
+    {
+      "name": "Control Theory",
+      "category": "Applied Mathematics",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "regulation",
+      "unit": "feedback",
+      "hints": ["pid controller", "state space", "observability", "controllability", "lyapunov stability", "optimal control", "adaptive", "robust"]
+    },
+    {
+      "name": "Propositional Logic",
+      "category": "Formal Logic",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "connective",
+      "unit": "formula",
+      "hints": ["and", "or", "not", "implies", "truth table", "satisfiability", "tautology", "resolution"]
+    },
+    {
+      "name": "Predicate Logic",
+      "category": "Formal Logic",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "quantifier",
+      "unit": "sentence",
+      "hints": ["universal quantifier", "existential quantifier", "variable binding", "relation", "first-order", "skolemization", "unification", "horn clause"]
+    },
+    {
+      "name": "Modal Logic",
+      "category": "Formal Logic",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "modality",
+      "unit": "world",
+      "hints": ["necessity", "possibility", "kripke semantics", "accessibility relation", "epistemic", "deontic", "temporal", "counterfactual"]
+    },
+    {
+      "name": "Temporal Logic",
+      "category": "Formal Logic",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "time",
+      "unit": "interval",
+      "hints": ["always", "eventually", "until", "next", "ltl", "ctl", "linear time", "branching time"]
+    },
+    {
+      "name": "Intuitionistic Logic",
+      "category": "Formal Logic",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "construction",
+      "unit": "proof",
+      "hints": ["brouwer", "heyting algebra", "brouwer-heyting-kolmogorov", "double negation", "curry-howard", "decidable", "excluded middle", "constructive"]
+    },
+    {
+      "name": "Higher-Order Logic",
+      "category": "Formal Logic",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "abstraction",
+      "unit": "type",
+      "hints": ["function type", "polymorphism", "dependent type", "lambda abstraction", "higher-order unification", "simple type theory", "church", "hol"]
+    },
+    {
+      "name": "Automata Theory",
+      "category": "Computation",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "state",
+      "unit": "machine",
+      "hints": ["finite automaton", "pushdown automaton", "turing machine", "regular language", "context-free", "pumping lemma", "nondeterminism", "closure"]
+    },
+    {
+      "name": "Computability",
+      "category": "Computation",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "decidability",
+      "unit": "problem",
+      "hints": ["turing machine", "halting problem", "recursive function", "church-turing thesis", "oracle", "rice theorem", "mu-recursive", "lambda definable"]
+    },
+    {
+      "name": "Complexity Theory",
+      "category": "Computation",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "resource",
+      "unit": "class",
+      "hints": ["p vs np", "np-complete", "polynomial time", "exponential time", "reduction", "space complexity", "probabilistic", "approximation"]
+    },
+    {
+      "name": "Lambda Calculus",
+      "category": "Computation",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "substitution",
+      "unit": "term",
+      "hints": ["abstraction", "application", "beta reduction", "alpha conversion", "church numeral", "fixed point", "combinator", "normal form"]
+    },
+    {
+      "name": "Type Theory",
+      "category": "Computation",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "type",
+      "unit": "term",
+      "hints": ["simply typed", "dependent type", "polymorphism", "type inference", "type checking", "curry-howard", "inductive type", "univalence"]
+    },
+    {
+      "name": "Programming Languages",
+      "category": "Computation",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "language",
+      "unit": "program",
+      "hints": ["syntax", "semantics", "compiler", "interpreter", "type system", "memory model", "concurrency", "module system"]
+    },
+    {
+      "name": "Formal Verification",
+      "category": "Computation",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "correctness",
+      "unit": "proof",
+      "hints": ["model checking", "theorem proving", "invariant", "hoare logic", "symbolic execution", "satisfiability modulo theories", "abstract interpretation", "temporal logic"]
+    },
+    {
+      "name": "Programming Paradigms",
+      "category": "Computation",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "paradigm",
+      "unit": "style",
+      "hints": ["functional", "object-oriented", "logical", "procedural", "declarative", "concurrent", "reactive", "aspect-oriented"]
+    },
+    {
+      "name": "General Systems Theory",
+      "category": "Systems Theory",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "system",
+      "unit": "boundary",
+      "hints": ["wholeness", "feedback loop", "homeostasis", "emergence", "hierarchy", "equifinality", "open system", "entropy"]
+    },
+    {
+      "name": "Cybernetics",
+      "category": "Systems Theory",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "regulation",
+      "unit": "loop",
+      "hints": ["negative feedback", "positive feedback", "self-regulation", "variety", "requisite variety", "black box", "circular causality", "steering"]
+    },
+    {
+      "name": "Chaos Theory",
+      "category": "Systems Theory",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "sensitivity",
+      "unit": "attractor",
+      "hints": ["strange attractor", "butterfly effect", "fractal dimension", "logistic map", "bifurcation diagram", "period doubling", "lyapunov exponent", "deterministic"]
+    },
+    {
+      "name": "Complex Adaptive Systems",
+      "category": "Systems Theory",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "emergence",
+      "unit": "agent",
+      "hints": ["emergence", "self-organization", "adaptation", "coevolution", "fitness landscape", "tipping point", "swarm intelligence", "autopoiesis"]
+    },
+    {
+      "name": "Network Theory",
+      "category": "Systems Theory",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "topology",
+      "unit": "link",
+      "hints": ["small-world", "scale-free", "preferential attachment", "clustering coefficient", "centrality", "community", "resilience", "percolation"]
+    },
+    {
+      "name": "Self-Organization",
+      "category": "Systems Theory",
+      "domain": "CONSTRUCT",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "order",
+      "unit": "pattern",
+      "hints": ["dissipative structure", "order parameter", "slaving principle", "synergetics", "pattern formation", "bifurcation", "spontaneous symmetry", "reaction-diffusion"]
+    },
+    {
+      "name": "Phonology",
+      "category": "Linguistics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "sound",
+      "unit": "phoneme",
+      "hints": ["distinctive feature", "syllable", "stress", "tone", "phonotactics", "alternation", "neutralization", "optimality theory"]
+    },
+    {
+      "name": "Morphology",
+      "category": "Linguistics",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "word",
+      "unit": "morpheme",
+      "hints": ["affixation", "inflection", "derivation", "compounding", "paradigm", "suppletion", "morphophonology", "productivity"]
+    },
+    {
+      "name": "Syntax",
+      "category": "Linguistics",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "structure",
+      "unit": "phrase",
+      "hints": ["constituent", "dependency", "phrase structure", "movement", "agreement", "binding", "government", "minimalism"]
+    },
+    {
+      "name": "Semantics",
+      "category": "Linguistics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "meaning",
+      "unit": "reference",
+      "hints": ["compositionality", "model-theoretic", "possible worlds", "intension", "extension", "quantifier scope", "presupposition", "implicature"]
+    },
+    {
+      "name": "Pragmatics",
+      "category": "Linguistics",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "context",
+      "unit": "utterance",
+      "hints": ["speech act", "implicature", "presupposition", "deixis", "relevance", "politeness", "conversational maxim", "common ground"]
+    },
+    {
+      "name": "Computational Linguistics",
+      "category": "Linguistics",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "processing",
+      "unit": "pipeline",
+      "hints": ["parsing", "tokenization", "named entity recognition", "part-of-speech tagging", "machine translation", "sentiment", "language model", "sequence labeling"]
+    },
+    {
+      "name": "Discourse Analysis",
+      "category": "Linguistics",
+      "domain": "BOND",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "coherence",
+      "unit": "text",
+      "hints": ["cohesion", "narrative structure", "conversation analysis", "turn-taking", "topic modeling", "argumentation", "rhetorical structure", "genre"]
+    },
+    {
+      "name": "Psycholinguistics",
+      "category": "Linguistics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "processing",
+      "unit": "experiment",
+      "hints": ["language acquisition", "sentence processing", "lexical access", "aphasia", "bilingualism", "working memory", "garden path", "erp"]
+    },
+    {
+      "name": "Consciousness",
+      "category": "Philosophy of Mind",
+      "domain": "HEAL",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "awareness",
+      "unit": "experience",
+      "hints": ["qualia", "phenomenal consciousness", "access consciousness", "hard problem", "neural correlate", "global workspace", "integrated information", "self-awareness"]
+    },
+    {
+      "name": "Intentionality",
+      "category": "Philosophy of Mind",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "aboutness",
+      "unit": "representation",
+      "hints": ["mental representation", "directedness", "brentano", "intentional object", "propositional attitude", "content", "naturalization", "teleosemantics"]
+    },
+    {
+      "name": "Embodied Cognition",
+      "category": "Philosophy of Mind",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "abstract",
+      "axis_name": "body",
+      "unit": "action",
+      "hints": ["sensorimotor", "enaction", "affordance", "grounded cognition", "situatedness", "motor simulation", "mirror neuron", "dynamical system"]
+    },
+    {
+      "name": "Extended Mind",
+      "category": "Philosophy of Mind",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "scaffolding",
+      "unit": "artifact",
+      "hints": ["cognitive extension", "active externalism", "parity principle", "cognitive scaffold", "distributed cognition", "material engagement", "niche construction", "cognitive artifact"]
+    },
+    {
+      "name": "Data Structures",
+      "category": "Information Science",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "organization",
+      "unit": "structure",
+      "hints": ["array", "linked list", "tree", "hash table", "graph", "heap", "trie", "skip list"]
+    },
+    {
+      "name": "Database Theory",
+      "category": "Information Science",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "storage",
+      "unit": "query",
+      "hints": ["relational model", "sql", "normalization", "transaction", "concurrency control", "indexing", "acid", "distributed database"]
+    },
+    {
+      "name": "Cryptography",
+      "category": "Information Science",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "abstract",
+      "axis_name": "security",
+      "unit": "protocol",
+      "hints": ["symmetric encryption", "public key", "digital signature", "hash function", "key exchange", "zero-knowledge", "homomorphic", "post-quantum"]
+    },
+    {
+      "name": "Machine Learning",
+      "category": "Information Science",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "abstract",
+      "axis_name": "model",
+      "unit": "prediction",
+      "hints": ["supervised learning", "unsupervised learning", "neural network", "decision tree", "support vector machine", "gradient descent", "overfitting", "ensemble"]
+    },
+    {
+      "name": "Artificial Intelligence",
+      "category": "Information Science",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "intelligence",
+      "unit": "agent",
+      "hints": ["reasoning", "planning", "knowledge representation", "search", "natural language", "computer vision", "reinforcement learning", "autonomy"]
+    },
+    {
+      "name": "Knowledge Representation",
+      "category": "Information Science",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "abstract",
+      "axis_name": "knowledge",
+      "unit": "symbol",
+      "hints": ["ontology", "semantic network", "description logic", "frames", "rules", "conceptual graph", "commonsense", "knowledge graph"]
+    }
+  ]
+}

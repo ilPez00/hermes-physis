@@ -1,0 +1,27 @@
+{
+  "kind": "place",
+  "domains": [
+    {"name":"Plant Floor","category":"Industrial","domain":"FABRICATE","mode":"WORK","axis_kind":"place","axis_name":"site","unit":"places","hints":["plant","factory","production floor","shopfloor","works"]},
+    {"name":"Production Line","category":"Industrial","domain":"FABRICATE","mode":"WORK","axis_kind":"place","axis_name":"site","unit":"lines","hints":["line","assembly line","linea","cell line"]},
+    {"name":"Work Station","category":"Industrial","domain":"CONSTRUCT","mode":"WORK","axis_kind":"place","axis_name":"site","unit":"stations","hints":["station","workbench","bench","cell","postazione"]},
+    {"name":"Machine Position","category":"Industrial","domain":"FABRICATE","mode":"WORK","axis_kind":"place","axis_name":"site","unit":"machines","hints":["machine position","cnc","press","lathe","mill","printer spot"]},
+    {"name":"Warehouse","category":"Industrial","domain":"HEAL","mode":"REST","axis_kind":"place","axis_name":"storage","unit":"stores","hints":["warehouse","magazzino","store room","stockroom","depot"]},
+    {"name":"Shipping Dock","category":"Industrial","domain":"BOND","mode":"MOVE","axis_kind":"place","axis_name":"logistics","unit":"docks","hints":["dock","loading bay","ramp","spedizione","outbound"]},
+    {"name":"Quality Lab","category":"Industrial","domain":"STUDY","mode":"LEARN","axis_kind":"place","axis_name":"assurance","unit":"labs","hints":["lab","quality lab","metrology","inspection area","test bench"]},
+    {"name":"Maintenance Shop","category":"Industrial","domain":"HEAL","mode":"MAINTAIN","axis_kind":"place","axis_name":"upkeep","unit":"shops","hints":["maintenance shop","workshop","tool crib","manutenzione"]},
+    {"name":"Control Room","category":"Industrial","domain":"STUDY","mode":"SENSE","axis_kind":"place","axis_name":"oversight","unit":"rooms","hints":["control room","supervision","scada room","sala controllo"]},
+    {"name":"Office Room","category":"Office","domain":"BOND","mode":"WORK","axis_kind":"place","axis_name":"workplace","unit":"rooms","hints":["office","ufficio","open space","cubicle","backoffice"]},
+    {"name":"Meeting Room","category":"Office","domain":"BOND","mode":"WALK","axis_kind":"place","axis_name":"workplace","unit":"rooms","hints":["meeting room","conference room","sala riunioni","huddle space"]},
+    {"name":"Desk","category":"Office","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"place","axis_name":"personal","unit":"desks","hints":["desk","scrivania","workspace","home office"]},
+    {"name":"Archive","category":"Office","domain":"STUDY","mode":"REST","axis_kind":"place","axis_name":"records","unit":"archives","hints":["archive","archivio","records room","filing cabinet","documenti"]},
+    {"name":"Home Studio","category":"Personal","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"place","axis_name":"personal","unit":"studios","hints":["home studio","studio","atelier","bottega"]},
+    {"name":"Library","category":"Personal","domain":"STUDY","mode":"LEARN","axis_kind":"place","axis_name":"learning","unit":"libraries","hints":["library","biblioteca","reading room","bookshelf"]},
+    {"name":"Workshop Garage","category":"Personal","domain":"FABRICATE","mode":"WORK","axis_kind":"place","axis_name":"making","unit":"garages","hints":["garage","officina","maker space","fablab"]},
+    {"name":"Code Repository","category":"Virtual","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"place","axis_name":"virtual","unit":"repos","hints":["repository","repo","git","codebase","monorepo"]},
+    {"name":"Server Host","category":"Virtual","domain":"FABRICATE","mode":"WORK","axis_kind":"place","axis_name":"virtual","unit":"hosts","hints":["server","host","vps","instance","node","rack"]},
+    {"name":"Cloud Volume","category":"Virtual","domain":"HEAL","mode":"REST","axis_kind":"place","axis_name":"virtual","unit":"volumes","hints":["cloud volume","bucket","object storage","nas","share"]},
+    {"name":"Mailbox","category":"Virtual","domain":"BOND","mode":"WALK","axis_kind":"place","axis_name":"virtual","unit":"mailboxes","hints":["mailbox","inbox","posta","imap folder","mail dir"]},
+    {"name":"Chat Space","category":"Virtual","domain":"BOND","mode":"WALK","axis_kind":"place","axis_name":"virtual","unit":"channels","hints":["chat space","channel","slack workspace","telegram group","discord server"]},
+    {"name":"Media Drive","category":"Virtual","domain":"STUDY","mode":"REST","axis_kind":"place","axis_name":"virtual","unit":"drives","hints":["media drive","external disk","photo archive","video library"]}
+  ]
+}

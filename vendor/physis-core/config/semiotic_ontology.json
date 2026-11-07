@@ -1,0 +1,841 @@
+{
+  "kind": "semiotic",
+  "domains": [
+    {
+      "name": "Qualisign",
+      "category": "Peirce's Trichotomies",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Firstness of Firstness",
+      "unit": "quality",
+      "hints": [
+        "A pure quality — the feeling of red before red is named",
+        "First contact with raw phenomenal texture",
+        "The immediate apprehension of tone without content",
+        "What anesthesia or deep presence work touches",
+        "The qualisign is a possibility, not an actual thing",
+        "Resists parsing; it must be felt to be known",
+        "In healing, the threshold between sensation and perception",
+        "The unit-ground from which all semiosis emerges"
+      ]
+    },
+    {
+      "name": "Sinsign",
+      "category": "Peirce's Trichotomies",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Firstness of Secondness",
+      "unit": "occurrence",
+      "hints": [
+        "An actually existing thing or event — this mark, that sound",
+        "Singular, here-now, unrepeatable in identical form",
+        "The brute facticity of a particular instance",
+        "What scaffolding or prototyping produces: one real thing",
+        "Indexes by virtue of being a physical trace",
+        "Every construction begins as a sinsign before it becomes a type",
+        "The unit of evidence in a singular observation",
+        "Grounds the walk through a specific site of material resistance"
+      ]
+    },
+    {
+      "name": "Legisign",
+      "category": "Peirce's Trichotomies",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Firstness of Thirdness",
+      "unit": "law",
+      "hints": [
+        "A sign that is a law, convention, or type — the word 'dog' understood",
+        "Not the utterance but the rule that governs all utterances",
+        "The binding structure that makes communication predictable",
+        "What makes a social bond durable across instances",
+        "Legisigns are general; they require replicas to be actualized",
+        "The domain of grammar, code, and contract",
+        "Creation through the application of a generative rule",
+        "Without legisigns, no shared meaning can be built"
+      ]
+    },
+    {
+      "name": "Icon",
+      "category": "Peirce's Sign Types",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "semiotic",
+      "axis_name": "Secondness of Firstness",
+      "unit": "likeness",
+      "hints": [
+        "A sign that denotes by virtue of resemblance — a portrait, diagram, metaphor",
+        "Shares qualities with its object; imitates what it represents",
+        "The basis of all visual representation and analogical thinking",
+        "What fabrication draws on when shaping form to match idea",
+        "Icons are indifferent to whether their object actually exists",
+        "Every model or blueprint is iconic before it becomes indexical",
+        "The mode of diagrams, maps, and prototypes",
+        "Creation through likeness — making the invisible visible by resemblance"
+      ]
+    },
+    {
+      "name": "Index",
+      "category": "Peirce's Sign Types",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Secondness of Secondness",
+      "unit": "trace",
+      "hints": [
+        "A sign that denotes by factual connection — smoke for fire, footprint for foot",
+        "Points to its object by being really affected by it",
+        "The evidential backbone of empirical inquiry",
+        "What research walks toward: causes, correlates, traces",
+        "Indices are existentially connected; destroy the object and the sign dies",
+        "A weathervane indexes wind direction without describing it",
+        "Every measurement instrument produces indexical signs",
+        "The study mode of clues, symptoms, and physical evidence"
+      ]
+    },
+    {
+      "name": "Symbol",
+      "category": "Peirce's Sign Types",
+      "domain": "BOND",
+      "mode": "MAINTAIN",
+      "axis_kind": "semiotic",
+      "axis_name": "Secondness of Thirdness",
+      "unit": "convention",
+      "hints": [
+        "A sign that denotes by habit, law, or convention — most words are symbols",
+        "Arbitrary and learned, not naturally connected to its object",
+        "The substrate of all cultural and institutional meaning",
+        "What binds a community through shared interpretive habits",
+        "Symbols grow: they acquire new meanings through use over time",
+        "A flag is a symbol; its power comes from collective agreement",
+        "Learning a language is acquiring a symbol system",
+        "Without symbols, there is no abstract thought or legal bond"
+      ]
+    },
+    {
+      "name": "Rheme",
+      "category": "Peirce's Interpretants",
+      "domain": "STUDY",
+      "mode": "BRAINSTORM",
+      "axis_kind": "semiotic",
+      "axis_name": "Thirdness of Firstness",
+      "unit": "possibility",
+      "hints": [
+        "A sign of qualitative possibility — a term like '___ is red'",
+        "The interpretant is an open potential, not a judgment",
+        "What fabrication lifts from possibility into provisional form",
+        "The rheme is the least determined interpretant; a mere predicate",
+        "In design, the first sketch that could become anything",
+        "The semiotic unit of brainstorming and divergent thinking",
+        "A rheme asserts nothing; it merely presents a quality for consideration",
+        "The mode of material possibility — what this substance could signify"
+      ]
+    },
+    {
+      "name": "Dicisign",
+      "category": "Peirce's Interpretants",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Thirdness of Secondness",
+      "unit": "proposition",
+      "hints": [
+        "A sign of actual existence — a proposition like 'This stone is heavy'",
+        "Makes a claim about the world that can be true or false",
+        "The interpretant asserts something of an object",
+        "What construction work verifies: does this joint hold?",
+        "Dicisigns are the atoms of factual discourse",
+        "A photograph is dicisign: it asserts that its subject existed",
+        "The mode of specification, dimensioning, and engineering judgment",
+        "Work that decides between true and false, fit and unfit"
+      ]
+    },
+    {
+      "name": "Argument",
+      "category": "Peirce's Interpretants",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Thirdness of Thirdness",
+      "unit": "inference",
+      "hints": [
+        "A sign that represents its object through reasoned inference",
+        "Not a single proposition but a structure of reasoning from premises to conclusion",
+        "The highest, most mediated form of semeiotic interpretant",
+        "What scholarly study produces: logical arguments from evidence",
+        "Arguments are the only signs that deliberately address their own truth",
+        "Deduction, induction, abduction — the three modes of argument",
+        "The unit of proof, demonstration, and theoretical contribution",
+        "Learning through the structure of reasons, not just observations"
+      ]
+    },
+    {
+      "name": "Firstness",
+      "category": "Peirce's Categories",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Category of Pure Possibility",
+      "unit": "quality",
+      "hints": [
+        "The mode of being that is what it is without reference to anything else",
+        "Pure possibility, feeling, and immediacy — a redness that is just red",
+        "The ontological ground of all quality and potential",
+        "What rest restores: contact with being before relation",
+        "Firstness cannot be conceived in relation; it resists language",
+        "The healing mode that asks 'what is this in itself?'",
+        "The origin point of all semiosis — quality before it signifies",
+        "A newborn's world before the subject-object split"
+      ]
+    },
+    {
+      "name": "Secondness",
+      "category": "Peirce's Categories",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Category of Brute Fact",
+      "unit": "resistance",
+      "hints": [
+        "The mode of being that is what it is in relation to another",
+        "Brute facts, reactions, struggle, and the shock of encountering the real",
+        "The door that resists, the stone that is heavy, the hand that pushes back",
+        "What construction lifts against: the resistance of materials and gravity",
+        "Secondness is the category of effort and reaction",
+        "The sense of 'not-me' that defines the boundary of the self",
+        "Every act of building is a negotiation with secondness",
+        "The mode of cause and effect, action and reaction"
+      ]
+    },
+    {
+      "name": "Thirdness",
+      "category": "Peirce's Categories",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Category of Mediation",
+      "unit": "habit",
+      "hints": [
+        "The mode of being that brings firstness and secondness into relation",
+        "Mediation, representation, law, habit — the bridging of quality and fact",
+        "What makes a sign a sign: the triadic relation that constitutes meaning",
+        "The bond that holds when rest re-establishes connection",
+        "Thirdness is the category of continuity and growth",
+        "A habit is a thirdness: a law that governs future action",
+        "The resting ground where firstness and secondness are synthesized",
+        "The semiotic bond that makes culture, learning, and institutions possible"
+      ]
+    },
+    {
+      "name": "Signifier",
+      "category": "Saussurean Linguistics",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's Sound-Image",
+      "unit": "form",
+      "hints": [
+        "The material or perceptual form of a sign — the sound 'tree' or the ink-mark 'tree'",
+        "Not the physical thing but the psychological imprint of the sound-pattern",
+        "What fabrication shapes: the material vehicle of meaning",
+        "The signifier has arbitrary relation to the signified",
+        "Signifiers differentiate: they are what they are by being not other signifiers",
+        "The entire phonetic/graphic system is a play of differences",
+        "In design, the signifier is what can be molded, carved, rendered",
+        "Creation begins by giving form to the signifier"
+      ]
+    },
+    {
+      "name": "Signified",
+      "category": "Saussurean Linguistics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's Concept",
+      "unit": "concept",
+      "hints": [
+        "The mental concept associated with a signifier — not the tree but the idea TREE",
+        "A purely relational unit of thought, defined by its place in the system",
+        "What study pursues: the conceptual content that a form conveys",
+        "Signifieds are not pre-existing; they are carved by language itself",
+        "The value of a signified is determined by its position in the system of differences",
+        "Learning is the acquisition of new signifieds and their relationships",
+        "The signified is inseparable from the signifier as two sides of one sheet",
+        "Concepts are not universal; they are products of specific semiotic systems"
+      ]
+    },
+    {
+      "name": "Langue",
+      "category": "Saussurean Linguistics",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's System",
+      "unit": "grammar",
+      "hints": [
+        "The abstract systematic structure of a language, shared by all speakers",
+        "Not any particular utterance but the rules that make utterances possible",
+        "What construction works with: the architectural grammar of a sign system",
+        "Langue is social, stable, and exists only in the collectivity",
+        "The structural foundation that enables parole to be meaningful",
+        "Working with langue means operating within rule-governed possibility",
+        "A chessboard and its rules are langue; any particular game is parole",
+        "The mode of standards, codification, and systematic design"
+      ]
+    },
+    {
+      "name": "Parole",
+      "category": "Saussurean Linguistics",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's Speech",
+      "unit": "utterance",
+      "hints": [
+        "The individual act of speech or writing — a particular utterance",
+        "Concrete, variable, personal, and situated",
+        "What bond creates in the moment of address between subjects",
+        "Parole is the actualization of langue in real communicative events",
+        "Every utterance is both constrained by langue and creative within it",
+        "The site of style, idiolect, and personal expression",
+        "Creation that happens in the living act of enunciation",
+        "Parole is where the system meets the body and the situation"
+      ]
+    },
+    {
+      "name": "Syntagmatic",
+      "category": "Saussurean Linguistics",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's Axis of Combination",
+      "unit": "chain",
+      "hints": [
+        "The axis of combination: signs arranged in sequence, like words in a sentence",
+        "Relations are in praesentia — items actually present in the chain",
+        "What construction walks along: the linear assembly of parts into wholes",
+        "Syntagmatic relations are about 'and': this element AND that element",
+        "The horizontal axis of narrative and architectural composition",
+        "Every building is a syntagm: foundation-walls-roof in sequence",
+        "Walking through a space is a syntagmatic experience of adjacency",
+        "The mode of syntax, sequence, and co-occurrence constraints"
+      ]
+    },
+    {
+      "name": "Paradigmatic",
+      "category": "Saussurean Linguistics",
+      "domain": "STUDY",
+      "mode": "BRAINSTORM",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's Axis of Selection",
+      "unit": "set",
+      "hints": [
+        "The axis of selection: signs that could substitute for each other in a given position",
+        "Relations are in absentia — items that are not present but could be",
+        "What study works through: the virtual set of alternatives",
+        "Paradigmatic relations are about 'or': this element OR that element",
+        "The vertical axis of choice, metaphor, and classification",
+        "Every word choice activates a paradigm and suppresses its alternatives",
+        "Working in the paradigmatic mode means comparing options systematically",
+        "The mode of taxonomy, opposition, and commutation tests"
+      ]
+    },
+    {
+      "name": "Synchronic",
+      "category": "Saussurean Linguistics",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's Static Axes",
+      "unit": "state",
+      "hints": [
+        "The study of a language system at a single point in time, frozen as a state",
+        "Ignores history to reveal the structure of relations that make meaning now",
+        "What healing rest into: the present system of relations without temporal flux",
+        "Synchronic is the axis of coexistence and mutual definition",
+        "A moment of equilibrium where the structure is fully present",
+        "Rest in the synchronic mode means dwelling in the present configuration",
+        "The snapshot that reveals structural truth that diachrony obscures",
+        "The mode of diagnosis: understanding a system as it is now"
+      ]
+    },
+    {
+      "name": "Diachronic",
+      "category": "Saussurean Linguistics",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Saussure's Evolutionary Axis",
+      "unit": "drift",
+      "hints": [
+        "The study of language change across time — phonetic shifts, semantic drift",
+        "Individual events of change that alter the system over generations",
+        "What fabrication walks through: the temporal layerings of form",
+        "Diachronic is the axis of transformation, evolution, and becoming",
+        "A language is never stable; diachrony is the reality of living systems",
+        "Walking through the history of a form reveals its sedimented meanings",
+        "Every material carries its diachronic traces — wear, patina, repair",
+        "The mode of genealogy, etymological depth, and transformative process"
+      ]
+    },
+    {
+      "name": "Denotation",
+      "category": "Barthesian Criticism",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Literal Meaning",
+      "unit": "reference",
+      "hints": [
+        "The first-order, literal, obvious meaning of a sign",
+        "What a dictionary captures: the stable referential function",
+        "What study works with before interpretation begins",
+        "Denotation is the 'what it is' before 'what it means'",
+        "Barthes later argued denotation is just the most naturalized connotation",
+        "The supposedly neutral layer that ideology works through",
+        "Working with denotation means establishing shared factual ground",
+        "The mode of description, documentation, and literal reading"
+      ]
+    },
+    {
+      "name": "Connotation",
+      "category": "Barthesian Criticism",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Second-Order Meaning",
+      "unit": "resonance",
+      "hints": [
+        "The second-order, culturally inflected meanings that cluster around a sign",
+        "Not what a word means but what it evokes, suggests, or implies",
+        "What fabrication creates: the layered texture of associations",
+        "Connotation is where ideology and cultural values operate",
+        "A photograph denotes a man in uniform; it connotes military honor",
+        "The domain of style, tone, and cultural coding",
+        "Creating through connotation means engineering associative resonance",
+        "The mode of poetry, branding, and indirect expression"
+      ]
+    },
+    {
+      "name": "Myth",
+      "category": "Barthesian Criticism",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Depoliticized Speech",
+      "unit": "naturalization",
+      "hints": [
+        "A second-order semiological system that turns history into nature",
+        "Myth makes contingent cultural constructs seem eternal and inevitable",
+        "What bond learns to recognize: the stories that hold a culture together",
+        "Myth is depoliticized speech: it strips a sign of its historical contingency",
+        "A black soldier saluting the French flag — Barthes' paradigmatic myth",
+        "Myth is not defined by its object but by how it speaks of that object",
+        "Learning myth means uncovering the buried ideological work in everyday signs",
+        "The mode of collective belief systems and their naturalizing power"
+      ]
+    },
+    {
+      "name": "Code",
+      "category": "Barthesian Criticism",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Cultural Coding",
+      "unit": "norm",
+      "hints": [
+        "A system of conventions that makes a text intelligible within a culture",
+        "Not the linguistic code but the cultural codes that govern interpretation",
+        "What construction works within: the rules that structure intelligibility",
+        "Barthes identified five codes in S/Z: hermeneutic, proairetic, semantic, symbolic, cultural",
+        "Every text is woven from multiple, often contradictory codes",
+        "Working with codes means both using them and revealing their operation",
+        "The mode of genre convention, narrative structure, and readability",
+        "Codes are what make meaning systematic rather than idiosyncratic"
+      ]
+    },
+    {
+      "name": "Writerly Text",
+      "category": "Barthesian Criticism",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Scriptible",
+      "unit": "participation",
+      "hints": [
+        "A text that demands the reader become a producer of meaning, not a consumer",
+        "Open, plural, indeterminate — resists a single interpretation",
+        "What bond creates when it invites co-authorship of meaning",
+        "The writerly text is not a thing but a practice of reading",
+        "It breaks the reader's comfortable passive consumption",
+        "Creating a writerly text means building generative ambiguity",
+        "The mode of avant-garde literature that foregrounds its own textuality",
+        "A bond formed through the shared work of making meaning"
+      ]
+    },
+    {
+      "name": "Readerly Text",
+      "category": "Barthesian Criticism",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Lisible",
+      "unit": "consumption",
+      "hints": [
+        "A text that offers a closed, determinate meaning for passive consumption",
+        "Follows conventions, confirms expectations, satisfies the desire for clarity",
+        "What study learns from: texts designed to transmit information efficiently",
+        "The readerly is the realm of product, not production",
+        "Most popular literature, journalism, and technical writing is readerly",
+        "Learning from a readerly text means extracting its intended message",
+        "The mode of transparency where language seems to vanish before its content",
+        "A bond of comfortable familiarity rather than creative participation"
+      ]
+    },
+    {
+      "name": "Punctum",
+      "category": "Barthesian Criticism",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Wounding Detail",
+      "unit": "wound",
+      "hints": [
+        "The accidental detail in a photograph that pierces, wounds, or pricks the viewer",
+        "Not the culturally coded studium but a personal, unnamable puncture",
+        "What healing lifts when a wound is acknowledged and integrated",
+        "The punctum is involuntary; it chooses you, you do not choose it",
+        "It expands beyond the photograph's frame into the viewer's own life",
+        "The element that breaks the studium's comfortable distance",
+        "Lifting the punctum into awareness is the work of mourning",
+        "The mode of singular, traumatic, and transformative encounter"
+      ]
+    },
+    {
+      "name": "Studium",
+      "category": "Barthesian Criticism",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "semiotic",
+      "axis_name": "Barthes' Informed Interest",
+      "unit": "interest",
+      "hints": [
+        "The general, culturally informed interest a viewer brings to a photograph",
+        "Polite, distanced, analytical — the domain of education and taste",
+        "What study walks through: the culturally coded surface of an image",
+        "The studium is 'that very wide field of unconcerned desire'",
+        "It requires the viewer to be culturally competent but emotionally detached",
+        "Walking through the studium means recognizing historical and cultural references",
+        "The mode of informed observation without personal risk",
+        "Studium is what binds a community of educated viewers"
+      ]
+    },
+    {
+      "name": "Unlimited Semiosis",
+      "category": "Eco's Semiotics",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "semiotic",
+      "axis_name": "Eco's Chain of Interpretants",
+      "unit": "drift",
+      "hints": [
+        "The process by which every sign refers to another sign in an endless chain",
+        "No sign has fixed meaning; each interpretant becomes a new representamen",
+        "What bond creates when it refuses to close meaning down",
+        "Unlimited semiosis is not chaos but the very condition of signification",
+        "The encyclopedia is the global network that unlimited semiosis traverses",
+        "Every dictionary is a closed loop of signs defining signs defining signs",
+        "Creating in the mode of unlimited semiosis means embracing interpretive openness",
+        "The epistemological ground of hermeneutics and textual plurality"
+      ]
+    },
+    {
+      "name": "Encyclopedia",
+      "category": "Eco's Semiotics",
+      "domain": "STUDY",
+      "mode": "MAINTAIN",
+      "axis_kind": "semiotic",
+      "axis_name": "Eco's Global Semantic Network",
+      "unit": "network",
+      "hints": [
+        "The sum total of all interpretive habits and cultural knowledge in a semiotic system",
+        "Not a structured dictionary but a disorganized, potentially infinite network",
+        "What study learns to navigate: the labyrinthine web of cultural associations",
+        "The encyclopedia is a regulative hypothesis, not a retrievable object",
+        "Every act of interpretation draws on an implicit encyclopedia",
+        "Learning is the progressive expansion and refinement of one's encyclopedia",
+        "The encyclopedia includes not just words but images, practices, and institutions",
+        "The mode of cultural competence, erudition, and intertextual knowledge"
+      ]
+    },
+    {
+      "name": "Intentio Operis",
+      "category": "Eco's Semiotics",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Eco's Intention of the Work",
+      "unit": "strategy",
+      "hints": [
+        "The intention of the text itself, neither author's nor reader's but the work's strategy",
+        "An interpretive hypothesis that the text encourages through its internal structure",
+        "What fabrication works to embed: the text's own interpretive constraints",
+        "The intentio operis is not fixed but is the range of plausible interpretations",
+        "It resists both the intentional fallacy and radical interpretive license",
+        "Working with intentio operis means designing textual affordances",
+        "The mode of authorial strategy encoded in textual structure",
+        "A text is an 'open work' that nonetheless has boundaries of coherence"
+      ]
+    },
+    {
+      "name": "Aberrant Decoding",
+      "category": "Eco's Semiotics",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Eco's Misreading",
+      "unit": "drift",
+      "hints": [
+        "The gap between the encoded meaning and the decoded meaning across cultures",
+        "A message sent with one code is received through a different code",
+        "What study walks into: the space between intention and interpretation",
+        "Aberrant decoding is not error; it is the normal condition of cross-cultural communication",
+        "Eco analyzed this through television: the same broadcast means differently in different homes",
+        "Walking through aberrant decodings reveals the hidden codes of both sender and receiver",
+        "The mode of cultural translation and its inevitable frictions",
+        "Every act of global communication must anticipate aberrant decoding"
+      ]
+    },
+    {
+      "name": "Iconism",
+      "category": "Eco's Semiotics",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "semiotic",
+      "axis_name": "Eco's Critique of Likeness",
+      "unit": "convention",
+      "hints": [
+        "The recognition that iconic resemblance is itself culturally coded",
+        "Even 'natural' likeness (a photograph) operates through learned conventions",
+        "What fabrication creates when it produces culturally legible likeness",
+        "Eco argued iconism is not natural but a set of conventional stimulus-properties",
+        "A portrait resembles its subject only for those trained in Western perspective",
+        "Creating iconically means encoding visual conventions into material form",
+        "The mode of diagrammatic reasoning and analogical representation",
+        "Iconism is the intersection of perceptual similarity and cultural coding"
+      ]
+    },
+    {
+      "name": "Ratio Facilis",
+      "category": "Eco's Semiotics",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Eco's Type-Token Production",
+      "unit": "replication",
+      "hints": [
+        "Production where the token conforms to a pre-existing type or model",
+        "The type precedes and governs the creation of the token",
+        "What construction creates when building to specification",
+        "Ratio facilis is the mode of templates, blueprints, and patterns",
+        "Most industrial production follows ratio facilis",
+        "Creating through ratio facilis means faithful instantiation of a rule",
+        "The mode of standardization, replication, and typological regularity",
+        "Ratio difficilis would be the inverse: the type must be invented from the token"
+      ]
+    },
+    {
+      "name": "Referential",
+      "category": "Jakobson's Functions",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Jakobson's Context Function",
+      "unit": "information",
+      "hints": [
+        "The function oriented toward the context or referent — conveying information",
+        "The dominant function in scientific and technical discourse",
+        "What study works with: facts, data, and propositional content",
+        "The referential function is denotative and cognitive",
+        "In Jakobson's model, every message has multiple functions but one is dominant",
+        "Working referentially means prioritizing clarity and accuracy",
+        "The mode of reports, documentation, and evidence-based communication",
+        "The referential function answers 'what is being talked about?'"
+      ]
+    },
+    {
+      "name": "Emotive",
+      "category": "Jakobson's Functions",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Jakobson's Addresser Function",
+      "unit": "expression",
+      "hints": [
+        "The function oriented toward the addresser — expressing attitude or emotion",
+        "Interjections, tone of voice, and affective markers",
+        "What healing lifts: the expressive dimension of the self",
+        "The emotive function reveals the speaker's subjective stance",
+        "Even referential statements carry emotive coloring through intonation",
+        "Lifting the emotive dimension means acknowledging feeling as meaning",
+        "The mode of poetry, confession, and authentic self-expression",
+        "The emotive function answers 'who is speaking and how do they feel?'"
+      ]
+    },
+    {
+      "name": "Conative",
+      "category": "Jakobson's Functions",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "axis_kind": "semiotic",
+      "axis_name": "Jakobson's Addressee Function",
+      "unit": "appeal",
+      "hints": [
+        "The function oriented toward the addressee — seeking to persuade or command",
+        "Imperatives, vocatives, and rhetorical appeals",
+        "What bond walks toward when it seeks response from the other",
+        "The conative function is most naked in commands: 'Drink!'",
+        "It reveals the social relationship between addresser and addressee",
+        "Walking conatively means moving the other toward action",
+        "The mode of persuasion, instruction, and behavioral influence",
+        "The conative function answers 'what effect is sought in the receiver?'"
+      ]
+    },
+    {
+      "name": "Phatic",
+      "category": "Jakobson's Functions",
+      "domain": "BOND",
+      "mode": "MAINTAIN",
+      "axis_kind": "semiotic",
+      "axis_name": "Jakobson's Contact Function",
+      "unit": "channel",
+      "hints": [
+        "The function oriented toward maintaining the channel of communication",
+        "Small talk, greetings, back-channels — 'Hello? Are you still there?'",
+        "What bond rests in: the pure maintenance of connection without message",
+        "The phatic function checks that the channel is open and working",
+        "It is the first function infants learn — the pleasure of connection itself",
+        "Resting in the phatic means attending to relationship over content",
+        "The mode of ritual exchange, social bonding, and presence",
+        "The phatic function answers 'is this connection still alive?'"
+      ]
+    },
+    {
+      "name": "Metalingual",
+      "category": "Jakobson's Functions",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "semiotic",
+      "axis_name": "Jakobson's Code-Focus Function",
+      "unit": "reflection",
+      "hints": [
+        "The function oriented toward the code itself — language talking about language",
+        "Definitions, glosses, grammar lessons — 'By 'metalingual' I mean...'",
+        "What study learns when it reflects on its own tools",
+        "The metalingual function is essential for learning any code",
+        "Every dictionary is an extended exercise of the metalingual function",
+        "Learning through the metalingual means understanding the system of rules",
+        "The mode of pedagogy, grammar, and philosophical reflection on language",
+        "The metalingual function answers 'what code is being used and how does it work?'"
+      ]
+    },
+    {
+      "name": "Poetic",
+      "category": "Jakobson's Functions",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Jakobson's Message Function",
+      "unit": "form",
+      "hints": [
+        "The function oriented toward the message itself — its form, sound, and texture",
+        "The poetic function foregrounds the signifier over the signified",
+        "What fabrication creates when it makes the medium part of the message",
+        "The poetic function projects the principle of equivalence from selection into combination",
+        "Rhyme, alliteration, parallelism — patterns that make form noticeable",
+        "Creating poetically means crafting the sensory experience of the message",
+        "The mode of literature, advertising, and any discourse that values how over what",
+        "The poetic function answers 'how is this message shaped and why does that matter?'"
+      ]
+    },
+    {
+      "name": "Actantial Model",
+      "category": "Greimas Narratology",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "semiotic",
+      "axis_name": "Greimas' Narrative Syntax",
+      "unit": "role",
+      "hints": [
+        "A structural model of narrative with six actantial roles: Sender, Object, Receiver, Helper, Subject, Opponent",
+        "Not characters but functions: an actant can be a person, thing, or abstraction",
+        "What construction creates: the structural skeleton of a story",
+        "The actantial model reveals the deep grammar underlying all narratives",
+        "Subject desires Object; Sender dispatches; Receiver benefits; Helper aids; Opponent obstructs",
+        "Creating an actantial model means mapping the force dynamics of a situation",
+        "The mode of scenario planning, myth analysis, and narrative design",
+        "Every quest, conspiracy, or project can be mapped onto actantial roles"
+      ]
+    },
+    {
+      "name": "Semiotic Square",
+      "category": "Greimas Narratology",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Greimas' Elementary Structure of Signification",
+      "unit": "opposition",
+      "hints": [
+        "A logical tool for mapping the deep structure of oppositions in any sign system",
+        "Based on the contrary and contradictory relations between terms",
+        "What bond learns when it understands how meaning emerges from opposition",
+        "The square has four positions: A, not-A, not-not-A, and the neutral term",
+        "Used to analyze everything from kinship systems to political ideologies",
+        "Learning the semiotic square reveals hidden logical relations in binary oppositions",
+        "The mode of structural analysis and dialectical thinking",
+        "The square transforms simple binaries into complex systems of implication"
+      ]
+    },
+    {
+      "name": "Isotopy",
+      "category": "Greimas Narratology",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "semiotic",
+      "axis_name": "Greimas' Coherence Plane",
+      "unit": "register",
+      "hints": [
+        "The recurrence of semantic categories that makes a text coherent and readable",
+        "A level of meaning at which a text maintains semantic homogeneity",
+        "What study works with when establishing a text's unified interpretation",
+        "Multiple isotopies can coexist in the same text — the basis of polysemy",
+        "A pun operates at the intersection of two isotopies",
+        "Working with isotopy means tracing the semantic threads that bind a discourse",
+        "The mode of discourse analysis, thematic criticism, and coherence testing",
+        "Isotopy explains why some readings feel consistent and others arbitrary"
+      ]
+    },
+    {
+      "name": "Narrative Program",
+      "category": "Greimas Narratology",
+      "domain": "FABRICATE",
+      "mode": "PLAN",
+      "axis_kind": "semiotic",
+      "axis_name": "Greimas' Transformation Unit",
+      "unit": "transformation",
+      "hints": [
+        "The basic unit of narrative syntax: a transformation from one state to another",
+        "S → (F → S) : A subject acts to transform the state of another subject",
+        "What fabrication walks through: the sequence of transformations in a process",
+        "A narrative program involves a subject, an action, and a change of state",
+        "Complex narratives chain multiple programs into narrative sequences",
+        "Walking the narrative program means tracing causal-transformational chains",
+        "The mode of process modeling, scenario mapping, and action analysis",
+        "Every making is a narrative program: raw material transformed into artifact"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "kind": "period",
+  "domains": [
+    {"name":"Shift","category":"Operational","domain":"FABRICATE","mode":"WORK","axis_kind":"period","axis_name":"rhythm","unit":"shifts","hints":["shift","turno","morning shift","night shift","8 hours"]},
+    {"name":"Workday","category":"Operational","domain":"FABRICATE","mode":"WORK","axis_kind":"period","axis_name":"rhythm","unit":"days","hints":["workday","giornata","business day","9 to 5"]},
+    {"name":"Week","category":"Operational","domain":"STUDY","mode":"PLAN","axis_kind":"period","axis_name":"calendar","unit":"weeks","hints":["week","settimana","weekly cycle"]},
+    {"name":"Sprint","category":"Operational","domain":"CONSTRUCT","mode":"PLAN","axis_kind":"period","axis_name":"cadence","unit":"sprints","hints":["sprint","iteration","scrum cycle","two weeks"]},
+    {"name":"Month","category":"Calendar","domain":"STUDY","mode":"PLAN","axis_kind":"period","axis_name":"calendar","unit":"months","hints":["month","mese","monthly close","calendar month"]},
+    {"name":"Quarter","category":"Calendar","domain":"STUDY","mode":"LEARN","axis_kind":"period","axis_name":"calendar","unit":"quarters","hints":["quarter","trimestre","q1","q2","q3","q4"]},
+    {"name":"Fiscal Year","category":"Calendar","domain":"STUDY","mode":"LEARN","axis_kind":"period","axis_name":"calendar","unit":"years","hints":["fiscal year","anno fiscale","financial year","fy"]},
+    {"name":"Season","category":"Calendar","domain":"HEAL","mode":"REST","axis_kind":"period","axis_name":"natural","unit":"seasons","hints":["season","stagione","spring","summer","autumn","winter","harvest"]},
+    {"name":"Maintenance Window","category":"Industrial","domain":"HEAL","mode":"MAINTAIN","axis_kind":"period","axis_name":"upkeep","unit":"windows","hints":["maintenance window","downtime slot","planned stop","fermo tecnico"]},
+    {"name":"Changeover","category":"Industrial","domain":"FABRICATE","mode":"LIFT","axis_kind":"period","axis_name":"production","unit":"changeovers","hints":["changeover","setup time","cambio formato","smistamento"]},
+    {"name":"Campaign","category":"Commercial","domain":"FABRICATE","mode":"WORK","axis_kind":"period","axis_name":"market","unit":"campaigns","hints":["campaign","campagna","promo period","sales push"]},
+    {"name":"Audit Window","category":"Governance","domain":"STUDY","mode":"SENSE","axis_kind":"period","axis_name":"assurance","unit":"audits","hints":["audit window","ispezione","review period","compliance check"]},
+    {"name":"Deadline","category":"Governance","domain":"BOND","mode":"GUIDE","axis_kind":"period","axis_name":"commitment","unit":"deadlines","hints":["deadline","scadenza","due date","cut-off","cutoff"]},
+    {"name":"Holiday","category":"Personal","domain":"HEAL","mode":"REST","axis_kind":"period","axis_name":"life","unit":"holidays","hints":["holiday","festività","vacation","ferie","break"]},
+    {"name":"Study Session","category":"Personal","domain":"STUDY","mode":"LEARN","axis_kind":"period","axis_name":"learning","unit":"sessions","hints":["study session","studio","reading block","deep work"]},
+    {"name":"Incident Response","category":"Operational","domain":"HEAL","mode":"LIFT","axis_kind":"period","axis_name":"reaction","unit":"incidents","hints":["incident response","emergenza","allarme","on-call window"]}
+  ]
+}

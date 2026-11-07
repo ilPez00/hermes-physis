@@ -1,0 +1,289 @@
+/* Physis Studio — shares the Physis Console design language (same tokens,
+   same header/nav/tab shell) so the core studio and the pro dashboards read as
+   one product. Keep the :root block in sync with src/bin/ui/console.html. */
+
+:root{
+  --bg:#070a18;
+  --bg2:#0b1025;
+  --panel:rgba(16,22,49,.78);
+  --panel2:rgba(11,16,35,.88);
+  --line:rgba(135,157,219,.18);
+  --line-strong:rgba(104,231,255,.42);
+  --fg:#f1f5ff;
+  --muted:#8997b8;
+  --accent:#68e7ff;
+  --accent2:#b49cff;
+  --green:#72f0b2;
+  --amber:#ffc66d;
+  --red:#ff718d;
+  --shadow:0 20px 70px rgba(0,0,0,.34);
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--fg);
+  background:
+    radial-gradient(900px 600px at 8% -12%, rgba(75,110,255,.28), transparent 58%),
+    radial-gradient(760px 520px at 96% 4%, rgba(104,231,255,.13), transparent 58%),
+    linear-gradient(180deg, var(--bg), var(--bg2));
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+/* No page had a link until the upgrade panel; the UA default blue is close to
+   unreadable on this background. */
+a{color:var(--accent);text-decoration-color:rgba(104,231,255,.45)}
+a:hover{color:var(--fg)}
+code{font:11px var(--mono);color:var(--muted)}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;
+  background-image:linear-gradient(rgba(111,135,204,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(111,135,204,.055) 1px,transparent 1px);
+  background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 76%);
+}
+
+/* ── header ─────────────────────────────────────────────────────── */
+header{
+  padding:14px 22px;
+  background:rgba(7,10,24,.7);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+  display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  box-shadow:var(--shadow);
+  position:relative;z-index:2;
+}
+header h1{font-size:16px;margin:0 12px 0 0;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+header h1:before{content:"◈";color:var(--accent);margin-right:9px;text-shadow:0 0 18px var(--accent)}
+header h1 span{color:var(--accent);font-weight:500}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:999px;padding:6px 11px;
+  background:rgba(13,19,35,.75);color:var(--muted);white-space:nowrap;
+}
+.chip b{color:var(--accent);font-weight:600}
+.chip.good{border-color:rgba(114,240,178,.45)}
+.chip.good b{color:var(--green)}
+/* A non-semantic embedder makes every score on screen coarse. That has to be
+   legible without hovering for a tooltip, so it gets its own amber state. */
+.chip.warn{border-color:rgba(255,198,109,.5);background:rgba(60,42,16,.5)}
+.chip.warn b{color:var(--amber)}
+.chip .qual{color:var(--amber);font-weight:600}
+#status{margin-left:auto;font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(13,19,35,.75)}
+
+/* ── controls ───────────────────────────────────────────────────── */
+input,button,select,textarea{
+  background:rgba(5,9,22,.72);color:var(--fg);
+  border:1px solid var(--line);border-radius:8px;
+  padding:9px 11px;font-size:13px;font-family:inherit;
+}
+textarea{width:100%;min-height:110px;resize:vertical}
+button{cursor:pointer;transition:transform .12s ease,border-color .12s ease,background .12s ease}
+button:hover{border-color:var(--accent);background:rgba(104,231,255,.1);box-shadow:0 0 20px rgba(104,231,255,.08)}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.45;cursor:progress}
+button.primary{background:linear-gradient(135deg,rgba(104,231,255,.22),rgba(180,156,255,.14));border-color:rgba(104,231,255,.5)}
+button.ghost{background:none;color:var(--muted)}
+button.ghost:hover{color:var(--fg)}
+button.small{padding:5px 9px;font-size:11px}
+button.good:hover{border-color:var(--green);background:rgba(114,240,178,.12)}
+button.bad:hover{border-color:var(--red);background:rgba(255,113,141,.12)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label{display:block;font:10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+.kbd{font:10px var(--mono);border:1px solid var(--line);padding:1px 6px;border-radius:4px;color:var(--accent);background:rgba(104,231,255,.08)}
+.muted{color:var(--muted)}
+.err{color:var(--red)}
+.ok{color:var(--green)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.tight{gap:6px}
+.grow{flex:1;min-width:160px}
+
+/* ── shell ──────────────────────────────────────────────────────── */
+main{flex:1;display:flex;min-height:0}
+nav{
+  width:206px;background:rgba(8,12,29,.76);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:22px 12px;gap:6px;position:relative;z-index:1;
+}
+nav:after{content:"PHYSIS / CORE";margin:auto 10px 4px;color:#4e5a7a;font:9px var(--mono);letter-spacing:.18em}
+nav button{background:none;border:none;border-radius:9px;text-align:left;padding:11px 13px;color:var(--muted);font-size:12px;letter-spacing:.02em}
+nav button .k{float:right;font:9px var(--mono);opacity:.55}
+nav button.active{
+  color:var(--fg);
+  background:linear-gradient(90deg,rgba(104,231,255,.16),rgba(180,156,255,.06));
+  border:1px solid var(--line-strong);
+  box-shadow:inset 3px 0 0 var(--accent),0 8px 28px rgba(41,112,160,.12);
+}
+nav button:hover{color:var(--fg)}
+/* Marks the nav entry when Pro is NOT installed, so the one item that is an
+   offer rather than a tool reads differently from the six that are tools. */
+nav button.accent{color:var(--accent2)}
+nav button.accent.active{color:var(--fg)}
+.tab{flex:1;min-width:0;display:none;overflow:auto;padding:26px clamp(18px,3vw,42px);position:relative;z-index:1}
+.tab.active{display:flex;flex-direction:column;gap:16px}
+/* Panels must keep their natural height: as flex children of a scrolling
+   column they would otherwise compress (clipping the canvases) instead of
+   letting the tab scroll. */
+.tab > *{flex-shrink:0}
+
+.hero{
+  display:flex;justify-content:space-between;gap:20px;align-items:flex-start;
+  padding:25px 26px;border:1px solid var(--line);border-radius:18px;
+  background:linear-gradient(120deg,rgba(19,28,61,.86),rgba(9,14,33,.76));
+  box-shadow:var(--shadow);
+}
+.hero h2{margin:0 0 6px;font-size:19px;letter-spacing:.01em}
+.hero p{margin:0;color:var(--muted);font-size:13px;max-width:62ch}
+.panel{
+  border:1px solid var(--line);border-radius:16px;padding:20px;
+  background:var(--panel);box-shadow:var(--shadow);
+}
+.panel > h3{margin:0 0 12px;font:10px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:1080px){.cols{grid-template-columns:1fr}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel2)}
+.tile .v{font:20px/1.1 var(--mono);color:var(--accent)}
+.tile .l{font:9px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:5px}
+/* Sample size rides alongside a mean so the figure is never read without it. */
+.tile .v .of{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.scroll{max-height:340px;overflow:auto}
+
+/* ── classify results ───────────────────────────────────────────── */
+.res{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--panel2)}
+.res .head{display:flex;align-items:center;gap:10px}
+.res .cell{font:12px var(--mono);letter-spacing:.06em;flex:1}
+.res .score{font:12px var(--mono);color:var(--accent);width:44px;text-align:right}
+.res .bar{height:6px;border-radius:3px;background:rgba(5,9,22,.8);overflow:hidden;margin-top:8px}
+.res .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.res .meta{margin-top:8px;display:flex;gap:5px;flex-wrap:wrap}
+.res.top{border-color:var(--line-strong)}
+.tag{font:10px var(--mono);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--muted);background:rgba(5,9,22,.5)}
+.tag.facet{color:var(--accent2);border-color:rgba(180,156,255,.3)}
+.tag.click{cursor:pointer}
+.tag.click:hover{color:var(--fg);border-color:var(--accent)}
+
+/* ── grid ───────────────────────────────────────────────────────── */
+#gridwrap{overflow:auto}
+table.grid{border-collapse:separate;border-spacing:4px}
+table.grid th{font:9px var(--mono);letter-spacing:.1em;color:var(--muted);font-weight:600;padding:2px 4px;text-align:center}
+table.grid td.rowlabel{font:9px var(--mono);letter-spacing:.1em;color:var(--muted);text-align:right;padding-right:8px;white-space:nowrap}
+/* An axis the ontology introduced beyond the built-in grid. */
+table.grid th .extra,table.grid td.rowlabel .extra{color:var(--accent2)}
+table.grid td.cell{
+  width:46px;height:42px;border-radius:9px;text-align:center;cursor:pointer;
+  border:1px solid transparent;transition:transform .1s ease,border-color .1s ease;
+  font:13px var(--mono);
+}
+table.grid td.cell:hover{transform:translateY(-2px);border-color:var(--accent)}
+table.grid td.cell.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 8px 22px rgba(104,231,255,.18)}
+.legend{display:flex;gap:8px;align-items:center;margin-top:12px;font:9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.legend .sw{width:16px;height:12px;border-radius:3px}
+
+/* ── lists ──────────────────────────────────────────────────────── */
+.item{border:1px solid var(--line);border-left-width:3px;border-radius:10px;padding:9px 11px;margin-bottom:7px;background:var(--panel2);font-size:12px}
+.item .l1{display:flex;gap:9px;align-items:center}
+.item .l1 .s{font:11px var(--mono);color:var(--accent)}
+.item .txt{margin-top:5px;color:var(--muted);word-break:break-word}
+.item.warn{border-left-color:var(--amber)}
+.item.bad{border-left-color:var(--red)}
+.item.good{border-left-color:var(--green)}
+.entryrow{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 8px;border-radius:7px;cursor:pointer}
+.entryrow:hover{background:rgba(104,231,255,.07)}
+.cat{margin-bottom:14px}
+.cat > .name{font:9px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin-bottom:5px}
+
+/* ── overlays ───────────────────────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;background:rgba(3,6,16,.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50}
+.modal-bg.show{display:flex}
+.modal{
+  background:linear-gradient(140deg,rgba(19,28,61,.97),rgba(9,14,33,.97));
+  border:1px solid var(--line-strong);border-radius:18px;padding:22px;
+  width:560px;max-width:94vw;max-height:88vh;overflow:auto;box-shadow:var(--shadow);
+}
+.modal h3{margin:0 0 8px;font-size:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.toast{
+  position:fixed;bottom:22px;right:22px;z-index:100;
+  border:1px solid var(--line);border-radius:12px;padding:11px 16px;
+  background:rgba(11,16,35,.96);box-shadow:var(--shadow);
+  font-size:12px;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:none}
+.toast.ok{border-color:rgba(114,240,178,.45)}
+.toast.err{border-color:rgba(255,113,141,.5);color:var(--red)}
+kbd{font:10px var(--mono)}
+
+/* ══ LAB — embedding map ═══════════════════════════════════════ */
+#mapwrap,#flowwrap{position:relative;background:
+  radial-gradient(700px 420px at 22% 0%, rgba(75,110,255,.14), transparent 60%),
+  radial-gradient(600px 380px at 88% 110%, rgba(180,156,255,.10), transparent 60%),
+  rgba(6,9,22,.66)}
+#labMap,#flowCanvas{display:block;width:100%;cursor:default}
+.maptip{
+  position:absolute;display:none;z-index:5;pointer-events:none;
+  max-width:220px;font-size:11px;line-height:1.45;
+  background:rgba(7,11,26,.94);border:1px solid var(--line-strong);border-radius:10px;
+  padding:8px 11px;box-shadow:0 12px 40px rgba(0,0,0,.5);
+}
+.nbrow{display:grid;grid-template-columns:minmax(90px,1.3fr) minmax(74px,.8fr) 1fr 46px;
+  gap:8px;align-items:center;padding:5px 6px;border-radius:7px;cursor:pointer;font-size:11.5px}
+.nbrow:hover{background:rgba(104,231,255,.07)}
+.nbname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nbcell{font:9.5px var(--mono);color:var(--muted);letter-spacing:.05em}
+.nbbar{height:4px;border-radius:2px;background:rgba(5,9,22,.85);overflow:hidden}
+.nbbar i{display:block;height:100%;border-radius:2px;box-shadow:0 0 8px currentColor}
+.nbsim{font:10px var(--mono);color:var(--accent);text-align:right}
+
+/* ══ FLOW — legend, workflow cards ═════════════════════════════ */
+.flowlegend{
+  display:flex;gap:16px;align-items:center;padding:10px 16px;
+  border-bottom:1px solid var(--line);
+  font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+}
+.flowlegend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.flowlegend .dot.n{background:#68e7ff;box-shadow:0 0 8px #68e7ff}
+.flowlegend .dot.h{background:#b49cff;box-shadow:0 0 8px #b49cff}
+.flowlegend .dot.s{background:#72f0b2}
+.flowlegend .dot.c{background:#ff718d}
+.flowlegend .dot.o{background:#68a8ff}
+.wfcard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;
+  background:linear-gradient(150deg,rgba(19,28,61,.72),rgba(9,14,33,.86))}
+.wfcard .l1{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.stagerow{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap}
+.stage{
+  flex:1;min-width:96px;border:1px solid var(--line);border-radius:10px;
+  padding:8px 10px;background:var(--panel2);position:relative;
+}
+.stagename{font:9px var(--mono);letter-spacing:.14em;color:var(--accent);margin-bottom:3px}
+.stageval{font-size:11.5px;color:var(--fg)}
+.stagearrow{position:absolute;right:-13px;top:50%;transform:translateY(-50%);
+  color:var(--accent);z-index:2;font-size:12px;text-shadow:0 0 8px rgba(104,231,255,.8)}
+.taskrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.taskchip{
+  font:10.5px var(--mono);border:1px solid;border-radius:7px;padding:3px 8px;
+  background:rgba(5,9,22,.55);letter-spacing:.02em;
+}
+.obadge{font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid;border-radius:999px;padding:3px 10px}
+.obadge.good{color:var(--green);border-color:rgba(114,240,178,.45);background:rgba(114,240,178,.07)}
+.obadge.bad{color:var(--red);border-color:rgba(255,113,141,.5);background:rgba(255,113,141,.07)}
+
+/* ══ COHERENCE — radar + verdict ═══════════════════════════════ */
+.cohgrid{display:flex;flex-direction:column;gap:14px;align-items:center}
+.verdictbox{display:flex;gap:14px;align-items:center;min-height:44px}
+.vbadge{
+  font:12px var(--mono);letter-spacing:.22em;padding:8px 18px;border-radius:999px;
+  border:1px solid;text-shadow:0 0 12px currentColor;
+}
+.vbadge.good{color:var(--green);border-color:rgba(114,240,178,.5);background:rgba(114,240,178,.06)}
+.vbadge.warn{color:var(--amber);border-color:rgba(255,198,109,.5);background:rgba(255,198,109,.06)}
+.vbadge.bad{color:var(--red);border-color:rgba(255,113,141,.55);background:rgba(255,113,141,.06)}
+.vscore{font:20px var(--mono);color:var(--fg)}
+.dimbar{display:grid;grid-template-columns:150px 1fr 52px;gap:10px;align-items:center;margin-bottom:8px}
+.dimbar .dl{font-size:11.5px;color:var(--muted)}
+.dimbar .db{height:6px;border-radius:3px;background:rgba(5,9,22,.85);overflow:hidden}
+.dimbar .db i{display:block;height:100%;border-radius:3px;
+  box-shadow:0 0 10px rgba(104,231,255,.35);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.dimbar .dv{font:10.5px var(--mono);color:var(--fg);text-align:right}

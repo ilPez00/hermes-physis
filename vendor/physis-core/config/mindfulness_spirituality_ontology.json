@@ -1,0 +1,12 @@
+{
+  "kind": "mindfulness_spirituality",
+  "domains": [
+    {"name":"Meditation","category":"Mindfulness","domain":"HEAL","mode":"REST","axis_kind":"mindfulness_spirituality","axis_name":"meditator","unit":"sessions","hints":["meditate","breath","mindfulness","sit","stillness","focus","present","vipassana","calm","awareness"]},
+    {"name":"Journaling","category":"Mindfulness","domain":"STUDY","mode":"CREATE","axis_kind":"mindfulness_spirituality","axis_name":"journaler","unit":"entries","hints":["journal","write","reflect","gratitude","morning pages","process","insight","diary","prompt","express"]},
+    {"name":"Contemplation & Study","category":"Mindfulness","domain":"STUDY","mode":"LEARN","axis_kind":"mindfulness_spirituality","axis_name":"seeker","unit":"texts","hints":["contemplate","philosophy","scripture","wisdom","read","ponder","meaning","study","teaching","reflect"]},
+    {"name":"Prayer & Ritual","category":"Mindfulness","domain":"BOND","mode":"WALK","axis_kind":"mindfulness_spirituality","axis_name":"devotee","unit":"practices","hints":["prayer","ritual","worship","ceremony","faith","devotion","sacred","practice","altar","tradition"]},
+    {"name":"Nature Connection","category":"Mindfulness","domain":"HEAL","mode":"WALK","axis_kind":"mindfulness_spirituality","axis_name":"wanderer","unit":"walks","hints":["nature","walk","forest","grounding","outdoor","awe","silence","earth","wilderness","presence"]},
+    {"name":"Compassion Practice","category":"Mindfulness","domain":"BOND","mode":"CREATE","axis_kind":"mindfulness_spirituality","axis_name":"giver","unit":"acts","hints":["compassion","kindness","loving-kindness","metta","service","forgiveness","empathy","generosity","give"]},
+    {"name":"Inner Growth","category":"Mindfulness","domain":"HEAL","mode":"LIFT","axis_kind":"mindfulness_spirituality","axis_name":"grower","unit":"breakthroughs","hints":["growth","shadow work","healing","transform","ego","letting go","surrender","breakthrough","integrate"]}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "productivity",
+  "domains": [
+    {"name":"Task Management","category":"Productivity","domain":"FABRICATE","mode":"PLAN","axis_kind":"productivity","axis_name":"organizer","unit":"tasks","hints":["task","todo","list","backlog","prioritize","gtd","capture","next action","kanban","tick off"]},
+    {"name":"Deep Work","category":"Productivity","domain":"STUDY","mode":"LIFT","axis_kind":"productivity","axis_name":"focuser","unit":"blocks","hints":["deep work","focus","flow","concentrate","no distraction","block","pomodoro","single-task","immerse"]},
+    {"name":"Time Blocking","category":"Productivity","domain":"CONSTRUCT","mode":"PLAN","axis_kind":"productivity","axis_name":"planner","unit":"blocks","hints":["time block","calendar","schedule","plan day","allocate","timebox","routine","agenda","slot"]},
+    {"name":"Goal Setting","category":"Productivity","domain":"CONSTRUCT","mode":"PLAN","axis_kind":"productivity","axis_name":"strategist","unit":"goals","hints":["goal","objective","okr","milestone","vision","smart goal","target","quarterly","intention","outcome"]},
+    {"name":"Review & Reflection","category":"Productivity","domain":"STUDY","mode":"REST","axis_kind":"productivity","axis_name":"reviewer","unit":"reviews","hints":["weekly review","reflect","retrospective","journal","assess","adjust","celebrate","lessons","recalibrate"]},
+    {"name":"Automation & Systems","category":"Productivity","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"productivity","axis_name":"systematizer","unit":"systems","hints":["automate","system","workflow","template","shortcut","script","delegate","streamline","batch","optimize"]},
+    {"name":"Energy Management","category":"Productivity","domain":"HEAL","mode":"MAINTAIN","axis_kind":"productivity","axis_name":"steward","unit":"cycles","hints":["energy","break","rest","burnout","pace","recharge","ultradian","mood","sustainable","balance"]},
+    {"name":"Decision Making","category":"Productivity","domain":"STUDY","mode":"PLAN","axis_kind":"productivity","axis_name":"decider","unit":"decisions","hints":["decide","decision","trade-off","pros cons","framework","prioritize","commit","evaluate","choose","weigh"]}
+  ]
+}

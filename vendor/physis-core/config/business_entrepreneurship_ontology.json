@@ -1,0 +1,13 @@
+{
+  "kind": "business_entrepreneurship",
+  "domains": [
+    {"name":"Idea Validation","category":"Business","domain":"STUDY","mode":"WORK","axis_kind":"business_entrepreneurship","axis_name":"validator","unit":"experiments","hints":["validate","idea","market research","customer interview","problem","demand","survey","mvp","assumption","fit"]},
+    {"name":"Product Development","category":"Business","domain":"FABRICATE","mode":"CREATE","axis_kind":"business_entrepreneurship","axis_name":"builder","unit":"features","hints":["product","mvp","build","feature","roadmap","prototype","iterate","ship","user feedback","backlog"]},
+    {"name":"Marketing","category":"Business","domain":"BOND","mode":"MOVE","axis_kind":"business_entrepreneurship","axis_name":"marketer","unit":"campaigns","hints":["marketing","campaign","content","seo","ads","brand","funnel","social","launch","audience","reach"]},
+    {"name":"Sales","category":"Business","domain":"BOND","mode":"WORK","axis_kind":"business_entrepreneurship","axis_name":"seller","unit":"deals","hints":["sales","pitch","lead","close","deal","crm","prospect","demo","negotiate","conversion","pipeline"]},
+    {"name":"Finance & Fundraising","category":"Business","domain":"BOND","mode":"WORK","axis_kind":"business_entrepreneurship","axis_name":"financier","unit":"rounds","hints":["fundraise","investor","pitch deck","revenue","runway","burn","valuation","cash flow","margin","unit economics"]},
+    {"name":"Operations","category":"Business","domain":"FABRICATE","mode":"WALK","axis_kind":"business_entrepreneurship","axis_name":"operator","unit":"processes","hints":["operations","process","sop","logistics","supply","workflow","efficiency","vendor","scale","system"]},
+    {"name":"Strategy","category":"Business","domain":"CONSTRUCT","mode":"PLAN","axis_kind":"business_entrepreneurship","axis_name":"strategist","unit":"plans","hints":["strategy","positioning","moat","competitor","market","vision","okr","differentiate","plan","advantage"]},
+    {"name":"Team Building","category":"Business","domain":"BOND","mode":"CREATE","axis_kind":"business_entrepreneurship","axis_name":"leader","unit":"hires","hints":["hire","team","culture","recruit","onboard","delegate","manage","leadership","morale","talent"]}
+  ]
+}

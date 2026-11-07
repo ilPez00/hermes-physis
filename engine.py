@@ -1,40 +1,52 @@
-"""Lightweight Physis engine wrapper.
+"""Discover and run the small Physis engines bundled with this plugin.
 
-The plugin deliberately depends on small engines (physis-core or
-physis-replant) instead of the full physis binary.  Several engines may be
-available at once; the plugin discovers all of them and routes each command to
-an engine that advertises it.
+Two binaries are shipped in ``bin/``:
+
+* ``physis-core`` - deterministic ontology/coherence engine (scan, search,
+  node-search, classify, snapshot, ...).
+* ``replant`` - verified tool-recipe replay (run, record, stats, show, ...).
+
+The plugin never guesses a command: it reads each engine's own ``--help``
+output and only routes a command to an engine that advertises it. That keeps
+the tool layer honest when one of the engines is upgraded or replaced.
 """
 
 from __future__ import annotations
 
+import json
 import os
+import platform
 import re
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Iterable
 
+DEFAULT_TIMEOUT = 20
+MAX_OUTPUT = 16000
 
-DEFAULT_TIMEOUT = 15
-MAX_OUTPUT = 12000
-
-CANDIDATES = ("physis-core", "physis-replant", "replant", "physis", "physis-next")
-
-# Bundled engines shipped inside this plugin (bin/ directory).
 PLUGIN_DIR = Path(__file__).resolve().parent
 BUNDLED_BIN_DIR = PLUGIN_DIR / "bin"
-BUNDLED_CANDIDATES = (
-    BUNDLED_BIN_DIR / "physis-core",
-    BUNDLED_BIN_DIR / "replant",
+
+# Names looked up on PATH when no bundled binary is present.
+CANDIDATES = ("physis-core", "replant", "physis-replant", "physis", "physis-next")
+
+_REPLANT_COMMANDS = re.compile(
+    r"\b(run|record|show|history|stats|approve|reject|undo|serve|mcp)\b"
 )
 
 
 class EngineError(Exception):
-    """Raised when no engine can be found or used."""
+    """Raised when no engine can be found or a configured path is unusable."""
+
+
+def _is_executable(path: Path) -> bool:
+    return path.is_file() and os.access(path, os.X_OK)
 
 
 class PhysisEngine:
+    """One engine binary plus its self-reported command surface."""
+
     def __init__(self, binary: str, timeout: int = DEFAULT_TIMEOUT):
         self.timeout = max(1, int(timeout or DEFAULT_TIMEOUT))
         self.binary = self.resolve_binary(binary)
@@ -43,25 +55,27 @@ class PhysisEngine:
     @staticmethod
     def resolve_binary(binary: str | None) -> str:
         if binary:
-            if os.path.isfile(binary) and os.access(binary, os.X_OK):
-                return binary
-            found = shutil.which(binary)
+            raw = os.path.expanduser(str(binary).strip())
+            if _is_executable(Path(raw)):
+                return raw
+            found = shutil.which(raw)
             if found:
                 return found
-            raise EngineError(f"configured engine binary not found: {binary}")
+            raise EngineError(f"configured engine binary not found or not executable: {binary}")
         for candidate in CANDIDATES:
             found = shutil.which(candidate)
             if found:
                 return found
         env_bin = os.environ.get("PHYSIS_BIN")
-        if env_bin and os.path.isfile(env_bin) and os.access(env_bin, os.X_OK):
+        if env_bin and _is_executable(Path(env_bin)):
             return env_bin
         raise EngineError(
-            "no Phasis engine found; install physis-core or physis-replant, "
-            "or set PHYSIS_BIN"
+            "no Physis engine found; the plugin ships bin/physis-core and bin/replant, "
+            "or set PHYSIS_BIN / plugins.entries.physis.settings.engine_bin"
         )
 
     def capabilities(self) -> set[str]:
+        """Commands the engine advertises in ``--help`` (cached)."""
         if self._capabilities is not None:
             return self._capabilities
         try:
@@ -69,46 +83,67 @@ class PhysisEngine:
                 [self.binary, "--help"],
                 capture_output=True,
                 text=True,
-                timeout=min(self.timeout, 5),
+                timeout=min(self.timeout, 10),
                 check=False,
             )
             text = (proc.stdout or "") + "\n" + (proc.stderr or "")
         except (subprocess.TimeoutExpired, OSError):
             text = ""
-        found = set(re.findall(r"(?m)^\s{2,}([a-z][a-z0-9_-]*)\b", text))
-        found.update(re.findall(r"(?m)^\s{2,}([a-z][a-z0-9_-]*)\s{2,}", text))
-        # replant emits --help as JSON: {"usage":"replant <run|record|...> [options]..."}
+
+        found: set[str] = set()
+        # physis-core: "Commands:\n  scan       Scan a directory..."
+        found.update(re.findall(r"(?m)^\s{2}([a-z][a-z0-9_-]*)\s{2,}\S", text))
+        # replant: --help is one JSON object whose "usage" lists <run|record|...>
         try:
-            import json as _json
-            payload = _json.loads(text)
-            usage = str(payload.get("usage", "") or payload.get("help", ""))
-            found.update(re.findall(r"\b(run|record|show|history|stats|approve|reject|undo|serve|mcp)\b", usage))
+            payload = json.loads(text.strip())
         except (ValueError, TypeError):
-            pass
+            payload = None
+        if isinstance(payload, dict):
+            usage = " ".join(str(payload.get(key, "")) for key in ("usage", "help"))
+            found.update(_REPLANT_COMMANDS.findall(usage))
         self._capabilities = found
         return found
 
     def supports(self, command: str) -> bool:
         caps = self.capabilities()
-        if not caps:
-            return True
-        return command in caps
+        # An engine that tells us nothing is tried rather than ruled out.
+        return True if not caps else command in caps
 
-    def run(self, args: Iterable[str], cwd: str | None = None, timeout: int | None = None, stdin: str | None = None) -> dict[str, Any]:
-        argv = [self.binary, *args]
+    def version(self) -> str:
+        try:
+            proc = subprocess.run(
+                [self.binary, "--version"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return ""
+        text = (proc.stdout or proc.stderr or "").strip()
+        return text.splitlines()[0][:120] if proc.returncode == 0 and text else ""
+
+    def run(
+        self,
+        args: Iterable[str],
+        cwd: str | None = None,
+        timeout: int | None = None,
+        stdin: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        argv = [self.binary, *[str(a) for a in args]]
         effective_timeout = self.timeout if timeout is None else max(1, int(timeout))
-        # If cwd doesn't exist, fall back to the current directory.
-        if cwd is not None and not Path(cwd).is_dir():
-            cwd = None
+        workdir = cwd if cwd and Path(cwd).is_dir() else None
+        run_env = None
+        if env:
+            run_env = {**os.environ, **{str(k): str(v) for k, v in env.items()}}
         try:
             proc = subprocess.run(
                 argv,
-                cwd=cwd,
+                cwd=workdir,
                 capture_output=True,
                 text=True,
                 timeout=effective_timeout,
                 check=False,
                 input=stdin,
+                env=run_env,
             )
         except subprocess.TimeoutExpired as exc:
             return {
@@ -144,6 +179,7 @@ class PhysisEngine:
     def info(self) -> dict[str, Any]:
         return {
             "binary": self.binary,
+            "version": self.version(),
             "timeout": self.timeout,
             "capabilities": sorted(self.capabilities()),
         }
@@ -169,22 +205,32 @@ class EnginePool:
         return result
 
     def supports(self, command: str) -> bool:
-        caps = self.capabilities()
-        if not caps:
-            return True
-        return command in caps
+        return any(engine.supports(command) for engine in self.engines)
 
-    def engine_for(self, command: str) -> PhysisEngine:
+    def engine_for(self, command: str, preferred: str | None = None) -> PhysisEngine:
+        if preferred:
+            for engine in self.engines:
+                if preferred in Path(engine.binary).name and engine.supports(command):
+                    return engine
         for engine in self.engines:
             if engine.supports(command):
                 return engine
         return self.engines[0]
 
-    def run(self, args: Iterable[str], cwd: str | None = None, timeout: int | None = None, stdin: str | None = None) -> dict[str, Any]:
+    def run(
+        self,
+        args: Iterable[str],
+        cwd: str | None = None,
+        timeout: int | None = None,
+        stdin: str | None = None,
+        env: dict[str, str] | None = None,
+        engine: str | None = None,
+    ) -> dict[str, Any]:
         argv = list(args)
         command = argv[0] if argv else ""
-        engine = self.engine_for(command)
-        return engine.run(argv, cwd=cwd, timeout=timeout, stdin=stdin)
+        return self.engine_for(command, preferred=engine).run(
+            argv, cwd=cwd, timeout=timeout, stdin=stdin, env=env
+        )
 
     def info(self) -> dict[str, Any]:
         return {
@@ -193,55 +239,59 @@ class EnginePool:
         }
 
 
+def _arch_dir_names() -> tuple[str, str]:
+    machine = platform.machine().lower()
+    arch = "x86_64" if machine in {"x86_64", "amd64"} else machine
+    system = platform.system().lower()
+    os_name = "linux" if system == "linux" else system
+    return os_name, arch
+
+
+def _bundled_binaries() -> list[str]:
+    """Bundled binaries, preferring the flat ``bin/`` layout (deduplicated)."""
+    found: list[str] = []
+    for name in ("physis-core", "replant"):
+        flat = BUNDLED_BIN_DIR / name
+        if _is_executable(flat):
+            found.append(str(flat))
+    os_name, arch = _arch_dir_names()
+    for name in ("physis-core", "replant"):
+        arch_path = BUNDLED_BIN_DIR / f"{os_name}-{arch}" / name
+        if _is_executable(arch_path):
+            resolved = str(arch_path.resolve())
+            if resolved not in {str(Path(item).resolve()) for item in found}:
+                found.append(str(arch_path))
+    return found
+
+
 def discover_engines(binary: Any = None, timeout: int = DEFAULT_TIMEOUT) -> EnginePool:
     binaries: list[str] = []
     if isinstance(binary, str) and binary.strip():
-        if "," in binary:
-            binaries = [item.strip() for item in binary.split(",") if item.strip()]
-        else:
-            binaries = [binary.strip()]
+        # A comma-separated list is accepted for operators who keep several
+        # engines in different locations.
+        binaries = [item.strip() for item in binary.split(",") if item.strip()]
     elif isinstance(binary, (list, tuple)):
         binaries = [str(item).strip() for item in binary if str(item).strip()]
-    elif binary is None:
+    else:
         env_bins = os.environ.get("PHYSIS_BINS") or os.environ.get("PHYSIS_BIN")
         if env_bins:
             binaries = [item.strip() for item in env_bins.split(",") if item.strip()]
         else:
-            # Prefer binaries bundled with the plugin, if present.
-            for bundled in BUNDLED_CANDIDATES:
-                if bundled.is_file() and os.access(bundled, os.X_OK):
-                    binaries.append(str(bundled))
-            # Also check arch-specific subdirs (bin/linux-x86_64/...).
-            import platform as _platform
-
-            machine = _platform.machine().lower()
-            system = _platform.system().lower()
-            arch = "x86_64" if machine in {"x86_64", "amd64"} else machine
-            os_name = "linux" if system == "linux" else system
-            for name in ("physis-core", "replant"):
-                arch_bundled = (
-                    Path(__file__).resolve().parent / "bin" / f"{os_name}-{arch}" / name
-                )
-                if (
-                    arch_bundled.is_file()
-                    and os.access(arch_bundled, os.X_OK)
-                    and str(arch_bundled) not in binaries
-                ):
-                    binaries.append(str(arch_bundled))
-            for candidate in CANDIDATES:
-                found = shutil.which(candidate)
-                if found and found not in binaries:
-                    binaries.append(found)
-
-    if not binaries:
-        # Fall back to a single configured/available binary; may raise.
-        binaries = [PhysisEngine.resolve_binary(None)]
+            # Bundled engines are the supported pair. Only look at PATH when
+            # the bundle is missing, so a stray `physis`/`physis-next` binary
+            # cannot silently change the tool surface.
+            binaries = _bundled_binaries()
+            if not binaries:
+                for candidate in CANDIDATES:
+                    found = shutil.which(candidate)
+                    if found:
+                        binaries.append(found)
 
     engines: list[PhysisEngine] = []
     seen: set[str] = set()
     for item in binaries:
         try:
-            resolved = PhysisEngine.resolve_binary(item)
+            resolved = str(Path(PhysisEngine.resolve_binary(item)).resolve())
         except EngineError:
             continue
         if resolved in seen:
@@ -251,13 +301,14 @@ def discover_engines(binary: Any = None, timeout: int = DEFAULT_TIMEOUT) -> Engi
 
     if not engines:
         raise EngineError(
-            "no Physis engines found; install physis-core or physis-replant, "
+            "no Physis engines found; expected bundled bin/physis-core and bin/replant, "
             "or set PHYSIS_BIN/PHYSIS_BINS"
         )
     return EnginePool(engines)
 
 
 def _truncate(text: str) -> str:
+    text = text or ""
     if len(text) <= MAX_OUTPUT:
         return text
     return text[:MAX_OUTPUT] + f"\n... truncated {len(text) - MAX_OUTPUT} bytes"

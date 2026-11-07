@@ -1,13 +1,21 @@
 name: physis
-version: 1.0.0
-description: Evidence-backed code context, causal chains and structural diffs using a lightweight Physis engine (physis-core or physis-replant), with optional full physis fallback.
+version: 1.1.0
+description: >
+  Evidence-backed code context with two bundled offline engines: physis-core
+  (coherence index, structural search, fixed-token context packets, semiotic
+  classification) and replant (verified tool-recipe replay with zero provider
+  calls). No API key, no network, no Python dependencies.
+author: Giovanni Pezzulli
+requires_hermes: ">=0.23.0"
 provides_tools:
   - physis_engine_status
   - physis_observe
+  - physis_snapshot
   - physis_context
   - physis_query
   - physis_why
   - physis_diff
+  - physis_classify
   - physis_command
   - replant_run
   - replant_record
@@ -20,22 +28,24 @@ config_schema:
   engine_bin:
     type: str
     default: ""
-    description: "Path to physis-core, physis-replant or physis binary"
+    description: "Optional override: path to physis-core, replant or a compatible engine (comma-separated allowed)"
   auto_observe:
     type: bool
     default: false
-    description: "Run an incremental observe after file edits"
+    description: "After file writes, incrementally re-index the edited folder (bounded, best-effort)"
   budget:
     type: int
     default: 800
-    description: "Token budget for context packets"
+    description: "Default token budget for physis_context packets (100-4000)"
   timeout:
     type: int
-    default: 15
-    description: "Subprocess timeout in seconds"
+    default: 20
+    description: "Per-engine subprocess timeout in seconds"
 tags:
   - code
   - context
+  - retrieval
   - verification
+  - offline
 license: MIT
 homepage: https://github.com/ilPez00/physis-core

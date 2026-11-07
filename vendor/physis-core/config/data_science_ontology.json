@@ -1,0 +1,15 @@
+{
+  "kind": "data_science",
+  "domains": [
+    {"name":"Data Cleaning","category":"Data Science","domain":"STUDY","mode":"WORK","axis_kind":"data_science","axis_name":"janitor","unit":"datasets","hints":["clean","missing values","outlier","dedupe","normalize","impute","wrangle","tidy","parse","sanitize"]},
+    {"name":"Exploratory Analysis","category":"Data Science","domain":"STUDY","mode":"WORK","axis_kind":"data_science","axis_name":"analyst","unit":"insights","hints":["eda","explore","distribution","correlation","histogram","summary stats","pandas","visualize","pattern","trend"]},
+    {"name":"Feature Engineering","category":"Data Science","domain":"FABRICATE","mode":"CREATE","axis_kind":"data_science","axis_name":"crafter","unit":"features","hints":["feature","encode","scale","one-hot","embedding","transform","derive","selection","binning","interaction"]},
+    {"name":"Model Training","category":"Data Science","domain":"STUDY","mode":"LEARN","axis_kind":"data_science","axis_name":"trainer","unit":"models","hints":["train","fit","model","epoch","gradient","loss","hyperparameter","gpu","backprop","converge","overfit"]},
+    {"name":"Model Evaluation","category":"Data Science","domain":"STUDY","mode":"SENSE","axis_kind":"data_science","axis_name":"evaluator","unit":"metrics","hints":["evaluate","accuracy","precision","recall","f1","auc","confusion matrix","validation","cross-validation","baseline"]},
+    {"name":"Data Pipelines","category":"Data Science","domain":"FABRICATE","mode":"WALK","axis_kind":"data_science","axis_name":"plumber","unit":"pipelines","hints":["pipeline","etl","ingest","batch","stream","airflow","spark","schedule","transform","load","warehouse"]},
+    {"name":"Statistical Inference","category":"Data Science","domain":"STUDY","mode":"WORK","axis_kind":"data_science","axis_name":"statistician","unit":"tests","hints":["hypothesis","p-value","confidence interval","significance","regression","bayesian","sampling","distribution","variance"]},
+    {"name":"Visualization","category":"Data Science","domain":"STUDY","mode":"GUIDE","axis_kind":"data_science","axis_name":"communicator","unit":"charts","hints":["plot","chart","matplotlib","seaborn","dashboard","graph","visualize","report","figure","axis"]},
+    {"name":"Deployment & Serving","category":"Data Science","domain":"FABRICATE","mode":"WORK","axis_kind":"data_science","axis_name":"server","unit":"endpoints","hints":["serve","inference","deploy model","onnx","api","latency","batch predict","mlops","endpoint","quantize"]},
+    {"name":"Experiment Tracking","category":"Data Science","domain":"STUDY","mode":"SENSE","axis_kind":"data_science","axis_name":"recorder","unit":"runs","hints":["experiment","track","mlflow","wandb","run","version","reproduce","log metric","compare","sweep"]}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "cybersecurity",
+  "domains": [
+    {"name":"Vulnerability Assessment","category":"Cybersecurity","domain":"CONSTRUCT","mode":"SENSE","axis_kind":"cybersecurity","axis_name":"assessor","unit":"findings","hints":["vulnerability","cve","scan","assess","weakness","exposure","audit","nessus","severity","patch gap"]},
+    {"name":"Penetration Testing","category":"Cybersecurity","domain":"CONSTRUCT","mode":"SENSE","axis_kind":"cybersecurity","axis_name":"redteam","unit":"exploits","hints":["pentest","exploit","red team","payload","privilege escalation","lateral movement","recon","metasploit","ctf","engagement"]},
+    {"name":"Incident Detection","category":"Cybersecurity","domain":"HEAL","mode":"SENSE","axis_kind":"cybersecurity","axis_name":"detector","unit":"alerts","hints":["detect","ids","siem","alert","anomaly","threat","log analysis","indicator","compromise","signature"]},
+    {"name":"Incident Response","category":"Cybersecurity","domain":"HEAL","mode":"WORK","axis_kind":"cybersecurity","axis_name":"responder","unit":"incidents","hints":["incident","breach","contain","eradicate","forensics","quarantine","recover","triage","root cause","report"]},
+    {"name":"Access Control","category":"Cybersecurity","domain":"BOND","mode":"CREATE","axis_kind":"cybersecurity","axis_name":"gatekeeper","unit":"policies","hints":["access","authentication","authorization","rbac","mfa","least privilege","identity","sso","permission","token"]},
+    {"name":"Cryptography","category":"Cybersecurity","domain":"FABRICATE","mode":"WORK","axis_kind":"cybersecurity","axis_name":"cryptographer","unit":"schemes","hints":["encrypt","decrypt","hash","key","tls","certificate","aes","rsa","signature","cipher","entropy"]},
+    {"name":"Security Hardening","category":"Cybersecurity","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"cybersecurity","axis_name":"hardener","unit":"controls","hints":["harden","patch","firewall","baseline","configuration","cis benchmark","disable","minimize attack surface","update"]},
+    {"name":"Threat Intelligence","category":"Cybersecurity","domain":"STUDY","mode":"SENSE","axis_kind":"cybersecurity","axis_name":"analyst","unit":"reports","hints":["threat intel","ioc","actor","ttp","mitre","campaign","feed","attribution","malware","research"]},
+    {"name":"Compliance & Governance","category":"Cybersecurity","domain":"CONSTRUCT","mode":"SENSE","axis_kind":"cybersecurity","axis_name":"auditor","unit":"controls","hints":["compliance","gdpr","soc2","iso27001","policy","governance","audit","control","framework","attestation"]},
+    {"name":"Secure Coding","category":"Cybersecurity","domain":"FABRICATE","mode":"WORK","axis_kind":"cybersecurity","axis_name":"developer","unit":"reviews","hints":["secure coding","input validation","sanitize","injection","xss","csrf","sast","dependency scan","owasp","escape"]}
+  ]
+}

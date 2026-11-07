@@ -1,0 +1,77 @@
+[package]
+name = "physis-core"
+version = "0.1.26"
+edition = "2021"
+description = "Ontology and classification primitives on a 5x14 semiotic grid: deterministic structural mapping (repeats, differences, contradictions), token-fixed RAG, interchangeable model/n-gram backends. Offline, no API key."
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/ilPez00/physis-core"
+homepage = "https://github.com/ilPez00/physis-core"
+documentation = "https://docs.rs/physis-core"
+keywords = ["knowledge-graph", "epistemic-engine", "truth-maintenance", "coherence", "embeddings"]
+categories = ["data-structures", "algorithms", "science", "text-processing"]
+# Keep stray backups and non-library files out of the published .crate.
+exclude = ["**/*.bak", "sw_add_domains.py", "STRIPE_LICENSE_GUIDE.md"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+anyhow = "1"
+rand = "0.8"
+sha2 = "0.10"
+
+# CLI + embedded studio GUI (axum). Kept optional so the engine core stays
+# dependency-free for embedders that reuse it. Enable with --features cli/studio.
+clap = { version = "4", features = ["derive"], optional = true }
+axum = { version = "0.7", features = ["json", "macros"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"], optional = true }
+ureq = { version = "2.2", optional = true }
+
+# Production semantic embeddings (optional — off by default so the package
+# builds anywhere without model files). Enable with --features embed-onnx.
+ort = { version = "2.0.0-rc.13", optional = true }
+tokenizers = { version = "0.21", optional = true }
+
+# Regular expressions for `system_one::heads::PatternHead` regex rules.
+# Kept optional so the core stays dependency-free: literal/prefix patterns
+# work without it, and a Regex rule is reported as unavailable rather than
+# silently matching nothing.
+regex = { version = "1", optional = true }
+
+[features]
+default = ["cli", "studio"]
+cli = ["dep:clap"]
+studio = ["dep:axum", "dep:tokio"]
+# ONNX MiniLM embedder via the `ort` runtime. Requires model.onnx +
+# tokenizer.json in the model dir at runtime; falls back to random projection.
+embed-onnx = ["dep:ort", "dep:tokenizers"]
+http = ["dep:ureq"]
+# Regex pattern rules for System-One decision heads (see `src/system_one/`).
+head-regex = ["dep:regex"]
+
+[dev-dependencies]
+tempfile = "3"
+# Used only by the research examples (experiment22/23, WordNet lexical
+# anchoring). Deliberately NOT a regular dependency: nothing in src/
+# touches WordNet, so shipping it as one would force the whole
+# database crate on every downstream consumer for no benefit.
+wordnet-db = "0.1.3"
+wordnet-types = "0.1.3"
+
+[lib]
+name = "physis_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "physis-core"
+path = "src/main.rs"
+required-features = ["cli"]
+
+# The front door. Deliberately dependency-light and feature-free: it parses no
+# subcommands of its own, it only decides which installed executable should
+# receive them, so it must build and run even where `cli` is off.
+[[bin]]
+name = "physis"
+path = "src/bin/physis.rs"

@@ -1,0 +1,12 @@
+{
+  "kind": "visual_arts",
+  "domains": [
+    {"name":"Drawing Practice","category":"Visual Arts","domain":"FABRICATE","mode":"LEARN","axis_kind":"visual_arts","axis_name":"draftsman","unit":"studies","hints":["draw","sketch","gesture","figure","line","shading","study","pencil","anatomy","perspective"]},
+    {"name":"Painting","category":"Visual Arts","domain":"FABRICATE","mode":"CREATE","axis_kind":"visual_arts","axis_name":"painter","unit":"pieces","hints":["paint","color","oil","acrylic","watercolor","brush","palette","canvas","blend","value"]},
+    {"name":"Digital Art","category":"Visual Arts","domain":"FABRICATE","mode":"CREATE","axis_kind":"visual_arts","axis_name":"digital","unit":"pieces","hints":["digital","photoshop","procreate","tablet","layer","brush","illustration","render","krita","vector"]},
+    {"name":"Composition & Theory","category":"Visual Arts","domain":"STUDY","mode":"LEARN","axis_kind":"visual_arts","axis_name":"theorist","unit":"concepts","hints":["composition","color theory","balance","focal point","rule of thirds","contrast","harmony","negative space"]},
+    {"name":"Photography","category":"Visual Arts","domain":"FABRICATE","mode":"CREATE","axis_kind":"visual_arts","axis_name":"photographer","unit":"shots","hints":["photo","camera","exposure","aperture","shutter","composition","lens","light","frame","edit"]},
+    {"name":"Critique & Reference","category":"Visual Arts","domain":"STUDY","mode":"LEARN","axis_kind":"visual_arts","axis_name":"critic","unit":"reviews","hints":["critique","reference","master study","analyze","feedback","gallery","inspiration","mood board","observe"]},
+    {"name":"Exhibition & Sharing","category":"Visual Arts","domain":"BOND","mode":"MOVE","axis_kind":"visual_arts","axis_name":"exhibitor","unit":"shows","hints":["exhibit","portfolio","share","commission","sell","gallery","post","showcase","print","client"]}
+  ]
+}

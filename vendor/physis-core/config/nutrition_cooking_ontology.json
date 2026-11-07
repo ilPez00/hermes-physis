@@ -1,0 +1,13 @@
+{
+  "kind": "nutrition_cooking",
+  "domains": [
+    {"name":"Meal Planning","category":"Cooking","domain":"FABRICATE","mode":"PLAN","axis_kind":"nutrition_cooking","axis_name":"planner","unit":"plans","hints":["meal plan","menu","prep","grocery list","weekly","portion","batch cook","schedule","balance"]},
+    {"name":"Cooking Techniques","category":"Cooking","domain":"FABRICATE","mode":"WORK","axis_kind":"nutrition_cooking","axis_name":"technique","unit":"dishes","hints":["sauté","roast","braise","grill","steam","fry","bake","simmer","sear","knife skills","temperature"]},
+    {"name":"Baking","category":"Cooking","domain":"FABRICATE","mode":"WORK","axis_kind":"nutrition_cooking","axis_name":"baker","unit":"bakes","hints":["bake","dough","flour","yeast","oven","pastry","bread","cake","ferment","proof","crumb"]},
+    {"name":"Recipe Development","category":"Cooking","domain":"FABRICATE","mode":"CREATE","axis_kind":"nutrition_cooking","axis_name":"creator","unit":"recipes","hints":["recipe","experiment","flavor","ingredient","season","ratio","substitute","plate","taste","balance"]},
+    {"name":"Nutrition Knowledge","category":"Cooking","domain":"HEAL","mode":"LEARN","axis_kind":"nutrition_cooking","axis_name":"nutritionist","unit":"topics","hints":["nutrition","macro","micronutrient","vitamin","protein","fiber","calorie","glycemic","label","balanced diet"]},
+    {"name":"Kitchen Organization","category":"Cooking","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"nutrition_cooking","axis_name":"steward","unit":"chores","hints":["pantry","organize","mise en place","clean","store","inventory","fridge","label","leftovers","spice rack"]},
+    {"name":"Preservation","category":"Cooking","domain":"FABRICATE","mode":"WORK","axis_kind":"nutrition_cooking","axis_name":"keeper","unit":"batches","hints":["preserve","ferment","pickle","can","freeze","dry","cure","jam","shelf life","brine"]},
+    {"name":"Hosting & Sharing","category":"Cooking","domain":"BOND","mode":"PLAY","axis_kind":"nutrition_cooking","axis_name":"host","unit":"meals","hints":["host","dinner","party","serve","share","guests","menu","entertain","feast","gathering"]}
+  ]
+}

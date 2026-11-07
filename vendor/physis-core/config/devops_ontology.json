@@ -1,0 +1,16 @@
+{
+  "kind": "devops",
+  "domains": [
+    {"name":"CI/CD Pipelines","category":"DevOps","domain":"FABRICATE","mode":"WALK","axis_kind":"devops","axis_name":"automation","unit":"pipelines","hints":["ci","cd","pipeline","github actions","jenkins","build","deploy","workflow","runner","artifact","stage"]},
+    {"name":"Containerization","category":"DevOps","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"devops","axis_name":"packaging","unit":"images","hints":["docker","container","image","dockerfile","compose","layer","registry","kubernetes","pod","helm"]},
+    {"name":"Infrastructure as Code","category":"DevOps","domain":"CONSTRUCT","mode":"WORK","axis_kind":"devops","axis_name":"provisioning","unit":"resources","hints":["terraform","ansible","provision","infrastructure","iac","cloudformation","module","state","plan","apply"]},
+    {"name":"Monitoring & Observability","category":"DevOps","domain":"HEAL","mode":"SENSE","axis_kind":"devops","axis_name":"observer","unit":"alerts","hints":["monitor","metric","log","trace","alert","prometheus","grafana","dashboard","uptime","sla","telemetry"]},
+    {"name":"Incident Response","category":"DevOps","domain":"HEAL","mode":"WORK","axis_kind":"devops","axis_name":"firefighter","unit":"incidents","hints":["incident","outage","oncall","pager","rollback","hotfix","postmortem","mitigate","severity","downtime"]},
+    {"name":"Deployment","category":"DevOps","domain":"FABRICATE","mode":"WORK","axis_kind":"devops","axis_name":"releaser","unit":"releases","hints":["deploy","release","rollout","canary","blue-green","staging","production","ship","promote","railway","vercel"]},
+    {"name":"Cloud Resource Management","category":"DevOps","domain":"CONSTRUCT","mode":"MAINTAIN","axis_kind":"devops","axis_name":"steward","unit":"services","hints":["aws","gcp","azure","cloud","ec2","s3","lambda","bucket","iam","region","quota","cost"]},
+    {"name":"Networking","category":"DevOps","domain":"BOND","mode":"CREATE","axis_kind":"devops","axis_name":"connector","unit":"routes","hints":["network","dns","load balancer","proxy","firewall","vpc","ingress","tls","port","gateway","subnet"]},
+    {"name":"Secrets Management","category":"DevOps","domain":"BOND","mode":"MAINTAIN","axis_kind":"devops","axis_name":"guardian","unit":"secrets","hints":["secret","vault","env var","credential","key","rotate","encrypt","ssm","kms",".env"]},
+    {"name":"Scaling","category":"DevOps","domain":"FABRICATE","mode":"PLAN","axis_kind":"devops","axis_name":"scaler","unit":"replicas","hints":["scale","autoscale","replica","horizontal","vertical","capacity","throughput","cluster","node","load"]},
+    {"name":"Backup & Recovery","category":"DevOps","domain":"HEAL","mode":"MAINTAIN","axis_kind":"devops","axis_name":"keeper","unit":"backups","hints":["backup","restore","snapshot","disaster recovery","retention","replication","archive","dump","failover"]}
+  ]
+}

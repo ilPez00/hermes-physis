@@ -1,0 +1,13 @@
+{
+  "kind": "relationships",
+  "domains": [
+    {"name":"Quality Time","category":"Relationships","domain":"BOND","mode":"REST","axis_kind":"relationships","axis_name":"presence","unit":"moments","hints":["time together","date","hang out","presence","attention","shared activity","quality time","connect","visit"]},
+    {"name":"Communication","category":"Relationships","domain":"BOND","mode":"WALK","axis_kind":"relationships","axis_name":"communicator","unit":"conversations","hints":["talk","listen","express","conversation","check in","share feelings","honest","clarify","understand","empathy"]},
+    {"name":"Conflict Resolution","category":"Relationships","domain":"BOND","mode":"WORK","axis_kind":"relationships","axis_name":"mediator","unit":"resolutions","hints":["conflict","argument","resolve","apologize","compromise","repair","disagreement","forgive","boundary","de-escalate"]},
+    {"name":"Acts of Service","category":"Relationships","domain":"BOND","mode":"WORK","axis_kind":"relationships","axis_name":"giver","unit":"deeds","hints":["help","support","favor","gift","cook","care","thoughtful","surprise","gesture","act of service"]},
+    {"name":"Building New Connections","category":"Relationships","domain":"BOND","mode":"MOVE","axis_kind":"relationships","axis_name":"connector","unit":"contacts","hints":["meet","network","friend","introduce","social","new people","community","reach out","invite","mingle"]},
+    {"name":"Family Bonds","category":"Relationships","domain":"BOND","mode":"MAINTAIN","axis_kind":"relationships","axis_name":"kin","unit":"gatherings","hints":["family","parent","sibling","kids","relatives","holiday","tradition","reunion","call mom","heritage"]},
+    {"name":"Self-Reflection in Relating","category":"Relationships","domain":"BOND","mode":"LEARN","axis_kind":"relationships","axis_name":"introspect","unit":"reflections","hints":["reflect","attachment","pattern","trust","vulnerability","needs","journal","grow","self-awareness"]},
+    {"name":"Romance & Intimacy","category":"Relationships","domain":"BOND","mode":"LIFT","axis_kind":"relationships","axis_name":"partner","unit":"moments","hints":["romance","intimacy","partner","affection","love","closeness","spark","date night","appreciation"]}
+  ]
+}

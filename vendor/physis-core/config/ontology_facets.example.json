@@ -1,0 +1,58 @@
+{
+  "kind": "facets_example",
+  "note": "Illustrative only — NOT registered in BUILTIN/EXTRA_ONTOLOGIES. Shows the facet schema on real entries. Load via OntologyLoader::load_from_str to experiment.",
+  "domains": [
+    {
+      "name": "Pump Maintenance",
+      "category": "reliability",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "machine",
+      "axis_name": "operational",
+      "unit": "tasks",
+      "hints": ["lubricate", "inspect", "replace seal"],
+      "facets": {
+        "sub_domain": "Repair",
+        "sub_mode": "Preventive",
+        "lifecycle": "Operate",
+        "agency": "Automated",
+        "scale": "Organizational",
+        "abstraction": "Concrete"
+      }
+    },
+    {
+      "name": "Contract Negotiation",
+      "category": "commerce",
+      "domain": "EXCHANGE",
+      "mode": "PERSUADE",
+      "axis_kind": "office",
+      "axis_name": "legal",
+      "unit": "deals",
+      "hints": ["terms", "counter-offer", "close"],
+      "facets": {
+        "sub_domain": "B2B",
+        "lifecycle": "Build",
+        "agency": "Collective",
+        "scale": "Organizational",
+        "abstraction": "Abstract"
+      }
+    },
+    {
+      "name": "First-Aid Drill",
+      "category": "safety",
+      "domain": "DEFEND",
+      "mode": "TEACH",
+      "axis_kind": "human",
+      "axis_name": "physical",
+      "unit": "sessions",
+      "hints": ["CPR", "stop bleed", "evacuate"],
+      "facets": {
+        "sub_domain": "Protect",
+        "lifecycle": "Design",
+        "agency": "SelfActor",
+        "scale": "Interpersonal",
+        "abstraction": "Concrete"
+      }
+    }
+  ]
+}

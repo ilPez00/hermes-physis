@@ -1,0 +1,205 @@
+{
+  "kind": "health_fitness",
+  "interpretant": {
+    "confirms": [
+      "success"
+    ],
+    "refutes": [],
+    "half_life_days": 21,
+    "weight": 1.0,
+    "note": "Completing a session confirms. Nothing refutes — a missed week is absence of evidence, not evidence of a wrong frame. Short half-life: current habits should outrank old ones."
+  },
+  "domains": [
+    {
+      "name": "Strength Training",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "LIFT",
+      "axis_kind": "health_fitness",
+      "axis_name": "strength",
+      "unit": "reps",
+      "hints": [
+        "gym",
+        "lift",
+        "weights",
+        "squat",
+        "deadlift",
+        "bench",
+        "reps",
+        "sets",
+        "barbell",
+        "progressive overload",
+        "muscle"
+      ]
+    },
+    {
+      "name": "Cardio",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "health_fitness",
+      "axis_name": "endurance",
+      "unit": "minutes",
+      "hints": [
+        "run",
+        "jog",
+        "cardio",
+        "cycling",
+        "swimming",
+        "heart rate",
+        "endurance",
+        "hiit",
+        "treadmill",
+        "pace",
+        "stamina"
+      ]
+    },
+    {
+      "name": "Mobility & Stretching",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "health_fitness",
+      "axis_name": "mobility",
+      "unit": "sessions",
+      "hints": [
+        "stretch",
+        "mobility",
+        "flexibility",
+        "yoga",
+        "warmup",
+        "cooldown",
+        "foam roll",
+        "range of motion",
+        "posture"
+      ]
+    },
+    {
+      "name": "Recovery & Sleep",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "health_fitness",
+      "axis_name": "recovery",
+      "unit": "hours",
+      "hints": [
+        "sleep",
+        "rest",
+        "recovery",
+        "nap",
+        "deload",
+        "fatigue",
+        "hrv",
+        "relax",
+        "restore",
+        "circadian"
+      ]
+    },
+    {
+      "name": "Nutrition Tracking",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "health_fitness",
+      "axis_name": "fuel",
+      "unit": "calories",
+      "hints": [
+        "calories",
+        "macros",
+        "protein",
+        "diet",
+        "meal",
+        "track",
+        "carbs",
+        "fat",
+        "deficit",
+        "surplus",
+        "hydration"
+      ]
+    },
+    {
+      "name": "Habit Building",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "health_fitness",
+      "axis_name": "discipline",
+      "unit": "streaks",
+      "hints": [
+        "habit",
+        "streak",
+        "routine",
+        "consistency",
+        "daily",
+        "schedule",
+        "accountability",
+        "commit",
+        "track",
+        "discipline"
+      ]
+    },
+    {
+      "name": "Skill Acquisition",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "LEARN",
+      "axis_kind": "health_fitness",
+      "axis_name": "technique",
+      "unit": "drills",
+      "hints": [
+        "technique",
+        "form",
+        "drill",
+        "practice",
+        "sport",
+        "learn",
+        "coordination",
+        "balance",
+        "skill",
+        "coaching"
+      ]
+    },
+    {
+      "name": "Mental Wellbeing",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "health_fitness",
+      "axis_name": "mind",
+      "unit": "sessions",
+      "hints": [
+        "meditation",
+        "mindfulness",
+        "stress",
+        "breathing",
+        "calm",
+        "mood",
+        "mental health",
+        "journal",
+        "gratitude",
+        "therapy"
+      ]
+    },
+    {
+      "name": "Medical Care",
+      "category": "Health & Fitness",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "health_fitness",
+      "axis_name": "clinical",
+      "unit": "visits",
+      "hints": [
+        "doctor",
+        "checkup",
+        "appointment",
+        "medication",
+        "symptom",
+        "diagnosis",
+        "prescription",
+        "lab",
+        "vaccine",
+        "treatment"
+      ]
+    }
+  ]
+}

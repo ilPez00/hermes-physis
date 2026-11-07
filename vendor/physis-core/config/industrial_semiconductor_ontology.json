@@ -1,0 +1,255 @@
+{
+  "kind": "industrial_semiconductor",
+  "domains": [
+    {
+      "name": "Semiconductor Manufacturing",
+      "category": "Industrial Process",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "process",
+      "axis_name": "wafer fabrication",
+      "unit": "wafers",
+      "hints": ["semiconductor", "wafer fab", "chip manufacturing", "IC fabrication", "wafer processing", "fab"]
+    },
+    {
+      "name": "Semiconductor Process",
+      "category": "Industrial Process",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "process",
+      "axis_name": "process step",
+      "unit": "steps",
+      "hints": ["process step", "lithography", "etching", "deposition", "CVD", "PVD", "ion implant", "clean"]
+    },
+    {
+      "name": "Semiconductor Equipment",
+      "category": "Industrial Equipment",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "equipment",
+      "axis_name": "tool",
+      "unit": "tools",
+      "hints": ["equipment", "tool", "chamber", "reactor", "stepper", "scanner", "track", "handler"]
+    },
+    {
+      "name": "Semiconductor Sensor",
+      "category": "Industrial Sensor",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "sensor",
+      "axis_name": "measurement",
+      "unit": "readings",
+      "hints": ["sensor", "metrology", "spectroscopy", "ellipsometry", "TEM", "SEM", "AFM", "OCD", "OSP"]
+    },
+    {
+      "name": "Process Measurement",
+      "category": "Industrial Measurement",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "measurement",
+      "axis_name": "parameter",
+      "unit": "units",
+      "hints": ["measurement", "temperature", "pressure", "flow", "RF power", "gas flow", "thickness", "critical dimension"]
+    },
+    {
+      "name": "Normal Process Operation",
+      "category": "Process State",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "process_state",
+      "axis_name": "steady state",
+      "unit": "state",
+      "hints": ["normal", "stable", "in control", "baseline", "steady state", "nominal", "expected", "routine"]
+    },
+    {
+      "name": "Process Anomaly",
+      "category": "Process State",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "process_state",
+      "axis_name": "deviation",
+      "unit": "events",
+      "hints": ["anomaly", "deviation", "outlier", "shift", "drift", "unusual", "abnormal", "suspicious"]
+    },
+    {
+      "name": "Equipment Anomaly",
+      "category": "Equipment State",
+      "domain": "HEAL",
+      "mode": "DESTROY",
+      "axis_kind": "equipment_state",
+      "axis_name": "fault",
+      "unit": "faults",
+      "hints": ["equipment fault", "tool alarm", "chamber issue", "maintenance required", "breakdown", "malfunction"]
+    },
+    {
+      "name": "Process Degradation",
+      "category": "Process State",
+      "domain": "HEAL",
+      "mode": "DESTROY",
+      "axis_kind": "process_state",
+      "axis_name": "decline",
+      "unit": "trend",
+      "hints": ["degradation", "decline", "wear", "aging", "drift", "deterioration", "performance loss"]
+    },
+    {
+      "name": "Manufacturing Defect",
+      "category": "Quality",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "quality",
+      "axis_name": "defect",
+      "unit": "defects",
+      "hints": ["defect", "particle", "contamination", "pattern defect", "bridge", "open", "short", "void"]
+    },
+    {
+      "name": "Process Failure",
+      "category": "Process State",
+      "domain": "FABRICATE",
+      "mode": "DESTROY",
+      "axis_kind": "process_state",
+      "axis_name": "failure",
+      "unit": "failures",
+      "hints": ["failure", "fail", "abort", "scrap", "rework", "yield loss", "catastrophic", "critical"]
+    },
+    {
+      "name": "Quality & Yield",
+      "category": "Quality",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "quality",
+      "axis_name": "yield metric",
+      "unit": "yield",
+      "hints": ["yield", "quality", "good die", "bad die", "bin", "sort", "test yield", "DPPM"]
+    },
+    {
+      "name": "Environmental Condition",
+      "category": "Process Environment",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "environment",
+      "axis_name": "ambient",
+      "unit": "conditions",
+      "hints": ["cleanroom", "temperature", "humidity", "particle count", "air quality", "vibration", "EMI"]
+    },
+    {
+      "name": "Process Control",
+      "category": "Industrial Control",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "control",
+      "axis_name": "regulation",
+      "unit": "loops",
+      "hints": ["PID", "feedback control", "setpoint", "tuning", "run-to-run", "fault detection", "classification"]
+    },
+    {
+      "name": "Semiconductor Material",
+      "category": "Material",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "material",
+      "axis_name": "substance",
+      "unit": "materials",
+      "hints": ["silicon", "silicon dioxide", "nitride", "metal", "photoresist", "gas", "chemical", "precursor"]
+    },
+    {
+      "name": "Normal Semiconductor Process",
+      "category": "Process State",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "process_state",
+      "axis_name": "steady state",
+      "unit": "state",
+      "hints": ["normal process", "in control", "baseline", "steady state", "nominal", "expected", "routine", "stable process"]
+    },
+    {
+      "name": "Elevated Process Parameter",
+      "category": "Process Anomaly",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "process_state",
+      "axis_name": "deviation",
+      "unit": "events",
+      "hints": ["elevated parameter", "high measurement", "above normal", "over range", "sigma elevated", "process excursion high"]
+    },
+    {
+      "name": "Depressed Process Parameter",
+      "category": "Process Anomaly",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "process_state",
+      "axis_name": "deviation",
+      "unit": "events",
+      "hints": ["depressed parameter", "low measurement", "below normal", "under range", "sigma depressed", "process excursion low"]
+    },
+    {
+      "name": "Multi-Parameter Process Anomaly",
+      "category": "Process Anomaly",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "process_state",
+      "axis_name": "deviation",
+      "unit": "events",
+      "hints": ["multi-parameter anomaly", "multiple deviations", "process anomalies detected", "several measurements deviate", "complex process deviation"]
+    },
+    {
+      "name": "Sensor Data Gap",
+      "category": "Data Quality",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "measurement",
+      "axis_name": "missing data",
+      "unit": "events",
+      "hints": ["missing measurement", "sensor gap", "data gap", "missing values", "incomplete data", "measurement absent"]
+    },
+    {
+      "name": "Process Parameter Drift",
+      "category": "Process State",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "process_state",
+      "axis_name": "decline",
+      "unit": "trend",
+      "hints": ["process drift", "parameter drift", "gradual deviation", "slow change", "trend away from baseline", "performance loss"]
+    },
+    {
+      "name": "Equipment Performance Anomaly",
+      "category": "Equipment State",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "equipment_state",
+      "axis_name": "fault",
+      "unit": "faults",
+      "hints": ["equipment anomaly", "tool performance issue", "chamber anomaly", "maintenance indicator", "equipment degradation"]
+    },
+    {
+      "name": "Semiconductor Manufacturing Defect",
+      "category": "Quality",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "quality",
+      "axis_name": "defect",
+      "unit": "defects",
+      "hints": ["manufacturing defect", "chip defect", "die defect", "pattern defect", "wafer defect", "yield loss"]
+    },
+    {
+      "name": "Process Yield Loss",
+      "category": "Quality",
+      "domain": "FABRICATE",
+      "mode": "DESTROY",
+      "axis_kind": "quality",
+      "axis_name": "yield metric",
+      "unit": "yield",
+      "hints": ["yield loss", "low yield", "quality loss", "failed process", "scrap rate", "bad die"]
+    },
+    {
+      "name": "Semiconductor Cleanroom Environment",
+      "category": "Process Environment",
+      "domain": "HEAL",
+      "mode": "MAINTAIN",
+      "axis_kind": "environment",
+      "axis_name": "ambient",
+      "unit": "conditions",
+      "hints": ["cleanroom", "fab environment", "particle count", "temperature control", "humidity control", "air quality"]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "music",
+  "domains": [
+    {"name":"Instrument Practice","category":"Music","domain":"FABRICATE","mode":"LEARN","axis_kind":"music","axis_name":"player","unit":"sessions","hints":["practice","scales","instrument","guitar","piano","technique","etude","fingering","warmup","drill","tempo"]},
+    {"name":"Music Theory","category":"Music","domain":"STUDY","mode":"LEARN","axis_kind":"music","axis_name":"theorist","unit":"concepts","hints":["theory","chord","scale","interval","harmony","key","mode","progression","notation","circle of fifths"]},
+    {"name":"Composition","category":"Music","domain":"FABRICATE","mode":"CREATE","axis_kind":"music","axis_name":"composer","unit":"pieces","hints":["compose","write song","melody","arrange","motif","songwriting","structure","hook","bridge","chorus"]},
+    {"name":"Production & Mixing","category":"Music","domain":"FABRICATE","mode":"WORK","axis_kind":"music","axis_name":"producer","unit":"tracks","hints":["produce","daw","mix","master","eq","compression","record","sample","beat","ableton","plugin","stem"]},
+    {"name":"Ear Training","category":"Music","domain":"STUDY","mode":"LEARN","axis_kind":"music","axis_name":"listener","unit":"drills","hints":["ear training","interval recognition","transcribe","pitch","relative pitch","sight singing","dictation","by ear"]},
+    {"name":"Performance","category":"Music","domain":"FABRICATE","mode":"WORK","axis_kind":"music","axis_name":"performer","unit":"shows","hints":["perform","gig","concert","stage","live","audience","setlist","rehearsal","recital","jam"]},
+    {"name":"Listening & Analysis","category":"Music","domain":"STUDY","mode":"LEARN","axis_kind":"music","axis_name":"appreciator","unit":"albums","hints":["listen","album","analyze","appreciate","genre","explore","playlist","discover","reference track"]}
+  ]
+}

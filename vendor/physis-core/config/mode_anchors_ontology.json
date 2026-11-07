@@ -1,0 +1,1256 @@
+{
+ "kind": "mode_anchors",
+ "_comment": "One anchor per (domain x mode) cell, 70 in total. The domain axis says WHAT IS ACTED ON -- HEAL=condition, CONSTRUCT=structure, FABRICATE=output, BOND=relation, STUDY=knowledge -- and the mode axis says WHAT ACT. Hints are mode-pure and domain-pure and deliberately span three registers (human, machine, organisational): the classifier embeds name+hints and nothing else, so a cell that only speaks one register cannot attract the others' records. Rewritten for Gate 0 after a 2026-09-07 audit found 43.3% of a deterministic sample filed in a cell its own anchor did not describe -- largely because every domain was anchored in one register (HEAL=Body, CONSTRUCT=Build, FABRICATE=Make, BOND=Connect, STUDY=Mind). Full contract: docs/GRID_AXES.md.",
+ "domains": [
+  {
+   "name": "Peak Exertion",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "LIFT",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "effort",
+   "hints": [
+    "heavy lifting",
+    "max effort",
+    "push to the limit",
+    "peak set",
+    "all-out effort",
+    "run at redline",
+    "maximum load on capacity",
+    "overload the system",
+    "exert to the ceiling"
+   ]
+  },
+  {
+   "name": "Recovery & Idle",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "REST",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "hours",
+   "hints": [
+    "rest day",
+    "sleep deeply",
+    "recover",
+    "cool down after the run",
+    "let it cool",
+    "standby to recover",
+    "downtime to restore condition",
+    "recuperate",
+    "idle while it recovers"
+   ]
+  },
+  {
+   "name": "Steady Condition",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "WALK",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "minutes",
+   "hints": [
+    "steady pace",
+    "easy cruise",
+    "zone two",
+    "run at nominal load",
+    "sustainable rhythm",
+    "continuous lubrication while running",
+    "tick over healthily",
+    "hold a healthy baseline",
+    "sustain condition under normal use"
+   ]
+  },
+  {
+   "name": "Do the Restorative Work",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "WORK",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "sessions",
+   "hints": [
+    "run the session",
+    "perform the treatment",
+    "do the therapy",
+    "work through the rehab",
+    "carry out the service call",
+    "administer the fix",
+    "labour at getting it back in shape",
+    "execute the recovery routine"
+   ]
+  },
+  {
+   "name": "Design a Regimen",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "CREATE",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "protocols",
+   "hints": [
+    "design a wellness routine",
+    "create a training plan",
+    "draft a recovery protocol",
+    "devise a health regimen",
+    "invent a care plan",
+    "new condition-management strategy",
+    "compose a rehabilitation programme"
+   ]
+  },
+  {
+   "name": "Learn the Practice",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "LEARN",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "reps",
+   "hints": [
+    "learn proper form",
+    "study nutrition",
+    "practise the technique",
+    "master the movement",
+    "learn to read machine health",
+    "train on the condition procedure",
+    "study how it wears"
+   ]
+  },
+  {
+   "name": "Breakdown & Damage",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "DESTROY",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "incidents",
+   "hints": [
+    "injury",
+    "tear the tissue",
+    "overtraining breakdown",
+    "burn out",
+    "wear out",
+    "fail under strain",
+    "degrade to failure",
+    "crack under load",
+    "damage beyond use"
+   ]
+  },
+  {
+   "name": "Condition Monitoring",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "SENSE",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "readings",
+   "hints": [
+    "monitor heart rate",
+    "notice fatigue",
+    "feel the body",
+    "watch for symptoms",
+    "vibration monitoring on the bearing",
+    "temperature sensing",
+    "health telemetry",
+    "detect degradation early"
+   ]
+  },
+  {
+   "name": "Coach & Advise",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "GUIDE",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "sessions",
+   "hints": [
+    "coach the athlete",
+    "guide the training",
+    "instruct on form",
+    "advise on the regimen",
+    "lead a wellness programme",
+    "mentor on recovery",
+    "direct the care team"
+   ]
+  },
+  {
+   "name": "Free Movement",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "PLAY",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "sessions",
+   "hints": [
+    "pick-up game",
+    "dance freely",
+    "recreational play",
+    "fun movement",
+    "informal exercise",
+    "playful exertion",
+    "move about for the joy of it"
+   ]
+  },
+  {
+   "name": "Ideate the Regimen",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "BRAINSTORM",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "ideas",
+   "hints": [
+    "throw out ways we could get it back in shape",
+    "what if we recovered differently",
+    "many possible approaches to condition",
+    "riff on options before choosing",
+    "diverge on care ideas",
+    "nothing committed yet"
+   ]
+  },
+  {
+   "name": "Preventive Upkeep",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "MAINTAIN",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "intervals",
+   "hints": [
+    "stay in shape",
+    "mobility work",
+    "stretch routine",
+    "preventive maintenance",
+    "lubricate on schedule",
+    "replace the filter before it fails",
+    "condition-based servicing",
+    "keep the system healthy"
+   ]
+  },
+  {
+   "name": "Transit & Locomotion",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "MOVE",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "trips",
+   "hints": [
+    "commute",
+    "walk to work",
+    "travel there",
+    "move across town",
+    "transport the patient",
+    "relocate the crew",
+    "get the body from A to B"
+   ]
+  },
+  {
+   "name": "Schedule the Care",
+   "category": "Condition",
+   "domain": "HEAL",
+   "mode": "PLAN",
+   "axis_kind": "process",
+   "axis_name": "condition",
+   "unit": "schedules",
+   "hints": [
+    "plan workouts",
+    "schedule training",
+    "organise the week's sessions",
+    "sequence the maintenance calendar",
+    "arrange the service window",
+    "set the recovery timetable"
+   ]
+  },
+  {
+   "name": "Heavy Structural Push",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "LIFT",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "loads",
+   "hints": [
+    "raise the structure",
+    "big pour day",
+    "crane the beam into place",
+    "heavy hauling on site",
+    "max structural load",
+    "push the build hard",
+    "peak construction effort"
+   ]
+  },
+  {
+   "name": "Structure at Standby",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "REST",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "hours",
+   "hints": [
+    "site idle",
+    "tools away",
+    "construction paused",
+    "platform in standby",
+    "infrastructure quiet",
+    "dormant system",
+    "powered down",
+    "the build is at rest"
+   ]
+  },
+  {
+   "name": "Structure in Service",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "WALK",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "days",
+   "hints": [
+    "the structure is in service",
+    "holding load day to day",
+    "infrastructure ticking over",
+    "platform serving normally",
+    "steady occupancy",
+    "running as built",
+    "carrying its normal duty"
+   ]
+  },
+  {
+   "name": "Build Execution",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "WORK",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "tasks",
+   "hints": [
+    "pour concrete",
+    "frame the wall",
+    "lay bricks",
+    "wire the panel",
+    "provision the infrastructure",
+    "stand up the platform",
+    "assemble the structure",
+    "execute the build"
+   ]
+  },
+  {
+   "name": "Design the Structure",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "CREATE",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "designs",
+   "hints": [
+    "draft the blueprint",
+    "settle the layout",
+    "architect the system",
+    "model the schema",
+    "commit to a floor plan",
+    "specify the platform",
+    "fix the structural design"
+   ]
+  },
+  {
+   "name": "Learn the Structure",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "LEARN",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "reps",
+   "hints": [
+    "learn carpentry",
+    "study the trade",
+    "apprentice on site",
+    "study the architecture",
+    "learn how the platform is put together",
+    "practise the construction technique"
+   ]
+  },
+  {
+   "name": "Demolish & Decommission",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "DESTROY",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "teardowns",
+   "hints": [
+    "demolish",
+    "tear down",
+    "raze",
+    "knock down the wall",
+    "decommission the platform",
+    "rip out the old infrastructure",
+    "dismantle the structure"
+   ]
+  },
+  {
+   "name": "Survey & Inspect",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "SENSE",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "surveys",
+   "hints": [
+    "survey the site",
+    "measure dimensions",
+    "check level",
+    "inspect the structure",
+    "structural monitoring",
+    "strain gauge on the beam",
+    "audit the infrastructure"
+   ]
+  },
+  {
+   "name": "Supervise the Build",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "GUIDE",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "crews",
+   "hints": [
+    "supervise the crew",
+    "coordinate trades",
+    "foreman the site",
+    "direct the build",
+    "lead the platform team",
+    "manage the construction"
+   ]
+  },
+  {
+   "name": "Mock Up & Tinker",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "PLAY",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "mockups",
+   "hints": [
+    "mock up",
+    "tinker with the structure",
+    "sandbox environment",
+    "throwaway prototype",
+    "playful build",
+    "experiment with the layout"
+   ]
+  },
+  {
+   "name": "Ideate the Structure",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "BRAINSTORM",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "ideas",
+   "hints": [
+    "float structural options",
+    "what if it were arranged differently",
+    "many possible arrangements",
+    "riff on how it could be put together",
+    "diverge before choosing a structure",
+    "nothing settled yet"
+   ]
+  },
+  {
+   "name": "Structural Upkeep",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "MAINTAIN",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "repairs",
+   "hints": [
+    "maintain the building",
+    "patch and seal",
+    "repair the roof",
+    "shore up the foundation",
+    "service the property",
+    "keep the infrastructure sound",
+    "refactor to keep it standing"
+   ]
+  },
+  {
+   "name": "Haul to Site",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "MOVE",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "loads",
+   "hints": [
+    "haul materials",
+    "transport beams",
+    "crane to site",
+    "deliver supplies",
+    "migrate the platform",
+    "relocate the structure"
+   ]
+  },
+  {
+   "name": "Sequence the Build",
+   "category": "Structure",
+   "domain": "CONSTRUCT",
+   "mode": "PLAN",
+   "axis_kind": "process",
+   "axis_name": "structure",
+   "unit": "phases",
+   "hints": [
+    "schedule the build",
+    "plan the phases",
+    "sequence the trades",
+    "critical path",
+    "stage the rollout",
+    "organise the site plan"
+   ]
+  },
+  {
+   "name": "Production Sprint",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "LIFT",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "units",
+   "hints": [
+    "crunch time",
+    "max output",
+    "push the batch",
+    "peak run",
+    "intense production",
+    "surge the line",
+    "all-out throughput"
+   ]
+  },
+  {
+   "name": "Line Downtime",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "REST",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "hours",
+   "hints": [
+    "line stopped",
+    "production pause",
+    "machine idle between runs",
+    "let it cure",
+    "dough proofing",
+    "material resting",
+    "batch waiting",
+    "factory quiet"
+   ]
+  },
+  {
+   "name": "Steady Output",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "WALK",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "units",
+   "hints": [
+    "steady output",
+    "routine run",
+    "ongoing production",
+    "the line is running",
+    "regular batches",
+    "nominal throughput",
+    "cadence of delivery"
+   ]
+  },
+  {
+   "name": "Produce & Ship",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "WORK",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "units",
+   "hints": [
+    "run the pipeline",
+    "produce the unit",
+    "operate the machine",
+    "machine the part",
+    "ship the build",
+    "deploy the release",
+    "cook the order",
+    "turn out the work"
+   ]
+  },
+  {
+   "name": "Make Something New",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "CREATE",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "pieces",
+   "hints": [
+    "make from scratch",
+    "compose a piece",
+    "write new code",
+    "design the product",
+    "cook a new dish",
+    "craft a new part",
+    "originate the artifact"
+   ]
+  },
+  {
+   "name": "Maker Practice",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "LEARN",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "reps",
+   "hints": [
+    "learn the tool",
+    "study the recipe",
+    "practise the technique",
+    "apprentice maker",
+    "master the craft",
+    "train on the machine"
+   ]
+  },
+  {
+   "name": "Scrap & Reject",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "DESTROY",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "rejects",
+   "hints": [
+    "scrap the part",
+    "melt down",
+    "recycle material",
+    "discard the reject",
+    "bin the batch",
+    "write off the output",
+    "break the product down"
+   ]
+  },
+  {
+   "name": "Quality Inspection",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "SENSE",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "checks",
+   "hints": [
+    "inspect the part",
+    "measure tolerance",
+    "gauge the dimension",
+    "check quality",
+    "sample the batch",
+    "test the output",
+    "metrology on the piece"
+   ]
+  },
+  {
+   "name": "Lead the Floor",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "GUIDE",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "shifts",
+   "hints": [
+    "lead the shop floor",
+    "coordinate production",
+    "train operators",
+    "direct fabrication",
+    "supervise the line",
+    "run the crew"
+   ]
+  },
+  {
+   "name": "Tinker & Prototype",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "PLAY",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "prototypes",
+   "hints": [
+    "tinker",
+    "prototype freely",
+    "hack a part",
+    "experiment with the material",
+    "playful making",
+    "knock together a one-off"
+   ]
+  },
+  {
+   "name": "Ideate the Product",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "BRAINSTORM",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "ideas",
+   "hints": [
+    "throw out things we could make",
+    "what else could come off this line",
+    "many candidate products",
+    "riff on possibilities before committing",
+    "diverge on what to build",
+    "nothing chosen yet"
+   ]
+  },
+  {
+   "name": "Keep the Line Able",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "MAINTAIN",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "intervals",
+   "hints": [
+    "replace the worn tool",
+    "changeover between runs",
+    "replenish consumables",
+    "keep the line fed",
+    "service the equipment so it can run",
+    "tooling upkeep",
+    "restock the machine"
+   ]
+  },
+  {
+   "name": "Material Handling",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "MOVE",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "loads",
+   "hints": [
+    "move stock",
+    "convey material",
+    "forklift to the line",
+    "route work in progress",
+    "transport parts",
+    "logistics of the batch"
+   ]
+  },
+  {
+   "name": "Production Planning",
+   "category": "Output",
+   "domain": "FABRICATE",
+   "mode": "PLAN",
+   "axis_kind": "process",
+   "axis_name": "output",
+   "unit": "runs",
+   "hints": [
+    "plan production",
+    "schedule the run",
+    "sequence the jobs",
+    "organise the batch",
+    "capacity planning",
+    "load the line"
+   ]
+  },
+  {
+   "name": "Deepen the Tie",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "LIFT",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "commitments",
+   "hints": [
+    "heart to heart",
+    "deepen trust",
+    "big commitment",
+    "intense connection",
+    "strengthen the alliance",
+    "high-stakes negotiation",
+    "escalate the partnership"
+   ]
+  },
+  {
+   "name": "Quiet Together",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "REST",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "hours",
+   "hints": [
+    "quiet evening together",
+    "restful company",
+    "just be present",
+    "relaxed connection",
+    "idle channel",
+    "the link is up but quiet",
+    "keepalive without traffic"
+   ]
+  },
+  {
+   "name": "Ongoing Contact",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "WALK",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "touches",
+   "hints": [
+    "regular check-in",
+    "keep in touch",
+    "steady correspondence",
+    "ongoing connection",
+    "routine call",
+    "heartbeat between services",
+    "steady traffic on the link"
+   ]
+  },
+  {
+   "name": "Work the Relationship",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "WORK",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "issues",
+   "hints": [
+    "resolve conflict",
+    "mediate",
+    "repair the bond",
+    "negotiate the contract",
+    "work the account",
+    "handle the escalation",
+    "do the emotional work",
+    "service the interface"
+   ]
+  },
+  {
+   "name": "Form the Connection",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "CREATE",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "links",
+   "hints": [
+    "create a tradition",
+    "design the interface",
+    "define the contract",
+    "form a partnership",
+    "establish the protocol",
+    "open a new channel",
+    "make new memories together"
+   ]
+  },
+  {
+   "name": "Learn to Relate",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "LEARN",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "reps",
+   "hints": [
+    "learn empathy",
+    "study communication",
+    "practise listening",
+    "understand them",
+    "learn the protocol",
+    "study the counterparty"
+   ]
+  },
+  {
+   "name": "Sever the Tie",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "DESTROY",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "breaks",
+   "hints": [
+    "cut ties",
+    "end the relationship",
+    "break up",
+    "terminate the contract",
+    "close the channel",
+    "sever the connection",
+    "deprecate the interface"
+   ]
+  },
+  {
+   "name": "Read the Other",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "SENSE",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "cues",
+   "hints": [
+    "read emotions",
+    "sense the mood",
+    "listen actively",
+    "notice cues",
+    "monitor the channel",
+    "detect the peer's state",
+    "empathise"
+   ]
+  },
+  {
+   "name": "Mentor & Lead",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "GUIDE",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "sessions",
+   "hints": [
+    "mentor someone",
+    "lead the group",
+    "counsel",
+    "coach",
+    "guide the team",
+    "chair the meeting",
+    "direct the partners"
+   ]
+  },
+  {
+   "name": "Socialise & Play",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "PLAY",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "occasions",
+   "hints": [
+    "hang out",
+    "joke around",
+    "play together",
+    "socialise",
+    "banter",
+    "informal gathering",
+    "improvise together"
+   ]
+  },
+  {
+   "name": "Ideate Together",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "BRAINSTORM",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "ideas",
+   "hints": [
+    "throw ideas around as a group",
+    "riff jointly without deciding",
+    "diverge in a workshop",
+    "many voices, no conclusion yet",
+    "open the floor to possibilities",
+    "think aloud together"
+   ]
+  },
+  {
+   "name": "Keep the Tie Alive",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "MAINTAIN",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "touches",
+   "hints": [
+    "nurture the relationship",
+    "maintain the account",
+    "renew the contract",
+    "keep the integration working",
+    "sustain the partnership",
+    "tend the connection"
+   ]
+  },
+  {
+   "name": "Introduce & Route",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "MOVE",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "handoffs",
+   "hints": [
+    "introduce people",
+    "bridge contacts",
+    "network",
+    "connect the parties",
+    "route the message",
+    "hand off between teams",
+    "broker the introduction"
+   ]
+  },
+  {
+   "name": "Coordinate Together",
+   "category": "Relation",
+   "domain": "BOND",
+   "mode": "PLAN",
+   "axis_kind": "process",
+   "axis_name": "relation",
+   "unit": "plans",
+   "hints": [
+    "plan the event",
+    "schedule the meetup",
+    "coordinate calendars",
+    "organise the gathering",
+    "arrange the joint plan",
+    "align the parties"
+   ]
+  },
+  {
+   "name": "Intensive Focus",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "LIFT",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "sessions",
+   "hints": [
+    "cram for the exam",
+    "deep focus",
+    "intense study session",
+    "push through the material",
+    "max concentration",
+    "marathon analysis"
+   ]
+  },
+  {
+   "name": "Reflective Pause",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "REST",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "pauses",
+   "hints": [
+    "reflect quietly",
+    "let ideas settle",
+    "incubate the idea",
+    "ponder",
+    "mental rest",
+    "step back and think",
+    "sleep on the problem"
+   ]
+  },
+  {
+   "name": "Steady Study",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "WALK",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "sessions",
+   "hints": [
+    "daily reading",
+    "steady review",
+    "ongoing study",
+    "routine practice",
+    "keep learning",
+    "continuous reading"
+   ]
+  },
+  {
+   "name": "Analysis Execution",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "WORK",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "analyses",
+   "hints": [
+    "run the experiment",
+    "analyse the data",
+    "crunch the numbers",
+    "execute the study",
+    "do the research",
+    "process the dataset",
+    "work through the evidence"
+   ]
+  },
+  {
+   "name": "Theorise & Write",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "CREATE",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "papers",
+   "hints": [
+    "write the paper",
+    "state the theory",
+    "compose an essay",
+    "author the finding",
+    "model the phenomenon",
+    "commit the explanation to writing",
+    "set out the argument"
+   ]
+  },
+  {
+   "name": "Deep Learning",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "LEARN",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "topics",
+   "hints": [
+    "learn the subject",
+    "master the topic",
+    "understand deeply",
+    "acquire knowledge",
+    "study the field",
+    "train on the material"
+   ]
+  },
+  {
+   "name": "Refute & Falsify",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "DESTROY",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "refutations",
+   "hints": [
+    "refute",
+    "debunk",
+    "dismantle the argument",
+    "falsify",
+    "critique",
+    "retract the claim",
+    "invalidate the result"
+   ]
+  },
+  {
+   "name": "Observe & Measure",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "SENSE",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "readings",
+   "hints": [
+    "observe",
+    "measure the variable",
+    "collect evidence",
+    "record the data",
+    "monitor the reading",
+    "perceive the pattern",
+    "instrument and log"
+   ]
+  },
+  {
+   "name": "Teach & Explain",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "GUIDE",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "lessons",
+   "hints": [
+    "teach",
+    "explain the concept",
+    "lecture",
+    "tutor",
+    "document for others",
+    "brief the team",
+    "mentor the learner"
+   ]
+  },
+  {
+   "name": "Thought Experiment",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "PLAY",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "experiments",
+   "hints": [
+    "thought experiment",
+    "play with ideas",
+    "explore what-if",
+    "puzzle over it",
+    "intellectual play",
+    "toy model"
+   ]
+  },
+  {
+   "name": "Hypothesise & Diverge",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "BRAINSTORM",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "hypotheses",
+   "hints": [
+    "what could account for this",
+    "throw out candidate explanations",
+    "many possibilities on the table",
+    "diverge before testing anything",
+    "speculate freely",
+    "nothing settled into a claim yet"
+   ]
+  },
+  {
+   "name": "Review & Retain",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "MAINTAIN",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "reviews",
+   "hints": [
+    "review notes",
+    "spaced repetition",
+    "retain knowledge",
+    "keep skills sharp",
+    "refresh the memory",
+    "update the documentation"
+   ]
+  },
+  {
+   "name": "Transfer & Apply",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "MOVE",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "transfers",
+   "hints": [
+    "cite the source",
+    "transfer the finding",
+    "port the method",
+    "apply to a new domain",
+    "carry the insight over",
+    "generalise the result"
+   ]
+  },
+  {
+   "name": "Design the Inquiry",
+   "category": "Knowledge",
+   "domain": "STUDY",
+   "mode": "PLAN",
+   "axis_kind": "process",
+   "axis_name": "knowledge",
+   "unit": "designs",
+   "hints": [
+    "plan the study",
+    "design the experiment",
+    "outline the paper",
+    "sequence the analysis",
+    "organise the literature",
+    "scope the investigation"
+   ]
+  }
+ ]
+}

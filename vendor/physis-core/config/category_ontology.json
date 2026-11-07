@@ -1,0 +1,923 @@
+{
+  "kind": "category",
+  "domains": [
+    {
+      "name": "Object",
+      "category": "Basic Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "object",
+      "unit": "object",
+      "hints": [
+        "Fixed point in the web of arrows",
+        "What everything else relates to",
+        "The nouns of categorical grammar",
+        "Nodes in the graph of structure",
+        "Identities are the fingerprints of objects",
+        "Every object carries a self-loop identity"
+      ]
+    },
+    {
+      "name": "Morphism",
+      "category": "Basic Category Theory",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "morphism",
+      "unit": "arrow",
+      "hints": [
+        "Arrow that connects source to target",
+        "The verbs of categorical grammar",
+        "Direction matters",
+        "Composable when end meets start",
+        "Can be identity or structure-preserving map",
+        "Structure of transformation itself"
+      ]
+    },
+    {
+      "name": "Identity",
+      "category": "Basic Category Theory",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "identity",
+      "unit": "identity",
+      "hints": [
+        "Arrow from a thing to itself",
+        "The self-same relation",
+        "Fixed point of composition",
+        "Every object has exactly one",
+        "Neutral element of arrow composition",
+        "Preserves all structure trivially"
+      ]
+    },
+    {
+      "name": "Composition",
+      "category": "Basic Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "composition",
+      "unit": "operation",
+      "hints": [
+        "Build longer paths from shorter ones",
+        "Associative by law",
+        "Fundamental way to combine structure",
+        "Vertical stacking of arrows",
+        "Closed under composition",
+        "Identity arrows are neutral elements"
+      ]
+    },
+    {
+      "name": "Domain",
+      "category": "Basic Category Theory",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "category",
+      "axis_name": "domain",
+      "unit": "object",
+      "hints": [
+        "Source object of a morphism",
+        "Where the arrow starts",
+        "Input type of a map",
+        "The 'from' in the typing judgment",
+        "Every arrow has exactly one domain",
+        "Ground of the mapping"
+      ]
+    },
+    {
+      "name": "Codomain",
+      "category": "Basic Category Theory",
+      "domain": "HEAL",
+      "mode": "LEARN",
+      "axis_kind": "category",
+      "axis_name": "codomain",
+      "unit": "object",
+      "hints": [
+        "Target object of a morphism",
+        "Where the arrow ends",
+        "Output type of a map",
+        "The 'to' in the typing judgment",
+        "Completes the directed edge",
+        "Target of structural transformation"
+      ]
+    },
+    {
+      "name": "Isomorphism",
+      "category": "Basic Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "isomorphism",
+      "unit": "iso",
+      "hints": [
+        "Two-way invertible map",
+        "Structure preserved exactly",
+        "Has an inverse on both sides",
+        "The categorical notion of sameness",
+        "Bijection with structure",
+        "Can be walked in both directions"
+      ]
+    },
+    {
+      "name": "Endomorphism",
+      "category": "Basic Category Theory",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "endomorphism",
+      "unit": "arrow",
+      "hints": [
+        "Self-map from an object to itself",
+        "Domain equals codomain",
+        "Closed loop of transformation",
+        "Generalized form of identity",
+        "Can be non-trivial even on one object",
+        "Fixes the object, varies the path"
+      ]
+    },
+    {
+      "name": "Monomorphism",
+      "category": "Basic Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "monomorphism",
+      "unit": "mono",
+      "hints": [
+        "Left-cancellative arrow",
+        "Injective in set-theoretic terms",
+        "If gf = hf then g = h",
+        "Embedding or subobject classifier",
+        "Irreversible lossless injection",
+        "No two different paths collapse"
+      ]
+    },
+    {
+      "name": "Epimorphism",
+      "category": "Basic Category Theory",
+      "domain": "FABRICATE",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "epimorphism",
+      "unit": "epi",
+      "hints": [
+        "Right-cancellative arrow",
+        "Surjective in set-theoretic terms",
+        "If fg = fh then g = h",
+        "Covering or quotient map",
+        "Every output is hit from some input",
+        "Collapses distinctions on the target side"
+      ]
+    },
+    {
+      "name": "Initial Object",
+      "category": "Universal Properties",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "initial_object",
+      "unit": "object",
+      "hints": [
+        "Exactly one arrow to every other object",
+        "The categorical starting point",
+        "Unique up to unique isomorphism",
+        "Empty set in Sets",
+        "Zero object when also terminal",
+        "Foundation from which structure emanates"
+      ]
+    },
+    {
+      "name": "Terminal Object",
+      "category": "Universal Properties",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "terminal_object",
+      "unit": "object",
+      "hints": [
+        "Exactly one arrow from every other object",
+        "The categorical ending point",
+        "Unique up to unique isomorphism",
+        "Singleton set in Sets",
+        "Absorbs all structure into unity",
+        "Fixed point of all maps"
+      ]
+    },
+    {
+      "name": "Product",
+      "category": "Universal Properties",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "product",
+      "unit": "object",
+      "hints": [
+        "Universal cone over two objects",
+        "Pair with projection maps",
+        "The categorical 'and'",
+        "Existence of ordered pairs",
+        "Limit of discrete diagram of two objects",
+        "Constructs joint structure"
+      ]
+    },
+    {
+      "name": "Coproduct",
+      "category": "Universal Properties",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "coproduct",
+      "unit": "object",
+      "hints": [
+        "Universal cocone under two objects",
+        "Sum with injection maps",
+        "The categorical 'or'",
+        "Disjoint union in Sets",
+        "Colimit of discrete diagram",
+        "Fabricates alternatives"
+      ]
+    },
+    {
+      "name": "Equalizer",
+      "category": "Universal Properties",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "category",
+      "axis_name": "equalizer",
+      "unit": "object",
+      "hints": [
+        "Universal way to make two maps agree",
+        "Subobject of the domain",
+        "Solutions to equations f = g",
+        "Limit of parallel pair diagram",
+        "Extracts the largest subobject where maps coincide",
+        "Studying sameness through constraints"
+      ]
+    },
+    {
+      "name": "Coequalizer",
+      "category": "Universal Properties",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "category",
+      "axis_name": "coequalizer",
+      "unit": "object",
+      "hints": [
+        "Universal way to force two maps to agree",
+        "Quotient of the codomain",
+        "Identifies points that differ",
+        "Colimit of parallel pair diagram",
+        "Collapses distinctions that don't matter",
+        "Builds the quotient by imposed equivalence"
+      ]
+    },
+    {
+      "name": "Limit",
+      "category": "Limits & Colimits",
+      "domain": "STUDY",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "limit",
+      "unit": "object",
+      "hints": [
+        "Universal cone over a diagram",
+        "Most general object mapping into all diagram objects",
+        "Cones that commute and are terminal among cones",
+        "Product, pullback, equalizer are special limits",
+        "Exists when category is complete",
+        "Finds the fixed point of constraints"
+      ]
+    },
+    {
+      "name": "Colimit",
+      "category": "Limits & Colimits",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "colimit",
+      "unit": "object",
+      "hints": [
+        "Universal cocone under a diagram",
+        "Most general object receiving maps from all diagram objects",
+        "Cocones that commute and are initial among cocones",
+        "Coproduct, pushout, coequalizer are special colimits",
+        "Exists when category is cocomplete",
+        "Fabricates the synthesis of parts"
+      ]
+    },
+    {
+      "name": "Pullback",
+      "category": "Limits & Colimits",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "pullback",
+      "unit": "object",
+      "hints": [
+        "Fiber product of two maps with common target",
+        "Limit of a cospan diagram",
+        "Substitution in categorical logic",
+        "Intersection of subobjects",
+        "Walking backward along common structure",
+        "Finds preimages"
+      ]
+    },
+    {
+      "name": "Pushout",
+      "category": "Limits & Colimits",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "pushout",
+      "unit": "object",
+      "hints": [
+        "Amalgamated sum of two maps with common source",
+        "Colimit of a span diagram",
+        "Union with overlap identification",
+        "Gluing two objects along a shared boundary",
+        "Constructs the smallest extension",
+        "Fills the missing corner"
+      ]
+    },
+    {
+      "name": "Cone",
+      "category": "Limits & Colimits",
+      "domain": "CONSTRUCT",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "cone",
+      "unit": "cone",
+      "hints": [
+        "Object with family of maps to all diagram objects",
+        "Triangles that all commute",
+        "Approximation from above",
+        "Pre-limit structure",
+        "The apex sees everything",
+        "Fixed posture over a diagram"
+      ]
+    },
+    {
+      "name": "Cocone",
+      "category": "Limits & Colimits",
+      "domain": "FABRICATE",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "cocone",
+      "unit": "cocone",
+      "hints": [
+        "Object with family of maps from all diagram objects",
+        "Triangles that all commute from below",
+        "Approximation from below",
+        "Pre-colimit structure",
+        "Everything flows into the apex",
+        "Lifts structure into synthesis"
+      ]
+    },
+    {
+      "name": "Diagram",
+      "category": "Limits & Colimits",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "diagram",
+      "unit": "diagram",
+      "hints": [
+        "Functor from an index category",
+        "Blueprint of objects and arrows to be filled",
+        "Shape is the index category",
+        "Pattern waiting for a limit or colimit",
+        "The sketch before construction",
+        "Creates the structure to study"
+      ]
+    },
+    {
+      "name": "Commuting Diagram",
+      "category": "Limits & Colimits",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "category",
+      "axis_name": "commuting_diagram",
+      "unit": "diagram",
+      "hints": [
+        "All paths between same endpoints agree",
+        "Compositional consistency condition",
+        "The visual language of category theory",
+        "Every triangle and square commutes",
+        "Constraints expressed as path equality",
+        "Builds coherence into structure"
+      ]
+    },
+    {
+      "name": "Functor",
+      "category": "Functors",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "functor",
+      "unit": "functor",
+      "hints": [
+        "Map from one category to another",
+        "Preserves composition and identities",
+        "The morphism between categories",
+        "Transports structure between worlds",
+        "Can be thought of as translation",
+        "Bonds two categorical contexts"
+      ]
+    },
+    {
+      "name": "Full Functor",
+      "category": "Functors",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "full_functor",
+      "unit": "functor",
+      "hints": [
+        "Surjective on Hom-sets",
+        "Every target morphism comes from somewhere",
+        "Richness of connection between categories",
+        "Nothing in the target is unmapped",
+        "Expressive completeness of translation",
+        "Creates all possible bonds"
+      ]
+    },
+    {
+      "name": "Faithful Functor",
+      "category": "Functors",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "category",
+      "axis_name": "faithful_functor",
+      "unit": "functor",
+      "hints": [
+        "Injective on Hom-sets",
+        "Distinct maps stay distinct",
+        "Preserves distinction between arrows",
+        "No collapsing of different morphisms",
+        "Accurate representation",
+        "Works to ensure fidelity"
+      ]
+    },
+    {
+      "name": "Essentially Surjective Functor",
+      "category": "Functors",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "essentially_surjective",
+      "unit": "functor",
+      "hints": [
+        "Every target object is isomorphic to some source image",
+        "Covers the target up to isomorphism",
+        "Weak surjectivity on objects",
+        "Together with full and faithful gives equivalence",
+        "Constructs reachability",
+        "Creates categorical coverage"
+      ]
+    },
+    {
+      "name": "Forgetful Functor",
+      "category": "Functors",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "forgetful_functor",
+      "unit": "functor",
+      "hints": [
+        "Drops some structure",
+        "Maps to a simpler category",
+        "Underlying set functor",
+        "Reveals bare bones",
+        "Walking stripped of ornament",
+        "Heals by simplification"
+      ]
+    },
+    {
+      "name": "Free Functor",
+      "category": "Functors",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "free_functor",
+      "unit": "functor",
+      "hints": [
+        "Generates free structure from bare set",
+        "Left adjoint to forgetful functor",
+        "Adds structure minimally",
+        "Lifts unstructured to structured",
+        "Builds the most general construction",
+        "Constructs without relations"
+      ]
+    },
+    {
+      "name": "Natural Transformation",
+      "category": "Natural Transformations",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "natural_transformation",
+      "unit": "nat_trans",
+      "hints": [
+        "Family of arrows between two functors",
+        "Morphism between functors",
+        "Naturality squares commute",
+        "Changes one construction into another coherently",
+        "Parametric polymorphism in type theory",
+        "Bonds two functorial perspectives"
+      ]
+    },
+    {
+      "name": "Horizontal Composition",
+      "category": "Natural Transformations",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "horizontal_composition",
+      "unit": "composition",
+      "hints": [
+        "Composition of natural transformations side-by-side",
+        "Whiskering functors past transformations",
+        "Builds higher-dimensional coherence",
+        "Interchange law with vertical composition",
+        "Creates compound naturality",
+        "Constructs mapping between composite functors"
+      ]
+    },
+    {
+      "name": "Vertical Composition",
+      "category": "Natural Transformations",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "vertical_composition",
+      "unit": "composition",
+      "hints": [
+        "Composition of natural transformations top-to-bottom",
+        "Stacking transformations on the same functors",
+        "Pointwise composition of components",
+        "Interchange law with horizontal composition",
+        "Fabricates higher naturality",
+        "Creates compound coherence cells"
+      ]
+    },
+    {
+      "name": "Natural Isomorphism",
+      "category": "Natural Transformations",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "category",
+      "axis_name": "natural_isomorphism",
+      "unit": "iso",
+      "hints": [
+        "Natural transformation with every component invertible",
+        "Functors are the same up to natural isomorphism",
+        "Equivalence of categories uses these",
+        "Reversible coherent change of perspective",
+        "Studying when two constructions are essentially the same",
+        "Learns the invariant structure"
+      ]
+    },
+    {
+      "name": "Adjunction",
+      "category": "Adjunctions",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "adjunction",
+      "unit": "adjunction",
+      "hints": [
+        "Pair of functors with natural bijection on Hom-sets",
+        "Most important concept in category theory",
+        "Left and right adjoint dance together",
+        "Solutions to universal mapping problems",
+        "Free-forgetful pairs are examples",
+        "Creates the deepest bonds between categories"
+      ]
+    },
+    {
+      "name": "Left Adjoint",
+      "category": "Adjunctions",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "left_adjoint",
+      "unit": "functor",
+      "hints": [
+        "Preserves colimits",
+        "Part of adjoint pair with right adjoint",
+        "Free construction side",
+        "Lifts to a richer structure",
+        "Largest solution to a universal problem",
+        "Constructs freely"
+      ]
+    },
+    {
+      "name": "Right Adjoint",
+      "category": "Adjunctions",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "right_adjoint",
+      "unit": "functor",
+      "hints": [
+        "Preserves limits",
+        "Part of adjoint pair with left adjoint",
+        "Forgetful or underlying side",
+        "Rests in the simpler category",
+        "Smallest solution to a universal problem",
+        "Heals by simplification"
+      ]
+    },
+    {
+      "name": "Unit of Adjunction",
+      "category": "Adjunctions",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "unit_of_adjunction",
+      "unit": "nat_trans",
+      "hints": [
+        "Natural transformation from identity to composite",
+        "Embeds source into the composed world",
+        "Maps object into R(L(object))",
+        "The 'inclusion' of an adjunction",
+        "Lifts the original into the transformed view",
+        "Constructs the canonical embedding"
+      ]
+    },
+    {
+      "name": "Counit of Adjunction",
+      "category": "Adjunctions",
+      "domain": "HEAL",
+      "mode": "REST",
+      "axis_kind": "category",
+      "axis_name": "counit_of_adjunction",
+      "unit": "nat_trans",
+      "hints": [
+        "Natural transformation from composite to identity",
+        "Evaluates the round-trip back to source",
+        "Maps L(R(object)) into object",
+        "The 'projection' of an adjunction",
+        "Undoes the lifting",
+        "Returns to rest after construction"
+      ]
+    },
+    {
+      "name": "Monad",
+      "category": "Monads",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "monad",
+      "unit": "monad",
+      "hints": [
+        "Endofunctor with unit and join",
+        "Internalizes algebraic structure",
+        "Arises from every adjunction",
+        "Effect or computation in programming",
+        "Wraps and sequences operations",
+        "Fabricates an algebraic universe"
+      ]
+    },
+    {
+      "name": "Unit of Monad",
+      "category": "Monads",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "unit_of_monad",
+      "unit": "nat_trans",
+      "hints": [
+        "Embeds objects into the monad",
+        "Natural transformation from identity to monad",
+        "Pure or return in programming",
+        "Lifts values into effectful context",
+        "Constructs the trivial wrapping",
+        "The entry point of monadic structure"
+      ]
+    },
+    {
+      "name": "Join of Monad",
+      "category": "Monads",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "join_of_monad",
+      "unit": "nat_trans",
+      "hints": [
+        "Flattens double wrapping",
+        "Natural transformation from T^2 to T",
+        "Multiplication of monad",
+        "Flatten or concat in programming",
+        "Associativity of flattening",
+        "Fabricates coherence of layering"
+      ]
+    },
+    {
+      "name": "Kleisli Category",
+      "category": "Monads",
+      "domain": "CONSTRUCT",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "kleisli_category",
+      "unit": "category",
+      "hints": [
+        "Category of monad-induced arrows",
+        "Objects are same as base category",
+        "Morphisms are maps into the monad",
+        "Walking through effectful computations",
+        "Kleisli composition is bind",
+        "Constructs the free algebra view"
+      ]
+    },
+    {
+      "name": "Eilenberg-Moore Category",
+      "category": "Monads",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "category",
+      "axis_name": "eilenberg_moore_category",
+      "unit": "category",
+      "hints": [
+        "Category of algebras for a monad",
+        "Objects are monad actions",
+        "Morphisms are algebra homomorphisms",
+        "Learns the semantic domain",
+        "Studies the models of algebraic theory",
+        "Terminal resolution of monad"
+      ]
+    },
+    {
+      "name": "Monad Algebra",
+      "category": "Monads",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "category",
+      "axis_name": "monad_algebra",
+      "unit": "algebra",
+      "hints": [
+        "Object with structure map from its monad image",
+        "Satisfies unit and associativity laws",
+        "Model of the theory the monad encodes",
+        "Works within the algebraic universe",
+        "Concrete instance of monadic structure",
+        "Constructs well-behaved actions"
+      ]
+    },
+    {
+      "name": "String Diagram",
+      "category": "Applied Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "string_diagram",
+      "unit": "diagram",
+      "hints": [
+        "2D graphical calculus for monoidal categories",
+        "Wires are objects, boxes are morphisms",
+        "Composition is connecting wires",
+        "Tensors are parallel wires",
+        "Creates visual intuition for categorical algebra",
+        "Constructs readable proofs"
+      ]
+    },
+    {
+      "name": "Signal Flow Graph",
+      "category": "Applied Category Theory",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "signal_flow_graph",
+      "unit": "graph",
+      "hints": [
+        "Wiring diagrams for linear systems",
+        "Components are boxes, signals are wires",
+        "Compositional model of computation",
+        "Feedback as traced monoidal category",
+        "Walking signals through a network",
+        "Bonds systems theory with algebra"
+      ]
+    },
+    {
+      "name": "Wiring Diagram",
+      "category": "Applied Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "WORK",
+      "axis_kind": "category",
+      "axis_name": "wiring_diagram",
+      "unit": "diagram",
+      "hints": [
+        "Structured interconnect between components",
+        "Operad of networks",
+        "Hierarchical composition of systems",
+        "Wiring diagrams compose by substitution",
+        "Works to build complex systems from simple parts",
+        "Constructs the topology of interaction"
+      ]
+    },
+    {
+      "name": "Categorical Quantum Mechanics",
+      "category": "Applied Category Theory",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "category",
+      "axis_name": "categorical_quantum",
+      "unit": "theory",
+      "hints": [
+        "Quantum protocols as string diagrams",
+        "Compact closed categories model entanglement",
+        "Frobenius algebras model classical channels",
+        "Learns the structure of quantum information",
+        "Studies teleportation as categorical composition",
+        "Complementarity as bialgebra"
+      ]
+    },
+    {
+      "name": "Database Schema",
+      "category": "Applied Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "category",
+      "axis_name": "database_schema",
+      "unit": "schema",
+      "hints": [
+        "Category whose objects are tables",
+        "Arrows are foreign key constraints",
+        "Instances are set-valued functors",
+        "Migrates data via functors",
+        "Creates a categorical model of data",
+        "Constructs query languages from limits"
+      ]
+    },
+    {
+      "name": "Functorial Semantics",
+      "category": "Applied Category Theory",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "category",
+      "axis_name": "functorial_semantics",
+      "unit": "semantics",
+      "hints": [
+        "Models are structure-preserving functors",
+        "Theories are syntactic categories",
+        "Lawvere theories as categorical logic",
+        "Learns meaning through categorical translation",
+        "Studies how structure determines interpretation",
+        "Brings syntax and semantics into adjoint relation"
+      ]
+    },
+    {
+      "name": "Enriched Category",
+      "category": "Enriched & Higher Category Theory",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "category",
+      "axis_name": "enriched_category",
+      "unit": "category",
+      "hints": [
+        "Hom-objects live in a monoidal category",
+        "Generalizes set-based Hom to metric, vector, etc.",
+        "Captures extra structure on morphism sets",
+        "Richer notion of distance or similarity",
+        "Lifts ordinary categories to structured contexts",
+        "Constructs categories with internalized Hom"
+      ]
+    },
+    {
+      "name": "2-Category",
+      "category": "Enriched & Higher Category Theory",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "category",
+      "axis_name": "2_category",
+      "unit": "category",
+      "hints": [
+        "Category with morphisms between morphisms",
+        "Objects, 1-morphisms, 2-morphisms",
+        "Horizontal and vertical composition",
+        "Exchange law governs coherence",
+        "Walks the higher-dimensional structure",
+        "Studies categorical levels"
+      ]
+    },
+    {
+      "name": "Yoneda Lemma",
+      "category": "Enriched & Higher Category Theory",
+      "domain": "HEAL",
+      "mode": "LEARN",
+      "axis_kind": "category",
+      "axis_name": "yoneda_lemma",
+      "unit": "lemma",
+      "hints": [
+        "Every object is determined by its Hom-functor",
+        "Natural transformations to Hom are the object itself",
+        "The most fundamental lemma in category theory",
+        "Embedding into presheaf category",
+        "Heals the gap between object and representation",
+        "Learns that object = its relationships"
+      ]
+    }
+  ]
+}

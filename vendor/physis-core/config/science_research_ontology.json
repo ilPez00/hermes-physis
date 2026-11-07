@@ -1,0 +1,13 @@
+{
+  "kind": "science_research",
+  "domains": [
+    {"name":"Literature Review","category":"Research","domain":"STUDY","mode":"LEARN","axis_kind":"science_research","axis_name":"reviewer","unit":"papers","hints":["literature","paper","review","citation","survey","prior work","read","arxiv","reference","state of the art"]},
+    {"name":"Hypothesis Formation","category":"Research","domain":"STUDY","mode":"BRAINSTORM","axis_kind":"science_research","axis_name":"theorist","unit":"hypotheses","hints":["hypothesis","question","theory","predict","propose","model","conjecture","framework","assumption"]},
+    {"name":"Experiment Design","category":"Research","domain":"STUDY","mode":"PLAN","axis_kind":"science_research","axis_name":"designer","unit":"protocols","hints":["experiment","design","protocol","control","variable","method","sample size","randomize","procedure","setup"]},
+    {"name":"Data Collection","category":"Research","domain":"STUDY","mode":"SENSE","axis_kind":"science_research","axis_name":"collector","unit":"measurements","hints":["collect","measure","observe","record","sample","instrument","field work","survey","log","capture data"]},
+    {"name":"Analysis & Interpretation","category":"Research","domain":"STUDY","mode":"WORK","axis_kind":"science_research","axis_name":"analyst","unit":"results","hints":["analyze","statistics","interpret","result","significance","model fit","conclusion","correlation","evidence"]},
+    {"name":"Writing & Publishing","category":"Research","domain":"STUDY","mode":"CREATE","axis_kind":"science_research","axis_name":"author","unit":"manuscripts","hints":["paper","manuscript","write","publish","journal","peer review","abstract","submit","figure","reference"]},
+    {"name":"Replication & Validation","category":"Research","domain":"STUDY","mode":"WORK","axis_kind":"science_research","axis_name":"validator","unit":"replications","hints":["replicate","validate","reproduce","verify","robustness","sensitivity","confirm","cross-check","rigor"]},
+    {"name":"Collaboration","category":"Research","domain":"BOND","mode":"WORK","axis_kind":"science_research","axis_name":"collaborator","unit":"projects","hints":["collaborate","coauthor","lab","grant","team","conference","present","network","funding","partner"]}
+  ]
+}

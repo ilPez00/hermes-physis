@@ -1,0 +1,13 @@
+{
+  "kind": "creative_writing",
+  "domains": [
+    {"name":"Drafting","category":"Writing","domain":"FABRICATE","mode":"CREATE","axis_kind":"creative_writing","axis_name":"writer","unit":"words","hints":["draft","write","prose","first draft","wordcount","freewrite","scene","chapter","flow","compose"]},
+    {"name":"Editing & Revision","category":"Writing","domain":"FABRICATE","mode":"WORK","axis_kind":"creative_writing","axis_name":"editor","unit":"revisions","hints":["edit","revise","cut","tighten","line edit","proofread","polish","rewrite","clarity","trim"]},
+    {"name":"Worldbuilding","category":"Writing","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"creative_writing","axis_name":"architect","unit":"settings","hints":["worldbuilding","setting","lore","map","culture","magic system","timeline","history","faction","geography"]},
+    {"name":"Character Development","category":"Writing","domain":"FABRICATE","mode":"CREATE","axis_kind":"creative_writing","axis_name":"characterist","unit":"characters","hints":["character","arc","motivation","backstory","dialogue","voice","flaw","relationship","protagonist","antagonist"]},
+    {"name":"Plot Structure","category":"Writing","domain":"CONSTRUCT","mode":"CREATE","axis_kind":"creative_writing","axis_name":"plotter","unit":"beats","hints":["plot","structure","outline","three-act","beat","conflict","tension","pacing","climax","subplot","arc"]},
+    {"name":"Research","category":"Writing","domain":"STUDY","mode":"WORK","axis_kind":"creative_writing","axis_name":"researcher","unit":"notes","hints":["research","fact-check","reference","source","detail","accuracy","background","investigate","authenticity"]},
+    {"name":"Reading the Craft","category":"Writing","domain":"STUDY","mode":"LEARN","axis_kind":"creative_writing","axis_name":"student","unit":"books","hints":["read","craft","style","technique","analyze","influence","genre","study writing","prose study"]},
+    {"name":"Publishing & Sharing","category":"Writing","domain":"FABRICATE","mode":"WORK","axis_kind":"creative_writing","axis_name":"author","unit":"submissions","hints":["publish","submit","query","agent","self-publish","feedback","beta reader","critique","blog","release"]}
+  ]
+}

@@ -1,0 +1,1306 @@
+{
+  "kind": "agent",
+  "domains": [
+    {
+      "name": "Planner",
+      "category": "cognitive_architecture",
+      "domain": "FABRICATE",
+      "mode": "PLAN",
+      "axis_kind": "agent",
+      "axis_name": "planner",
+      "unit": "plan",
+      "hints": [
+        "hierarchical task network decomposition",
+        "STRIPS operator sequencing",
+        "means-ends analysis with goal regression",
+        "partial-order planning with causal links",
+        "graphplan plan-space search",
+        "SATPlan propositional encoding",
+        "temporal planning with durative actions",
+        "contingency planning for uncertain outcomes"
+      ]
+    },
+    {
+      "name": "Executor",
+      "category": "cognitive_architecture",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "executor",
+      "unit": "action",
+      "hints": [
+        "plan-step execution and dispatch",
+        "precondition monitoring during execution",
+        "action outcome verification",
+        "environment state synchronization",
+        "rollback on execution failure",
+        "concurrent action scheduling",
+        "resource-constrained execution",
+        "execution trace logging"
+      ]
+    },
+    {
+      "name": "Reflector",
+      "category": "cognitive_architecture",
+      "domain": "STUDY",
+      "mode": "REST",
+      "axis_kind": "agent",
+      "axis_name": "reflector",
+      "unit": "insight",
+      "hints": [
+        "self-evaluation of past decisions",
+        "credit assignment across action sequences",
+        "performance gap analysis",
+        "strategy revision from outcomes",
+        "bias detection in reasoning",
+        "temporal reflection on goal progress",
+        "counterfactual self-assessment",
+        "narrative reconstruction of episodes"
+      ]
+    },
+    {
+      "name": "Monitor",
+      "category": "cognitive_architecture",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "monitor",
+      "unit": "metric",
+      "hints": [
+        "real-time metric collection and aggregation",
+        "anomaly detection in system state",
+        "threshold-based alert generation",
+        "sliding-window performance tracking",
+        "drift detection in environmental conditions",
+        "resource utilization profiling",
+        "health-check polling at intervals",
+        "state comparison against expected baselines"
+      ]
+    },
+    {
+      "name": "Reasoner",
+      "category": "cognitive_architecture",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "reasoner",
+      "unit": "inference",
+      "hints": [
+        "logical deduction through modus ponens",
+        "first-order logic resolution",
+        "description logic subsumption",
+        "probabilistic inference via Bayes rule",
+        "default logic with exception handling",
+        "temporal reasoning over event sequences",
+        "belief revision with new evidence",
+        "ontology-grounded inference chains"
+      ]
+    },
+    {
+      "name": "Learner",
+      "category": "cognitive_architecture",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "agent",
+      "axis_name": "learner",
+      "unit": "sample",
+      "hints": [
+        "model update from labeled examples",
+        "incremental learning without full retrain",
+        "online adaptation to non-stationary distributions",
+        "experience replay for sample efficiency",
+        "representation learning from raw data",
+        "gradient-based parameter optimization",
+        "Bayesian posterior updating",
+        "synthetic data augmentation for rare events"
+      ]
+    },
+    {
+      "name": "Memorizer",
+      "category": "cognitive_architecture",
+      "domain": "STUDY",
+      "mode": "MAINTAIN",
+      "axis_kind": "agent",
+      "axis_name": "memorizer",
+      "unit": "memory",
+      "hints": [
+        "episodic memory encoding and retrieval",
+        "semantic memory consolidation",
+        "working memory buffer management",
+        "content-addressable recall",
+        "memory decay and forgetting curves",
+        "spaced repetition scheduling",
+        "context-dependent memory retrieval",
+        "interference mitigation in associative memory"
+      ]
+    },
+    {
+      "name": "Communicator",
+      "category": "cognitive_architecture",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "communicator",
+      "unit": "message",
+      "hints": [
+        "intention encoding into message format",
+        "shared ontology grounding for referents",
+        "speech-act theory for illocutionary force",
+        "turn-taking protocol management",
+        "common ground maintenance across utterances",
+        "communicative efficiency via pragmatic infererence",
+        "multi-modal message composition",
+        "backchannel feedback interpretation"
+      ]
+    },
+    {
+      "name": "Negotiator",
+      "category": "cognitive_architecture",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "negotiator",
+      "unit": "deal",
+      "hints": [
+        "offer-counteroffer bargaining dynamics",
+        "utility landscape exploration under constraints",
+        "concession scheduling for deadlock avoidance",
+        "multi-issue negotiation with trade-offs",
+        "reputation-sensitive negotiation stance",
+        "reservation price estimation from opponent moves",
+        "argumentation-based persuasion",
+        "integrative bargaining for win-win outcomes"
+      ]
+    },
+    {
+      "name": "Observer",
+      "category": "cognitive_architecture",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "observer",
+      "unit": "observation",
+      "hints": [
+        "sensory data acquisition and filtering",
+        "object detection and recognition in scenes",
+        "state estimation from partial observations",
+        "attention mechanism for salient features",
+        "multi-modal sensor fusion",
+        "change detection across temporal snapshots",
+        "perspective-taking in social observation",
+        "uncertainty-calibrated perception"
+      ]
+    },
+    {
+      "name": "Deductive Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "deductive_reasoner",
+      "unit": "theorem",
+      "hints": [
+        "top-down inference from general principles",
+        "syllogistic reasoning with categorical propositions",
+        "modus tollens for contrapositive deduction",
+        "natural deduction with introduction and elimination rules",
+        "sequent calculus proof construction",
+        "forward chaining on Horn clauses",
+        "backward chaining for goal-directed proof",
+        "category-theoretic diagram chasing"
+      ]
+    },
+    {
+      "name": "Inductive Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "inductive_reasoner",
+      "unit": "generalization",
+      "hints": [
+        "bottom-up pattern extraction from examples",
+        "enumeration induction over finite domains",
+        "analogical generalization across cases",
+        "Bayesian inference for hypothesis ranking",
+        "minimum description length principle",
+        "statistical learning from sampled data",
+        "rule induction from attribute-value pairs",
+        "concept learning via positive and negative examples"
+      ]
+    },
+    {
+      "name": "Abductive Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "abductive_reasoner",
+      "unit": "hypothesis",
+      "hints": [
+        "inference to the best explanation",
+        "diagnosis from observed symptoms to causes",
+        "hypothesis generation under uncertainty",
+        "parsimony-driven explanation selection",
+        "causal graph inference from correlational data",
+        "relevant evidence weighting for competing explanations",
+        "counterfactual reasoning over explanatory models",
+        "iterative refinement of candidate explanations"
+      ]
+    },
+    {
+      "name": "Analogical Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "MOVE",
+      "axis_kind": "agent",
+      "axis_name": "analogical_reasoner",
+      "unit": "mapping",
+      "hints": [
+        "structural alignment between source and target",
+        "relational mapping with isomorphic constraints",
+        "attribute correspondence across domains",
+        "systematicity principle for coherent mappings",
+        "analogy retrieval from long-term memory",
+        "schema induction from multiple analogs",
+        "cross-domain transfer of solution strategies",
+        "candidate inference projection to target domain"
+      ]
+    },
+    {
+      "name": "Causal Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "causal_reasoner",
+      "unit": "cause",
+      "hints": [
+        "do-calculus for intervention modeling",
+        "structural causal model specification",
+        "causal effect identification from observational data",
+        "confounder adjustment via back-door criterion",
+        "front-door criterion for mediated effects",
+        "instrumental variable estimation",
+        "counterfactual query answering",
+        "Granger causality in time series"
+      ]
+    },
+    {
+      "name": "Counterfactual Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "PLAY",
+      "axis_kind": "agent",
+      "axis_name": "counterfactual_reasoner",
+      "unit": "scenario",
+      "hints": [
+        "what-if simulation under alternate histories",
+        "minimal-rewrite counterfactual generation",
+        "contrastive explanation extraction",
+        "structural equation model intervention",
+        "regret minimization from counterfactual outcomes",
+        "treatment effect estimation per unit",
+        "impossible-world reasoning for hypotheticals",
+        "closest-possible-world semantics"
+      ]
+    },
+    {
+      "name": "Modal Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "modal_reasoner",
+      "unit": "modality",
+      "hints": [
+        "Kripke frame semantics for possible worlds",
+        "necessity and possibility dual modalities",
+        "epistemic logic for knowledge and belief",
+        "deontic logic for obligation and permission",
+        "temporal logic with always and eventually",
+        "accessibility relation constraints",
+        "axiom schema verification across frames",
+        "soundness and completeness for modal systems"
+      ]
+    },
+    {
+      "name": "Non-monotonic Reasoning",
+      "category": "reasoning_pattern",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "nonmonotonic_reasoner",
+      "unit": "defeasible_conclusion",
+      "hints": [
+        "default logic with exception-handling rules",
+        "circumscription for minimal abnormality",
+        "defeasible argumentation frameworks",
+        "autoepistemic logic for belief introspection",
+        "preference-based entailment selection",
+        "reinstatement in argumentation graphs",
+        "skeptical vs credulous inference modes",
+        "belief revision with retraction of conclusions"
+      ]
+    },
+    {
+      "name": "Reactive Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "reactive_agent",
+      "unit": "reflex",
+      "hints": [
+        "stimulus-response mapping without internal state",
+        "subsumption architecture with behavior layers",
+        "condition-action rule execution",
+        "situatedness in immediate environment",
+        "emergence of complex behavior from simple rules",
+        "minimal representation for fast response",
+        "pre-wired behavioral priors",
+        "feedback loop closure at millisecond scale"
+      ]
+    },
+    {
+      "name": "Deliberative Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "deliberative_agent",
+      "unit": "belief",
+      "hints": [
+        "belief-desire-intention architecture",
+        "symbolic world model representation",
+        "means-ends reasoning for goal achievement",
+        "plan library with hierarchical decomposition",
+        "intention reconsideration under new information",
+        "procedural reasoning system with recipes",
+        "commitment strategy for persistent goals",
+        "explicit representation of other agents mental states"
+      ]
+    },
+    {
+      "name": "Hybrid Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "hybrid_agent",
+      "unit": "layer",
+      "hints": [
+        "three-layer architecture with reactive and deliberative tiers",
+        "layered behavior arbitration between fast and slow systems",
+        "temporal scale separation for decision-making",
+        "meta-management layer for self-awareness",
+        "reactive override of deliberative plans in emergencies",
+        "smooth transition between automatic and controlled processing",
+        "parallel activation of reactive and reasoning pathways",
+        "resource-adaptive allocation across cognitive layers"
+      ]
+    },
+    {
+      "name": "Goal-oriented Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "goal_oriented_agent",
+      "unit": "goal",
+      "hints": [
+        "explicit goal representation and tracking",
+        "goal decomposition into subgoals",
+        "progress monitoring toward goal states",
+        "goal prioritization under resource constraints",
+        "goal regression from desired state to initial state",
+        "maintenance goals for persistent conditions",
+        "achievement goals for discrete milestones",
+        "goal conflict resolution through preference ordering"
+      ]
+    },
+    {
+      "name": "Utility-based Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "utility_based_agent",
+      "unit": "utility",
+      "hints": [
+        "expected utility maximization framework",
+        "Markov decision process formulation",
+        "reward function design for desired behavior",
+        "discounted cumulative reward optimization",
+        "risk-sensitive utility with concave/convex shapes",
+        "multi-attribute utility for complex trade-offs",
+        "preference elicitation from observed choices",
+        "value iteration for state-action evaluation"
+      ]
+    },
+    {
+      "name": "Learning Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "learning_agent",
+      "unit": "experience",
+      "hints": [
+        "experience-driven policy improvement",
+        "model-based vs model-free learning dichotomy",
+        "exploration-exploitation trade-off management",
+        "credit assignment across temporally extended actions",
+        "sample-efficient generalization from limited data",
+        "curriculum learning for progressive difficulty",
+        "transfer of learned skills to novel contexts",
+        "lifelong learning without catastrophic forgetting"
+      ]
+    },
+    {
+      "name": "Social Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "social_agent",
+      "unit": "interaction",
+      "hints": [
+        "theory of mind for mental state attribution",
+        "norm-aware behavior in social contexts",
+        "reputation formation through repeated interaction",
+        "cooperative alignment with shared goals",
+        "social signaling via expressive acts",
+        "convention emergence through mutual accommodation",
+        "trust modeling from interaction history",
+        "perspective-taking for empathetic response"
+      ]
+    },
+    {
+      "name": "Emergent Agent",
+      "category": "agent_type",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "emergent_agent",
+      "unit": "phase",
+      "hints": [
+        "collective behavior from local interaction rules",
+        "self-organization without centralized control",
+        "phase transitions in agent populations",
+        "stigmergy through environment-mediated coordination",
+        "swarm-level intelligence from simple individual rules",
+        "criticality at the edge of order and chaos",
+        "path dependence in emergent social structures",
+        "feedback amplification driving macroscopic patterns"
+      ]
+    },
+    {
+      "name": "Agent Coordination",
+      "category": "multi_agent_system",
+      "domain": "BOND",
+      "mode": "PLAN",
+      "axis_kind": "agent",
+      "axis_name": "agent_coordination",
+      "unit": "sync",
+      "hints": [
+        "joint intention theory for shared plans",
+        "role assignment and task decomposition",
+        "mutual belief establishment for team alignment",
+        "shared plan repair on execution deviation",
+        "concurrent action synchronization protocols",
+        "team situation awareness maintenance",
+        "commitment-based coordination with deadlines",
+        "ad hoc teamwork without pre-coordination"
+      ]
+    },
+    {
+      "name": "Agent Negotiation",
+      "category": "multi_agent_system",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "agent_negotiation",
+      "unit": "agreement",
+      "hints": [
+        "alternating offers protocol for bargaining",
+        "monotonic concession strategy analysis",
+        "argumentation-based negotiation with justification",
+        "multi-issue utility negotiation spaces",
+        "automated mediation for dispute resolution",
+        "negotiation deadline effects on outcomes",
+        "coalitional negotiation for group decisions",
+        "trust-calibrated negotiation tactics"
+      ]
+    },
+    {
+      "name": "Agent Communication",
+      "category": "multi_agent_system",
+      "domain": "BOND",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "agent_communication",
+      "unit": "utterance",
+      "hints": [
+        "ACL performative-based message encoding",
+        "shared ontology for semantic interoperability",
+        "FIPA-ACL standard compliance",
+        "content language specification for propositions",
+        "conversation protocol state machines",
+        "inform, request, propose, accept, reject performatives",
+        "query refinement via clarification dialogs",
+        "distributed truth maintenance through communication"
+      ]
+    },
+    {
+      "name": "Agent Organization",
+      "category": "multi_agent_system",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "agent_organization",
+      "unit": "role",
+      "hints": [
+        "hierarchical authority structure design",
+        "holonic agent composition into super-agents",
+        "dynamic role reassignment under environmental change",
+        "team formation with complementary capabilities",
+        "organizational memory across agent generations",
+        "delegation protocols with accountability tracking",
+        "congregation for specialized expertise pooling",
+        "market-based resource allocation within organizations"
+      ]
+    },
+    {
+      "name": "Swarm Intelligence",
+      "category": "multi_agent_system",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "agent",
+      "axis_name": "swarm_intelligence",
+      "unit": "agent",
+      "hints": [
+        "ant colony optimization for path finding",
+        "particle swarm optimization in continuous spaces",
+        "bee colony algorithm for task allocation",
+        "flocking rules for collective motion",
+        "foraging behavior as distributed search",
+        "negative feedback via pheromone evaporation",
+        "decentralized decision-making with quorum sensing",
+        "self-organized division of labor without managers"
+      ]
+    },
+    {
+      "name": "Coalition Formation",
+      "category": "multi_agent_system",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "coalition_formation",
+      "unit": "coalition",
+      "hints": [
+        "characteristic function game for coalition value",
+        "Shapley value for fair payoff distribution",
+        "core stability against subgroup defection",
+        "bargaining over coalition surplus",
+        "dynamic coalition reconfiguration over time",
+        "overlapping coalitions for multi-tasking",
+        "computational complexity of coalition structure generation",
+        "anytime algorithms for bounded-rational coalitions"
+      ]
+    },
+    {
+      "name": "Self-Awareness",
+      "category": "meta_cognition",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "self_awareness",
+      "unit": "self_model",
+      "hints": [
+        "explicit self-model representation",
+        "confidence calibration on own capabilities",
+        "bias monitoring in cognitive processes",
+        "distinction between self and other mental states",
+        "metacognitive access to internal representations",
+        "limitation recognition for fallback triggering",
+        "self-concept stability across contexts",
+        "introspective access to reasoning provenance"
+      ]
+    },
+    {
+      "name": "Introspection",
+      "category": "meta_cognition",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "introspection",
+      "unit": "reflection",
+      "hints": [
+        "trace examination of own inference steps",
+        "reasoning chain decomposition and audit",
+        "assumption surfacing from implicit premises",
+        "decision provenance backtracking",
+        "cognitive load assessment during tasks",
+        "strategy effectiveness post-hoc analysis",
+        "latent state visualization for interpretability",
+        "attentional focus self-reporting"
+      ]
+    },
+    {
+      "name": "Confidence Estimation",
+      "category": "meta_cognition",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "confidence_estimator",
+      "unit": "confidence",
+      "hints": [
+        "predictive probability calibration",
+        "expected calibration error measurement",
+        "temperature scaling for output logits",
+        "Bayesian model uncertainty quantification",
+        "ensemble disagreement as uncertainty proxy",
+        "conformal prediction for set-valued outputs",
+        "selective prediction with abstention option",
+        "out-of-distribution detection via confidence"
+      ]
+    },
+    {
+      "name": "Strategy Selection",
+      "category": "meta_cognition",
+      "domain": "STUDY",
+      "mode": "PLAN",
+      "axis_kind": "agent",
+      "axis_name": "strategy_selector",
+      "unit": "strategy",
+      "hints": [
+        "meta-level reasoning over solution approaches",
+        "strategy repertoire maintenance and expansion",
+        "context-sensitive strategy matching",
+        "cost-benefit analysis of cognitive strategies",
+        "strategy switching under time pressure",
+        "analogy-driven strategy adaptation",
+        "strategy composition for novel problems",
+        "decentralized strategy selection in multi-agent contexts"
+      ]
+    },
+    {
+      "name": "Resource Management",
+      "category": "meta_cognition",
+      "domain": "FABRICATE",
+      "mode": "PLAN",
+      "axis_kind": "agent",
+      "axis_name": "resource_manager",
+      "unit": "resource",
+      "hints": [
+        "computational budget allocation across subtasks",
+        "attention scheduling for limited capacity",
+        "memory footprint optimization during reasoning",
+        "approximate reasoning under time constraints",
+        "anytime algorithm design for graceful degradation",
+        "energy-aware computation in embedded agents",
+        "parallel vs sequential computation trade-offs",
+        "cache invalidation and prioritization strategies"
+      ]
+    },
+    {
+      "name": "Error Detection",
+      "category": "meta_cognition",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "error_detector",
+      "unit": "error",
+      "hints": [
+        "invariant violation monitoring",
+        "precondition failure anticipation",
+        "outcome verification against expectations",
+        "consistency checking across knowledge sources",
+        "temporal anomaly detection in process execution",
+        "contradiction detection in belief sets",
+        "input validation and sanitization",
+        "early warning indicators for systemic failure"
+      ]
+    },
+    {
+      "name": "Tool Selection",
+      "category": "tool_use",
+      "domain": "STUDY",
+      "mode": "PLAN",
+      "axis_kind": "agent",
+      "axis_name": "tool_selector",
+      "unit": "tool",
+      "hints": [
+        "capability matching between task and tool",
+        "tool affordance modeling from specifications",
+        "cost-benefit analysis of tool alternatives",
+        "experience-driven tool preference learning",
+        "tool availability and accessibility checking",
+        "domain-specific tool specialization",
+        "tool recommendation from task embeddings",
+        "precision-recall trade-off across tool choices"
+      ]
+    },
+    {
+      "name": "Tool Application",
+      "category": "tool_use",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "tool_applicator",
+      "unit": "use",
+      "hints": [
+        "correct invocation syntax and parameter binding",
+        "input formatting to match tool schema",
+        "output parsing and interpretation",
+        "error handling on tool execution failure",
+        "usage monitoring for rate limits",
+        "stateful tool interaction management",
+        "idempotency handling for safe retries",
+        "undo or compensation on partial tool effects"
+      ]
+    },
+    {
+      "name": "Tool Creation",
+      "category": "tool_use",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "tool_creator",
+      "unit": "artifact",
+      "hints": [
+        "task requirement analysis for new tool design",
+        "abstraction of repeated patterns into reusable tools",
+        "tool interface specification with input-output contracts",
+        "modular composition of primitive operations",
+        "verification of tool correctness and safety",
+        "documentation generation for tool users",
+        "version management for iterated tool improvements",
+        "test suite construction for tool validation"
+      ]
+    },
+    {
+      "name": "Tool Composition",
+      "category": "tool_use",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "tool_composer",
+      "unit": "pipeline",
+      "hints": [
+        "sequential chaining with output-input matching",
+        "parallel tool invocation for independent subtasks",
+        "dataflow graph construction across tools",
+        "conditional branching on intermediate results",
+        "loop and recursion patterns in tool pipelines",
+        "error propagation and recovery across stages",
+        "pipeline caching for intermediate results",
+        "dynamic reconfiguration of tool chains at runtime"
+      ]
+    },
+    {
+      "name": "Supervised Learning",
+      "category": "learning_paradigm",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "agent",
+      "axis_name": "supervised_learner",
+      "unit": "label",
+      "hints": [
+        "input-output mapping from annotated examples",
+        "empirical risk minimization over training data",
+        "loss function selection for task-specific objectives",
+        "regularization to prevent overfitting",
+        "cross-validation for hyperparameter tuning",
+        "imbalanced learning with weighted loss",
+        "noisy label handling through robust loss functions",
+        "semi-supervised extension with unlabeled data"
+      ]
+    },
+    {
+      "name": "Unsupervised Learning",
+      "category": "learning_paradigm",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "agent",
+      "axis_name": "unsupervised_learner",
+      "unit": "cluster",
+      "hints": [
+        "pattern discovery without labeled data",
+        "clustering with distance metric learning",
+        "density estimation for generative modeling",
+        "dimensionality reduction for latent structure",
+        "anomaly detection as outlier mining",
+        "manifold learning for non-linear embeddings",
+        "self-organizing maps for topology preservation",
+        "contrastive learning for representation discovery"
+      ]
+    },
+    {
+      "name": "Reinforcement Learning",
+      "category": "learning_paradigm",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "agent",
+      "axis_name": "reinforcement_learner",
+      "unit": "reward",
+      "hints": [
+        "trial-and-error learning from scalar feedback",
+        "temporal difference learning for bootstrapping",
+        "Q-learning for off-policy value estimation",
+        "policy gradient methods for continuous actions",
+        "deep RL with function approximation",
+        "reward shaping for sparse reward environments",
+        "intrinsic motivation through curiosity bonus",
+        "offline RL from pre-collected experience data"
+      ]
+    },
+    {
+      "name": "Transfer Learning",
+      "category": "learning_paradigm",
+      "domain": "STUDY",
+      "mode": "MOVE",
+      "axis_kind": "agent",
+      "axis_name": "transfer_learner",
+      "unit": "domain",
+      "hints": [
+        "cross-domain knowledge reuse via feature mapping",
+        "fine-tuning of pre-trained representations",
+        "domain adaptation with distribution alignment",
+        "few-shot learning with meta-learned initializations",
+        "zero-shot transfer through shared embedding spaces",
+        "progressive networks for cumulative skill acquisition",
+        "representation disentanglement for task-agnostic features",
+        "multi-task learning as implicit transfer"
+      ]
+    },
+    {
+      "name": "Meta-Learning",
+      "category": "learning_paradigm",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "agent",
+      "axis_name": "meta_learner",
+      "unit": "episode",
+      "hints": [
+        "learning-to-learn across task distributions",
+        "model-agnostic meta-learning for fast adaptation",
+        "optimization-based inner-loop fine-tuning",
+        "metric-based few-shot classification",
+        "recurrent meta-learners with memory across episodes",
+        "Bayesian meta-learning with uncertainty",
+        "task embedding for contextual parameter generation",
+        "evolutionary meta-optimization of learning algorithms"
+      ]
+    },
+    {
+      "name": "Active Learning",
+      "category": "learning_paradigm",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "agent",
+      "axis_name": "active_learner",
+      "unit": "query",
+      "hints": [
+        "informative sample selection for labeling",
+        "uncertainty sampling with entropy maximization",
+        "query-by-committee for disagreement-based selection",
+        "expected model change maximization",
+        "diverse batch selection for efficient acquisition",
+        "cost-sensitive active learning with budget constraints",
+        "stream-based selective sampling",
+        "synthetic query generation via adversarial examples"
+      ]
+    },
+    {
+      "name": "System Prompt",
+      "category": "PromptPipeline",
+      "domain": "BOND",
+      "mode": "GUIDE",
+      "axis_kind": "agent",
+      "axis_name": "prompt_pipeline",
+      "unit": "tokens",
+      "hints": [
+        "system prompt",
+        "instructions",
+        "role",
+        "persona",
+        "directives",
+        "constraints",
+        "preamble",
+        "context setting"
+      ]
+    },
+    {
+      "name": "User Input",
+      "category": "PromptPipeline",
+      "domain": "BOND",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "prompt_pipeline",
+      "unit": "message",
+      "hints": [
+        "user input",
+        "query",
+        "question",
+        "command",
+        "instruction",
+        "request",
+        "utterance",
+        "message"
+      ]
+    },
+    {
+      "name": "Assistant Response",
+      "category": "PromptPipeline",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "prompt_pipeline",
+      "unit": "response",
+      "hints": [
+        "assistant",
+        "completion",
+        "answer",
+        "generated output",
+        "reply",
+        "content",
+        "response"
+      ]
+    },
+    {
+      "name": "Context Window",
+      "category": "PromptPipeline",
+      "domain": "STUDY",
+      "mode": "MAINTAIN",
+      "axis_kind": "agent",
+      "axis_name": "memory_manager",
+      "unit": "tokens",
+      "hints": [
+        "context window",
+        "sliding window",
+        "truncation",
+        "summarization",
+        "history",
+        "buffer",
+        "token limit"
+      ]
+    },
+    {
+      "name": "Prompt Template",
+      "category": "PromptPipeline",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "agent",
+      "axis_name": "prompt_pipeline",
+      "unit": "templates",
+      "hints": [
+        "template",
+        "variable",
+        "placeholder",
+        "format",
+        "few-shot",
+        "example",
+        "pattern",
+        "prompt template"
+      ]
+    },
+    {
+      "name": "Working Memory",
+      "category": "AgentMemory",
+      "domain": "STUDY",
+      "mode": "MAINTAIN",
+      "axis_kind": "agent",
+      "axis_name": "memory_manager",
+      "unit": "items",
+      "hints": [
+        "working memory",
+        "scratchpad",
+        "active",
+        "short-term",
+        "buffer",
+        "current",
+        "immediate"
+      ]
+    },
+    {
+      "name": "Episodic Memory",
+      "category": "AgentMemory",
+      "domain": "STUDY",
+      "mode": "MAINTAIN",
+      "axis_kind": "agent",
+      "axis_name": "memory_manager",
+      "unit": "episodes",
+      "hints": [
+        "episodic",
+        "experience",
+        "recall",
+        "past",
+        "event",
+        "history",
+        "episode",
+        "memory"
+      ]
+    },
+    {
+      "name": "Semantic Memory",
+      "category": "AgentMemory",
+      "domain": "STUDY",
+      "mode": "MAINTAIN",
+      "axis_kind": "agent",
+      "axis_name": "memory_manager",
+      "unit": "facts",
+      "hints": [
+        "semantic",
+        "knowledge",
+        "fact",
+        "concept",
+        "long-term",
+        "persistent",
+        "stored",
+        "memory"
+      ]
+    },
+    {
+      "name": "Tool Invocation",
+      "category": "ToolExecution",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "tool_executor",
+      "unit": "calls",
+      "hints": [
+        "tool call",
+        "function call",
+        "invoke",
+        "execute",
+        "run",
+        "call",
+        "command"
+      ]
+    },
+    {
+      "name": "Tool Result",
+      "category": "ToolExecution",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "tool_executor",
+      "unit": "results",
+      "hints": [
+        "tool output",
+        "return value",
+        "result",
+        "status code",
+        "response",
+        "data",
+        "error"
+      ]
+    },
+    {
+      "name": "Output Publishing",
+      "category": "ToolExecution",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "output_handler",
+      "unit": "outputs",
+      "hints": [
+        "write",
+        "save",
+        "publish",
+        "stream",
+        "artifact",
+        "file",
+        "database",
+        "broadcast"
+      ]
+    },
+    {
+      "name": "Error Recovery",
+      "category": "QualityAssurance",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "error_handler",
+      "unit": "retries",
+      "hints": [
+        "error",
+        "exception",
+        "retry",
+        "fallback",
+        "degrade",
+        "recover",
+        "handle",
+        "resilience"
+      ]
+    },
+    {
+      "name": "Quality Check",
+      "category": "QualityAssurance",
+      "domain": "FABRICATE",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "quality_monitor",
+      "unit": "events",
+      "hints": [
+        "quality",
+        "feedback",
+        "correct",
+        "wrong",
+        "fix",
+        "adjust",
+        "refine",
+        "review"
+      ]
+    },
+    {
+      "name": "Confidence Threshold",
+      "category": "QualityAssurance",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "confidence_estimator",
+      "unit": "score",
+      "hints": [
+        "confidence",
+        "threshold",
+        "low confidence",
+        "uncertainty",
+        "abstain",
+        "gate",
+        "certainty"
+      ]
+    },
+    {
+      "name": "Human Escalation",
+      "category": "QualityAssurance",
+      "domain": "BOND",
+      "mode": "MOVE",
+      "axis_kind": "agent",
+      "axis_name": "escalation_manager",
+      "unit": "handoffs",
+      "hints": [
+        "escalate",
+        "handoff",
+        "human review",
+        "supervisor",
+        "approve",
+        "override",
+        "human in loop"
+      ]
+    },
+    {
+      "name": "PDCA Cycle",
+      "category": "QualityAssurance",
+      "domain": "CONSTRUCT",
+      "mode": "MAINTAIN",
+      "axis_kind": "agent",
+      "axis_name": "quality_monitor",
+      "unit": "cycles",
+      "hints": [
+        "pdca",
+        "plan",
+        "do",
+        "check",
+        "act",
+        "continuous improvement",
+        "iterate",
+        "deming"
+      ]
+    },
+    {
+      "name": "Workflow Chain",
+      "category": "AgentLifecycle",
+      "domain": "FABRICATE",
+      "mode": "PLAN",
+      "axis_kind": "agent",
+      "axis_name": "workflow_engine",
+      "unit": "steps",
+      "hints": [
+        "workflow",
+        "pipeline",
+        "chain",
+        "sequence",
+        "stage",
+        "phase",
+        "task",
+        "step"
+      ]
+    },
+    {
+      "name": "Agent Loop",
+      "category": "AgentLifecycle",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "agent",
+      "axis_name": "workflow_engine",
+      "unit": "iterations",
+      "hints": [
+        "loop",
+        "retry",
+        "recursion",
+        "backoff",
+        "max attempts",
+        "repeat",
+        "iteration"
+      ]
+    },
+    {
+      "name": "Agent State",
+      "category": "AgentLifecycle",
+      "domain": "HEAL",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "state_manager",
+      "unit": "state",
+      "hints": [
+        "idle",
+        "running",
+        "paused",
+        "stopped",
+        "ready",
+        "sleeping",
+        "initializing"
+      ]
+    },
+    {
+      "name": "Agent Versioning",
+      "category": "AgentLifecycle",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "agent",
+      "axis_name": "config_manager",
+      "unit": "versions",
+      "hints": [
+        "version",
+        "deploy",
+        "rollback",
+        "release",
+        "tag",
+        "staging",
+        "production"
+      ]
+    },
+    {
+      "name": "Telemetry & Log",
+      "category": "AgentLifecycle",
+      "domain": "STUDY",
+      "mode": "SENSE",
+      "axis_kind": "agent",
+      "axis_name": "monitor",
+      "unit": "events",
+      "hints": [
+        "log",
+        "trace",
+        "audit",
+        "observability",
+        "event",
+        "metric",
+        "monitor",
+        "telemetry"
+      ]
+    }
+  ]
+}

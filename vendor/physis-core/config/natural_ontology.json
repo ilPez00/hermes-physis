@@ -1,0 +1,565 @@
+{
+  "kind": "natural",
+  "domains": [
+    {
+      "name": "Mechanics",
+      "category": "Physics — Classical",
+      "domain": "FABRICATE",
+      "mode": "WORK",
+      "axis_kind": "natural",
+      "axis_name": "force",
+      "unit": "N",
+      "hints": ["force", "motion", "Newton's laws", "momentum", "energy", "inertia", "conservation", "kinematics"]
+    },
+    {
+      "name": "Thermodynamics",
+      "category": "Physics — Classical",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "temperature",
+      "unit": "K",
+      "hints": ["heat", "entropy", "energy transfer", "thermal equilibrium", "Carnot cycle", "phase transition", "Laws of Thermodynamics", "free energy"]
+    },
+    {
+      "name": "Electromagnetism",
+      "category": "Physics — Classical",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "charge",
+      "unit": "C",
+      "hints": ["charge", "field", "wave", "Maxwell's equations", "Lorentz force", "electric potential", "magnetic flux", "induction"]
+    },
+    {
+      "name": "Optics",
+      "category": "Physics — Classical",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "wavelength",
+      "unit": "m",
+      "hints": ["light", "refraction", "reflection", "diffraction", "lens", "polarization", "interference", "spectrum"]
+    },
+    {
+      "name": "Acoustics",
+      "category": "Physics — Classical",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "frequency",
+      "unit": "Hz",
+      "hints": ["sound", "wave", "resonance", "amplitude", "decibel", "harmonic", "Doppler effect", "standing wave"]
+    },
+    {
+      "name": "Fluid Dynamics",
+      "category": "Physics — Classical",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "viscosity",
+      "unit": "Pa·s",
+      "hints": ["flow", "pressure", "turbulence", "Bernoulli's principle", "vorticity", "boundary layer", "Reynolds number", "lift"]
+    },
+    {
+      "name": "Gravitation",
+      "category": "Physics — Classical",
+      "domain": "CONSTRUCT",
+      "mode": "LIFT",
+      "axis_kind": "natural",
+      "axis_name": "gravitational_mass",
+      "unit": "kg",
+      "hints": ["mass", "orbit", "spacetime curvature", "gravitational constant", "tidal force", "Kepler's law", "escape velocity", "gravity well"]
+    },
+    {
+      "name": "Classical Wave Theory",
+      "category": "Physics — Classical",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "phase",
+      "unit": "rad",
+      "hints": ["interference", "diffraction", "propagation", "dispersion", "group velocity", "phase velocity", "superposition", "Huygens principle"]
+    },
+    {
+      "name": "Quantum Mechanics",
+      "category": "Physics — Modern",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "action",
+      "unit": "J·s",
+      "hints": ["superposition", "measurement", "wavefunction", "probability amplitude", "uncertainty", "entanglement", "quantum state", "collapse"]
+    },
+    {
+      "name": "Relativity",
+      "category": "Physics — Modern",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "spacetime_interval",
+      "unit": "m²",
+      "hints": ["spacetime", "frame", "invariant", "time dilation", "length contraction", "rest mass", "equivalence principle", "geodesic"]
+    },
+    {
+      "name": "Particle Physics",
+      "category": "Physics — Modern",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "energy_scale",
+      "unit": "TeV",
+      "hints": ["quarks", "leptons", "bosons", "Standard Model", "gauge symmetry", "Higgs field", "cross-section", "Feynman diagram"]
+    },
+    {
+      "name": "Nuclear Physics",
+      "category": "Physics — Modern",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "natural",
+      "axis_name": "binding_energy",
+      "unit": "MeV",
+      "hints": ["fission", "fusion", "decay", "isotope", "half-life", "chain reaction", "radioactivity", "neutron capture"]
+    },
+    {
+      "name": "Cosmology",
+      "category": "Physics — Modern",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "redshift",
+      "unit": "z",
+      "hints": ["universe", "big bang", "expansion", "cosmic microwave background", "dark matter", "dark energy", "inflation", "scale factor"]
+    },
+    {
+      "name": "String Theory",
+      "category": "Physics — Modern",
+      "domain": "STUDY",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "string_tension",
+      "unit": "TeV⁻¹",
+      "hints": ["extra dimensions", "branes", "vibrational mode", "compactification", "Calabi-Yau manifold", "duality", "M-theory", "supersymmetry"]
+    },
+    {
+      "name": "Organic Chemistry",
+      "category": "Chemistry",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "hybridization",
+      "unit": "spⁿ",
+      "hints": ["carbon", "functional groups", "stereochemistry", "aromaticity", "nucleophile", "electrophile", "synthesis", "reaction mechanism"]
+    },
+    {
+      "name": "Inorganic Chemistry",
+      "category": "Chemistry",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "oxidation_state",
+      "unit": "e⁻",
+      "hints": ["crystal", "coordination", "ligand", "symmetry", "metal center", "crystal field", "band structure", "organometallic"]
+    },
+    {
+      "name": "Biochemistry",
+      "category": "Chemistry",
+      "domain": "HEAL",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "concentration",
+      "unit": "M",
+      "hints": ["protein", "enzyme", "metabolism", "substrate", "inhibition", "pathway", "catalysis", "biosynthesis"]
+    },
+    {
+      "name": "Physical Chemistry",
+      "category": "Chemistry",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "natural",
+      "axis_name": "rate_constant",
+      "unit": "s⁻¹",
+      "hints": ["reaction kinetics", "quantum chemistry", "molecular orbital", "potential energy surface", "transition state", "partition function", "Boltzmann distribution", "spectroscopy"]
+    },
+    {
+      "name": "Analytical Chemistry",
+      "category": "Chemistry",
+      "domain": "STUDY",
+      "mode": "WORK",
+      "axis_kind": "natural",
+      "axis_name": "detection_limit",
+      "unit": "ppm",
+      "hints": ["spectroscopy", "chromatography", "calibration", "selectivity", "sensitivity", "mass spectrometry", "titration", "separation"]
+    },
+    {
+      "name": "Thermochemistry",
+      "category": "Chemistry",
+      "domain": "HEAL",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "enthalpy",
+      "unit": "kJ/mol",
+      "hints": ["enthalpy", "Gibbs free energy", "exothermic", "endothermic", "spontaneity", "heat capacity", "bond energy", "entropy change"]
+    },
+    {
+      "name": "Electrochemistry",
+      "category": "Chemistry",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "potential",
+      "unit": "V",
+      "hints": ["redox", "cell", "potential", "Nernst equation", "electrolysis", "corrosion", "battery", "electrical double layer"]
+    },
+    {
+      "name": "Polymer Chemistry",
+      "category": "Chemistry",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "molecular_weight",
+      "unit": "Da",
+      "hints": ["chain", "cross-link", "plastic", "polymerization", "monomer", "copolymer", "glass transition", "polydispersity"]
+    },
+    {
+      "name": "Cell Biology",
+      "category": "Biology",
+      "domain": "HEAL",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "membrane_potential",
+      "unit": "mV",
+      "hints": ["membrane", "organelle", "division", "cytoskeleton", "signal transduction", "apoptosis", "endocytosis", "cellular respiration"]
+    },
+    {
+      "name": "Genetics",
+      "category": "Biology",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "base_pair",
+      "unit": "bp",
+      "hints": ["DNA", "gene", "expression", "mutation", "transcription", "translation", "recombination", "epigenetics"]
+    },
+    {
+      "name": "Evolution",
+      "category": "Biology",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "fitness",
+      "unit": "W",
+      "hints": ["selection", "drift", "speciation", "adaptation", "phylogeny", "convergent evolution", "coevolution", "fitness landscape"]
+    },
+    {
+      "name": "Ecology",
+      "category": "Biology",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "biomass",
+      "unit": "kg/m²",
+      "hints": ["ecosystem", "food web", "biome", "trophic level", "productivity", "keystone species", "niche", "succession"]
+    },
+    {
+      "name": "Neuroscience",
+      "category": "Biology",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "action_potential",
+      "unit": "mV",
+      "hints": ["neuron", "synapse", "brain", "plasticity", "neurotransmitter", "cortex", "neural circuit", "cognition"]
+    },
+    {
+      "name": "Physiology",
+      "category": "Biology",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "natural",
+      "axis_name": "homeostatic_set_point",
+      "unit": "—",
+      "hints": ["organ", "homeostasis", "system", "feedback loop", "endocrine", "circulatory", "respiratory", "regulation"]
+    },
+    {
+      "name": "Microbiology",
+      "category": "Biology",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "colony_forming_unit",
+      "unit": "CFU/mL",
+      "hints": ["bacteria", "virus", "fungi", "pathogen", "biofilm", "antibiotic resistance", "culture", "symbiosis"]
+    },
+    {
+      "name": "Botany",
+      "category": "Biology",
+      "domain": "HEAL",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "photosynthetic_rate",
+      "unit": "μmol/m²/s",
+      "hints": ["plant", "photosynthesis", "growth", "transpiration", "vascular tissue", "pollination", "seed", "chloroplast"]
+    },
+    {
+      "name": "Zoology",
+      "category": "Biology",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "metabolic_rate",
+      "unit": "W",
+      "hints": ["animal", "behavior", "anatomy", "taxonomy", "morphology", "ethology", "adaptation", "life cycle"]
+    },
+    {
+      "name": "Molecular Biology",
+      "category": "Biology",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "expression_level",
+      "unit": "FPKM",
+      "hints": ["biopolymer", "pathway", "gene regulation", "replication", "RNA splicing", "protein folding", "chromatin", "signal cascade"]
+    },
+    {
+      "name": "Developmental Biology",
+      "category": "Biology",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "morphogen_gradient",
+      "unit": "—",
+      "hints": ["embryo", "morphogenesis", "differentiation", "patterning", "induction", "Hox gene", "axis formation", "organogenesis"]
+    },
+    {
+      "name": "Immunology",
+      "category": "Biology",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "natural",
+      "axis_name": "antibody_titer",
+      "unit": "—",
+      "hints": ["immune", "antibody", "vaccine", "B cell", "T cell", "antigen", "inflammation", "adaptive immunity"]
+    },
+    {
+      "name": "Geology",
+      "category": "Earth Science",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "stratigraphic_depth",
+      "unit": "m",
+      "hints": ["rock", "mineral", "tectonic", "sediment", "strata", "fossil", "orogeny", "lithosphere"]
+    },
+    {
+      "name": "Meteorology",
+      "category": "Earth Science",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "pressure",
+      "unit": "hPa",
+      "hints": ["weather", "climate", "atmosphere", "front", "precipitation", "jet stream", "cyclone", "convection"]
+    },
+    {
+      "name": "Oceanography",
+      "category": "Earth Science",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "salinity",
+      "unit": "PSU",
+      "hints": ["current", "tide", "marine", "thermohaline", "upwelling", "bathymetry", "wave dynamics", "estuary"]
+    },
+    {
+      "name": "Seismology",
+      "category": "Earth Science",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "magnitude",
+      "unit": "Mw",
+      "hints": ["earthquake", "wave", "fault", "epicenter", "Richter scale", "P-wave", "S-wave", "rupture"]
+    },
+    {
+      "name": "Volcanology",
+      "category": "Earth Science",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "magma_viscosity",
+      "unit": "Pa·s",
+      "hints": ["magma", "eruption", "lava", "pyroclastic flow", "caldera", "tephra", "volcanic gas", "plume"]
+    },
+    {
+      "name": "Geomorphology",
+      "category": "Earth Science",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "relief",
+      "unit": "m",
+      "hints": ["landform", "erosion", "weathering", "deposition", "topography", "drainage basin", "fluvial", "mass wasting"]
+    },
+    {
+      "name": "Hydrology",
+      "category": "Earth Science",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "discharge",
+      "unit": "m³/s",
+      "hints": ["water", "river", "aquifer", "watershed", "groundwater", "evapotranspiration", "infiltration", "runoff"]
+    },
+    {
+      "name": "Glaciology",
+      "category": "Earth Science",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "ice_flow_velocity",
+      "unit": "m/yr",
+      "hints": ["ice", "glacier", "cryosphere", "ice core", "moraine", "calving", "permafrost", "albedo feedback"]
+    },
+    {
+      "name": "Stellar Astronomy",
+      "category": "Astronomy",
+      "domain": "FABRICATE",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "luminosity",
+      "unit": "L☉",
+      "hints": ["star", "fusion", "supernova", "Hertzsprung-Russell diagram", "main sequence", "stellar nucleosynthesis", "neutron star", "white dwarf"]
+    },
+    {
+      "name": "Planetary Science",
+      "category": "Astronomy",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "semi_major_axis",
+      "unit": "AU",
+      "hints": ["planet", "moon", "orbit", "planetesimal", "accretion", "differentiation", "rings", "asteroid belt"]
+    },
+    {
+      "name": "Astrophysics",
+      "category": "Astronomy",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "flux_density",
+      "unit": "Jy",
+      "hints": ["radiation", "magnetosphere", "accretion disk", "jet", "black hole", "pulsar", "cosmic ray", "synchrotron"]
+    },
+    {
+      "name": "Observational Astronomy",
+      "category": "Astronomy",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "angular_resolution",
+      "unit": "arcsec",
+      "hints": ["telescope", "spectrum", "photometry", "interferometry", "adaptive optics", "signal-to-noise", "CCD", "radio dish"]
+    },
+    {
+      "name": "Exoplanet Science",
+      "category": "Astronomy",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "orbital_period",
+      "unit": "days",
+      "hints": ["detection", "habitability", "transit", "radial velocity", "habitable zone", "atmospheric characterization", "direct imaging", "microlensing"]
+    },
+    {
+      "name": "Astrobiology",
+      "category": "Astronomy",
+      "domain": "HEAL",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "survivability",
+      "unit": "—",
+      "hints": ["life", "extremophile", "biosignature", "prebiotic chemistry", "abiogenesis", "Mars analog", "ocean world", "origin of life"]
+    },
+    {
+      "name": "Conservation",
+      "category": "Ecology & Environment",
+      "domain": "HEAL",
+      "mode": "WORK",
+      "axis_kind": "natural",
+      "axis_name": "population_density",
+      "unit": "ind/km²",
+      "hints": ["protect", "restore", "preserve", "endangered species", "habitat fragmentation", "rewilding", "corridor", "poaching"]
+    },
+    {
+      "name": "Biodiversity",
+      "category": "Ecology & Environment",
+      "domain": "BOND",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "species_richness",
+      "unit": "S",
+      "hints": ["species", "richness", "ecosystem", "endemism", "Shannon index", "phylogenetic diversity", "hotspot", "biogeography"]
+    },
+    {
+      "name": "Biogeochemistry",
+      "category": "Ecology & Environment",
+      "domain": "BOND",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "flux_rate",
+      "unit": "PgC/yr",
+      "hints": ["carbon cycle", "nutrient flow", "nitrogen fixation", "decomposition", "stoichiometry", "biogeochemical cycle", "methane cycle", "weathering"]
+    },
+    {
+      "name": "Climate Science",
+      "category": "Ecology & Environment",
+      "domain": "STUDY",
+      "mode": "LEARN",
+      "axis_kind": "natural",
+      "axis_name": "anomaly",
+      "unit": "°C",
+      "hints": ["warming", "CO₂", "feedback", "forcing", "tipping point", "paleoclimate", "GCM", "scenario"]
+    },
+    {
+      "name": "Forestry",
+      "category": "Ecology & Environment",
+      "domain": "HEAL",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "basal_area",
+      "unit": "m²/ha",
+      "hints": ["forest", "timber", "canopy", "silviculture", "reforestation", "agroforestry", "stand", "carbon sequestration"]
+    },
+    {
+      "name": "Marine Biology",
+      "category": "Ecology & Environment",
+      "domain": "STUDY",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "chlorophyll_concentration",
+      "unit": "mg/m³",
+      "hints": ["ocean life", "reef", "fishery", "plankton", "benthic", "pelagic", "coral bleaching", "overfishing"]
+    },
+    {
+      "name": "Population Biology",
+      "category": "Ecology & Environment",
+      "domain": "FABRICATE",
+      "mode": "WALK",
+      "axis_kind": "natural",
+      "axis_name": "growth_rate",
+      "unit": "r",
+      "hints": ["growth", "carrying capacity", "logistic equation", "Lotka-Volterra", "metapopulation", "age structure", "demography", "Allee effect"]
+    },
+    {
+      "name": "Sustainable Systems",
+      "category": "Ecology & Environment",
+      "domain": "CONSTRUCT",
+      "mode": "CREATE",
+      "axis_kind": "natural",
+      "axis_name": "embodied_energy",
+      "unit": "MJ/kg",
+      "hints": ["renewable", "circular", "lifecycle assessment", "ecological footprint", "closed loop", "regenerative", "decoupling", "steady state"]
+    }
+  ]
+}
