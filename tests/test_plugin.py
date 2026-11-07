@@ -80,6 +80,26 @@ def test_registered_handler_runs(tmp_path):
     assert result["nodes"] == 7
 
 
+def test_settings_flow_into_handlers():
+    plugin = load_package()
+    ctx = FakeContext(settings={"timeout": 7})
+    plugin.register(ctx)
+    from tools import DEFAULTS
+
+    assert DEFAULTS["timeout"] == 20  # config is resolved per call, not global
+    handler = ctx.tools["physis_engine_status"]["handler"]
+    result = handler({})
+    assert result["ok"] is True
+
+
+def test_hook_is_safe_without_engine(tmp_path):
+    plugin = load_package()
+    ctx = FakeContext(settings={"auto_observe": True, "engine_bin": str(tmp_path / "nope")})
+    plugin.register(ctx)
+    hook = ctx.hooks["post_tool_call"]
+    assert hook(tool_name="write_file", tool_args={"path": str(tmp_path / "x.py")}) is None
+
+
 def test_manifest_matches_registered_tools():
     import yaml
 

@@ -113,9 +113,13 @@ replant_demo()                             # record once, replay twice, 0 provid
 ## Development
 
 ```bash
-python3.13 -m pytest          # 30 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # 34 tests: unit + integration against the bundled binaries
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
+
+Rebuilding from `vendor/` reproduces the shipped binaries byte-for-byte (same
+SHA256; see `bin/SHA256SUMS`), so the source snapshot is the one that built the
+bundle.
 
 The integration tests are the regression net for the original packaging bug:
 unit tests with fake engines passed while the shipped binary advertised a
@@ -135,6 +139,19 @@ examples/            zero-config replant fixture
 skills/physis/       the skill Hermes loads with the plugin
 tests/               unit + integration
 ```
+
+## Troubleshooting
+
+- **Installer flags the bundle.** Hermes scans third-party plugins. The two
+  Linux binaries are the only opaque files; their hashes are in
+  `bin/SHA256SUMS` and they rebuild from the vendored source. Review, then
+  re-run with `--force` if your installer asks.
+- **`No recalled nodes`.** The index is empty for that store; run
+  `physis_observe` first, or check `PHYSIS_CORE_DIR`.
+- **`physis_context` says "no corpus documents".** It compiles markdown/text
+  documents; point `path` at a directory that contains them.
+- **Everything looks lexical.** The bundled embedder is random-projection; only
+  an ONNX-enabled build with real weights changes that.
 
 ## License
 
