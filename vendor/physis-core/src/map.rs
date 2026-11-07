@@ -168,7 +168,12 @@ pub fn build_map(
     threshold: Option<f32>,
 ) -> anyhow::Result<MapReport> {
     let ontology = OntologyLoader::load_all();
-    let clf = CellClassifier::build(&ontology, embedder);
+    let clf = CellClassifier::build_cached(
+        &ontology,
+        embedder,
+        &CellClassifier::default_cache_dir(),
+        &CellClassifier::cache_identity(embedder),
+    );
     let cfg = DiscoveryConfig {
         min_cluster: 2,
         ..DiscoveryConfig::default()

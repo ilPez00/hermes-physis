@@ -390,6 +390,32 @@ impl CellClassifier {
         Self::build_seeds_batched(&seeds, embedder)
     }
 
+    /// Where classifier caches live: `PHYSIS_CACHE_DIR` when set, else
+    /// `<data dir>/cache` (`PHYSIS_CORE_DIR` or `~/.physis`).
+    pub fn default_cache_dir() -> std::path::PathBuf {
+        std::env::var("PHYSIS_CACHE_DIR")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| crate::store::data_dir().join("cache"))
+    }
+
+    /// Identity of the embedding model, independent of install path.
+    pub fn cache_identity(embedder: &dyn VectorEmbed) -> String {
+        let dir = std::env::var("PHYSIS_MODEL_DIR").unwrap_or_default();
+        let identity = if dir.trim().is_empty() {
+            "no-model".to_string()
+        } else {
+            let p = std::path::Path::new(&dir);
+            let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("model");
+            let size = std::fs::metadata(p.join("model.onnx"))
+                .map(|m| m.len())
+                .unwrap_or(0);
+            format!("{name}|{size}")
+        };
+        format!("{}d|{identity}", embedder.dimension())
+    }
+
     /// Build once, then reuse across CLI invocations.
     ///
     /// Embedding ~760 ontology entries costs seconds on CPU; every `classify`,
