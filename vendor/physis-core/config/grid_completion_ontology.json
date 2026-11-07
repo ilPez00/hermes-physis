@@ -115,7 +115,7 @@
       "axis_name": "Access Elevation",
       "unit": "",
       "hints": [
-        "sudo",
+        "root",
         "admin",
         "elevate"
       ],
