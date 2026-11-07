@@ -1,0 +1,35 @@
+name: physis
+version: 1.0.0
+description: Evidence-backed code context, causal chains and structural diffs using a lightweight Physis engine (physis-core or physis-replant), with optional full physis fallback.
+provides_tools:
+  - physis_engine_status
+  - physis_observe
+  - physis_context
+  - physis_query
+  - physis_why
+  - physis_diff
+provides_hooks:
+  - post_tool_call
+config_schema:
+  engine_bin:
+    type: str
+    default: ""
+    description: "Path to physis-core, physis-replant or physis binary"
+  auto_observe:
+    type: bool
+    default: false
+    description: "Run an incremental observe after file edits"
+  budget:
+    type: int
+    default: 800
+    description: "Token budget for context packets"
+  timeout:
+    type: int
+    default: 15
+    description: "Subprocess timeout in seconds"
+tags:
+  - code
+  - context
+  - verification
+license: MIT
+homepage: https://github.com/ilPez00/physis-core
