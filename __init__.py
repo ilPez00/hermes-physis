@@ -75,6 +75,11 @@ def register(ctx) -> None:
     # Environment fallback for the engine binary.
     if not config.get("engine_bin"):
         config["engine_bin"] = os.environ.get("PHYSIS_BIN", "")
+    # Default to the bundled physis-core if nothing configured.
+    if not config.get("engine_bin"):
+        bundled = str(PLUGIN_DIR / "bin" / "physis-core")
+        if os.path.isfile(bundled) and os.access(bundled, os.X_OK):
+            config["engine_bin"] = bundled
 
     _register_tools(ctx, config)
 

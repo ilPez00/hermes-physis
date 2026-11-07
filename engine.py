@@ -21,6 +21,14 @@ MAX_OUTPUT = 12000
 
 CANDIDATES = ("physis-core", "physis-replant", "replant", "physis", "physis-next")
 
+# Bundled engines shipped inside this plugin (bin/ directory).
+PLUGIN_DIR = Path(__file__).resolve().parent
+BUNDLED_BIN_DIR = PLUGIN_DIR / "bin"
+BUNDLED_CANDIDATES = (
+    BUNDLED_BIN_DIR / "physis-core",
+    BUNDLED_BIN_DIR / "replant",
+)
+
 
 class EngineError(Exception):
     """Raised when no engine can be found or used."""
@@ -69,6 +77,14 @@ class PhysisEngine:
             text = ""
         found = set(re.findall(r"(?m)^\s{2,}([a-z][a-z0-9_-]*)\b", text))
         found.update(re.findall(r"(?m)^\s{2,}([a-z][a-z0-9_-]*)\s{2,}", text))
+        # replant emits --help as JSON: {"usage":"replant <run|record|...> [options]..."}
+        try:
+            import json as _json
+            payload = _json.loads(text)
+            usage = str(payload.get("usage", "") or payload.get("help", ""))
+            found.update(re.findall(r"\b(run|record|show|history|stats|approve|reject|undo|serve|mcp)\b", usage))
+        except (ValueError, TypeError):
+            pass
         self._capabilities = found
         return found
 
@@ -78,9 +94,12 @@ class PhysisEngine:
             return True
         return command in caps
 
-    def run(self, args: Iterable[str], cwd: str | None = None, timeout: int | None = None) -> dict[str, Any]:
+    def run(self, args: Iterable[str], cwd: str | None = None, timeout: int | None = None, stdin: str | None = None) -> dict[str, Any]:
         argv = [self.binary, *args]
         effective_timeout = self.timeout if timeout is None else max(1, int(timeout))
+        # If cwd doesn't exist, fall back to the current directory.
+        if cwd is not None and not Path(cwd).is_dir():
+            cwd = None
         try:
             proc = subprocess.run(
                 argv,
@@ -89,6 +108,7 @@ class PhysisEngine:
                 text=True,
                 timeout=effective_timeout,
                 check=False,
+                input=stdin,
             )
         except subprocess.TimeoutExpired as exc:
             return {
@@ -160,11 +180,11 @@ class EnginePool:
                 return engine
         return self.engines[0]
 
-    def run(self, args: Iterable[str], cwd: str | None = None, timeout: int | None = None) -> dict[str, Any]:
+    def run(self, args: Iterable[str], cwd: str | None = None, timeout: int | None = None, stdin: str | None = None) -> dict[str, Any]:
         argv = list(args)
         command = argv[0] if argv else ""
         engine = self.engine_for(command)
-        return engine.run(argv, cwd=cwd, timeout=timeout)
+        return engine.run(argv, cwd=cwd, timeout=timeout, stdin=stdin)
 
     def info(self) -> dict[str, Any]:
         return {
@@ -187,16 +207,27 @@ def discover_engines(binary: Any = None, timeout: int = DEFAULT_TIMEOUT) -> Engi
         if env_bins:
             binaries = [item.strip() for item in env_bins.split(",") if item.strip()]
         else:
-            # Prefer a binary bundled with the plugin, if present.
+            # Prefer binaries bundled with the plugin, if present.
+            for bundled in BUNDLED_CANDIDATES:
+                if bundled.is_file() and os.access(bundled, os.X_OK):
+                    binaries.append(str(bundled))
+            # Also check arch-specific subdirs (bin/linux-x86_64/...).
             import platform as _platform
 
             machine = _platform.machine().lower()
             system = _platform.system().lower()
             arch = "x86_64" if machine in {"x86_64", "amd64"} else machine
             os_name = "linux" if system == "linux" else system
-            bundled = Path(__file__).resolve().parent / "bin" / f"{os_name}-{arch}" / "physis-core"
-            if bundled.is_file() and os.access(bundled, os.X_OK):
-                binaries.append(str(bundled))
+            for name in ("physis-core", "replant"):
+                arch_bundled = (
+                    Path(__file__).resolve().parent / "bin" / f"{os_name}-{arch}" / name
+                )
+                if (
+                    arch_bundled.is_file()
+                    and os.access(arch_bundled, os.X_OK)
+                    and str(arch_bundled) not in binaries
+                ):
+                    binaries.append(str(arch_bundled))
             for candidate in CANDIDATES:
                 found = shutil.which(candidate)
                 if found and found not in binaries:

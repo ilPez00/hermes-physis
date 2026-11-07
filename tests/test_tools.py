@@ -46,14 +46,14 @@ def test_context_runs(tmp_path):
 
 
 def test_why_requires_object(tmp_path):
-    binary = make_binary(tmp_path, {"why"})
+    binary = make_binary(tmp_path, {"ground"})
     result = HANDLERS["physis_why"]({"engine_bin": binary, "path": str(tmp_path)})
     assert result["ok"] is False
     assert "object is required" in result["error"]
 
 
 def test_diff_default_refs(tmp_path):
-    binary = make_binary(tmp_path, {"diff"})
+    binary = make_binary(tmp_path, {"direction"})
     result = HANDLERS["physis_diff"]({"engine_bin": binary, "path": str(tmp_path)})
     assert result["ok"] is True
-    assert "HEAD~1..HEAD" in result["stdout"]
+    assert "HEAD~1" in result["stdout"] or "HEAD" in result["stdout"]

@@ -1,0 +1,24 @@
+physis-replant
+
+Copyright 2026 ilPez00
+
+The entire project is licensed under the Apache License, Version 2.0 (see
+LICENSE). This includes material extracted from physis-next, whose original
+Apache-2.0 license and notices are preserved here.
+
+Extracted from physis-next (Apache-2.0):
+  src/cascade.rs
+  src/compile.rs
+  src/deterministic.rs
+  src/ids.rs
+  src/trace.rs
+  src/lib.rs (cognition data types and trait)
+
+Upstream: https://github.com/ilPez00/physis-next
+Original extraction: physis-replant commit e0c3cf8.
+Modified in this project: imports, standalone trace helpers, input validation,
+candidate guards, undo/review wiring, and accurate labeling of synthetic tests.
+
+The replay engine, CLI, HTTP bridge, MCP server, SDKs, and n8n node are original
+work licensed Apache-2.0. No separate commercial license is required to use,
+modify, or redistribute this repository.

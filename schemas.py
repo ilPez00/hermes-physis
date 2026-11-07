@@ -91,14 +91,33 @@ COMMAND = {
 
 REPLANT_RUN = {
     "name": "replant_run",
-    "description": "Run the replant memo path for an input and report tier, result and saved time.",
+    "description": "Run replant: replay a verified recipe or return miss. Requires a tools registry (--tools) and store dir.",
     "parameters": {
         "type": "object",
         "properties": {
             "input": {"type": "string", "description": "Input to replay or execute"},
-            "path": {"type": "string", "description": "Working directory"},
+            "path": {"type": "string", "description": "Working directory (store lives here under .physis/replant)"},
+            "tools": {"type": "string", "description": "Path to replant tools registry JSON (required for run/record)"},
+            "store": {"type": "string", "description": "Replant state directory (default: <path>/.physis/replant)"},
         },
-        "required": ["input"],
+        "required": ["input", "tools"],
+    },
+}
+
+REPLANT_RECORD = {
+    "name": "replant_record",
+    "description": "Record a verified replant recipe: execute actions + checks, then persist for replay. Requires --tools and --store.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "input": {"type": "string", "description": "Input / prompt for the request"},
+            "recipe": {"type": "string", "description": "JSON recipe: {steps: [{tool, input}], checks: [{tool, input}]}"},
+            "trace": {"type": "string", "description": "JSON trace metadata (optional)"},
+            "path": {"type": "string", "description": "Working directory (store lives here under .physis/replant)"},
+            "tools": {"type": "string", "description": "Path to replant tools registry JSON (required)"},
+            "store": {"type": "string", "description": "Replant state directory (default: <path>/.physis/replant)"},
+        },
+        "required": ["input", "recipe", "tools"],
     },
 }
 
@@ -107,18 +126,56 @@ REPLANT_STATS = {
     "description": "Report replant memo counts, effectiveness and speedup.",
     "parameters": {
         "type": "object",
-        "properties": {"path": {"type": "string", "description": "Working directory"}},
+        "properties": {
+            "path": {"type": "string", "description": "Working directory (store lives here under .physis/replant)"},
+            "store": {"type": "string", "description": "Replant state directory (default: <path>/.physis/replant)"},
+        },
         "required": [],
     },
 }
 
 REPLANT_DEMO = {
     "name": "replant_demo",
-    "description": "Run the replant demo loop and return its benchmark report.",
+    "description": "Run the replant record→replay loop via the binary and return its report.",
     "parameters": {
         "type": "object",
-        "properties": {"path": {"type": "string", "description": "Working directory"}},
-        "required": [],
+        "properties": {
+            "path": {"type": "string", "description": "Working directory (store lives here under .physis/replant)"},
+            "tools": {"type": "string", "description": "Path to replant tools registry JSON (required)"},
+            "store": {"type": "string", "description": "Replant state directory (default: <path>/.physis/replant)"},
+        },
+        "required": ["tools"],
+    },
+}
+
+REPLANT_RECORD = {
+    "name": "replant_record",
+    "description": "Record a verified replant recipe: execute actions + checks, then persist for replay.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "input": {"type": "string", "description": "Input / prompt for the request"},
+            "recipe": {"type": "string", "description": "JSON recipe: {steps: [{tool, input}], checks: [{tool, input}]}"},
+            "trace": {"type": "string", "description": "JSON trace metadata (optional)"},
+            "path": {"type": "string", "description": "Working directory (store lives here under .physis/replant)"},
+            "tools": {"type": "string", "description": "Path to replant tools registry JSON (required)"},
+            "store": {"type": "string", "description": "Replant state directory (default: <path>/.physis/replant)"},
+        },
+        "required": ["input", "recipe", "tools"],
+    },
+}
+
+REPLANT_SHOW = {
+    "name": "replant_show",
+    "description": "Show a learned replant record for an input.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "input": {"type": "string", "description": "Input to look up"},
+            "path": {"type": "string", "description": "Working directory (store lives here under .physis/replant)"},
+            "store": {"type": "string", "description": "Replant state directory (default: <path>/.physis/replant)"},
+        },
+        "required": ["input"],
     },
 }
 
@@ -131,7 +188,9 @@ ALL_SCHEMAS = [
     DIFF,
     COMMAND,
     REPLANT_RUN,
+    REPLANT_RECORD,
     REPLANT_STATS,
     REPLANT_DEMO,
+    REPLANT_SHOW,
 ]
 ALL_NAMES = [s["name"] for s in ALL_SCHEMAS]
