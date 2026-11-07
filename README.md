@@ -103,8 +103,13 @@ replant_demo()                             # record once, replay twice, 0 provid
 - The bundled physis-core uses a **random-projection embedder**. Similarity is
   lexical, not semantic; the engine prints that warning on every search. Set
   `PHYSIS_MODEL_DIR` to real weights only if you have an ONNX-enabled build.
+- `physis_context` defaults to `mode=code` (the scanned graph, sees source
+  files). The engine's `context` compiler only ingests markdown/text, so it is
+  exposed as `mode=docs`.
 - The index is **global** (`~/.physis`, or `PHYSIS_CORE_DIR`). Scanning two
   repos puts both in one graph; queries can surface nodes from either.
+- Auto-indexing is bounded: `physis_context` refuses to scan a corpus over
+  ~1500 files and the docs compiler refuses over ~5000; pass a narrower path.
 - `physis_why` is **evidence retrieval**, not a causal-chain generator. If the
   label is absent, that is missing evidence, not a verdict.
 - replant is deliberately narrow: exact request match, registered tools only.

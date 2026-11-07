@@ -55,6 +55,14 @@ CONTEXT = {
                 "type": "integer",
                 "description": "Token budget for the packet (100-4000, default 800)",
             },
+            "mode": {
+                "type": "string",
+                "enum": ["code", "docs"],
+                "description": (
+                    "code (default) uses the scanned coherence graph and sees "
+                    "source files; docs uses the markdown/text context compiler"
+                ),
+            },
         },
         "required": ["task"],
     },

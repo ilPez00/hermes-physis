@@ -73,13 +73,29 @@ def test_scan_search_and_snapshot(isolated_store, repo):
     assert snapshot["nodes"] >= 3
 
 
-def test_context_compiles_packet(isolated_store, repo):
+def test_context_code_mode_uses_graph_and_autoscans(isolated_store, repo):
     result = HANDLERS["physis_context"](
-        {"path": str(repo), "task": "authentication token rotation", "budget": 200, "timeout": 60}
+        {"path": str(repo), "task": "rotate an expired token", "budget": 300, "timeout": 60}
     )
     assert result["ok"] is True
+    assert result["mode"] == "code"
+    assert result["auto_indexed"] is True
+    assert result["results"] >= 1
+    assert "auth.py" in result["stdout"]
+
+
+def test_context_docs_mode_reports_compression(isolated_store, tmp_path):
+    corpus = tmp_path / "docs"
+    corpus.mkdir()
+    (corpus / "runbook.md").write_text("# Runbook\n\nIf pressure exceeds 2.6 bar, stop the pump.\n")
+    (corpus / "policy.txt").write_text("Retention: vibration records are kept for 5 years.\n")
+    result = HANDLERS["physis_context"](
+        {"path": str(corpus), "task": "valve pressure", "budget": 200, "mode": "docs", "timeout": 60}
+    )
+    assert result["ok"] is True
+    assert result["mode"] == "docs"
+    assert result["source_documents"] == 2
     assert result["physis_tokens"] <= result["baseline_tokens"]
-    assert result.get("physis_context")
 
 
 def test_classify_and_direction(isolated_store, repo):

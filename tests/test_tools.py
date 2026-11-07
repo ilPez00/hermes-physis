@@ -50,6 +50,10 @@ def make_binary(tmp_path: Path, supported: set[str]) -> str:
     if argv and argv[0] == "direction":
         print('{{"direction": "shorter", "before_tokens": 12, "after_tokens": 8, "moved": true, "retention": 0.7}}')
         raise SystemExit(0)
+    if argv and argv[0] == "node-search":
+        print('Fixed-token search: 2 results (120 tokens, budget 300)')
+        print('  1. 0.9  src/auth.py: def rotate_token()')
+        raise SystemExit(0)
     if argv and argv[0] == "chain":
         print('{{"gaps": ["gap-a"], "control": {{"permuted": true}}, "drift": []}}')
         raise SystemExit(0)
@@ -101,12 +105,23 @@ def test_observe_rejects_home(tmp_path):
 def test_context_compiles_packet(tmp_path):
     binary = make_binary(tmp_path, CORE_COMMANDS)
     result = HANDLERS["physis_context"](
-        {"engine_bin": binary, "path": str(tmp_path), "task": "where is auth", "budget": 250}
+        {"engine_bin": binary, "path": str(tmp_path), "task": "where is auth", "budget": 250, "mode": "docs"}
     )
     assert result["ok"] is True
     assert result["argv"][1] == "context"
     assert result["physis_tokens"] == 200
     assert result["physis_context"] == "packed"
+
+
+def test_context_code_mode_uses_graph(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_context"](
+        {"engine_bin": binary, "path": str(tmp_path), "task": "where is auth", "budget": 250}
+    )
+    assert result["ok"] is True
+    assert result["argv"][1] == "node-search"
+    assert result["results"] == 2
+    assert result["mode"] == "code"
 
 
 def test_context_requires_task(tmp_path):
@@ -131,7 +146,8 @@ def test_why_maps_object_to_node_search(tmp_path):
         {"engine_bin": binary, "path": str(tmp_path), "object": "AuthService"}
     )
     assert result["ok"] is True
-    assert "ran:node-search AuthService" in result["stdout"]
+    assert result["argv"][1] == "node-search"
+    assert "AuthService" in result["argv"]
     assert "Evidence retrieval" in result["note"]
 
 

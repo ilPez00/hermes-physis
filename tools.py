@@ -249,14 +249,36 @@ def physis_snapshot(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     return result
 
 
+_NODE_SEARCH_RE = re.compile(r"Fixed-token search:\s*(\d+) results?\s*\((\d+) tokens, budget (\d+)\)")
+
+
+_SKIP_DIRS = {".git", "target", "node_modules", "vendor", ".next", "dist", "build", ".venv", "__pycache__"}
+
+
+def _count_files(root: str, limit: int) -> int:
+    """Count files under *root*, stopping at *limit* + 1 (cheap guard)."""
+    count = 0
+    for _dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+        count += len(filenames)
+        if count > limit:
+            return count
+    return count
+
+
 def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """Fixed-token context packet.
+
+    Two corpora behave differently: the coherence graph (scan) sees code and
+    docs, while the `context` compiler only ingests markdown/text documents.
+    Default `mode="code"` therefore uses the indexed graph (auto-scanning once
+    if the store is empty); `mode="docs"` uses the compiler's JSON report.
+    """
     merged = _with_defaults(_merge(args, kwargs))
     try:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
-    if not pool.supports("context"):
-        return _unsupported(pool, "context")
 
     task = str(merged.get("task") or merged.get("query") or "").strip()
     if not task:
@@ -269,29 +291,95 @@ def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     except (TypeError, ValueError):
         budget = int(DEFAULTS["budget"])
     budget = min(4000, max(100, budget))
+    mode = str(merged.get("mode") or "code").strip().lower()
 
-    result = _run(
-        pool,
-        ["context", "--corpus", path, "--query", task, "--budget", str(budget), "--json"],
-        merged,
-    )
-    payload = _json_payload(result)
-    if payload:
-        for key in (
-            "source_documents",
-            "baseline_tokens",
-            "physis_tokens",
-            "compression_ratio",
-            "repeats",
-            "differences",
-            "contradictions",
-            "clusters",
-            "physis_context",
-        ):
-            if key in payload:
-                result[key] = payload[key]
-    result["budget"] = budget
+    if mode == "docs":
+        if not pool.supports("context"):
+            return _unsupported(pool, "context")
+        doc_files = _count_files(path, 5000)
+        if doc_files > 5000:
+            return {
+                "ok": False,
+                "error": f"corpus is too large for the docs compiler ({doc_files}+ files)",
+                "hint": "point path at a docs/ subdirectory or use mode=code on an indexed subtree",
+            }
+        result = _run(
+            pool,
+            ["context", "--corpus", path, "--query", task, "--budget", str(budget), "--json"],
+            merged,
+        )
+        payload = _json_payload(result)
+        if payload:
+            for key in (
+                "source_documents",
+                "baseline_tokens",
+                "physis_tokens",
+                "compression_ratio",
+                "repeats",
+                "differences",
+                "contradictions",
+                "clusters",
+                "physis_context",
+            ):
+                if key in payload:
+                    result[key] = payload[key]
+        result["mode"] = "docs"
+        result["task"] = task
+        result["budget"] = budget
+        return result
+
+    if mode != "code":
+        return {"ok": False, "error": "mode must be code or docs"}
+
+    if not pool.supports("node-search"):
+        return _unsupported(pool, "node-search")
+
+    def _node_search() -> dict[str, Any]:
+        return _run(
+            pool,
+            ["node-search", task, "--budget", str(budget), "--max", str(merged.get("max") or 12)],
+            merged,
+        )
+
+    result = _node_search()
+    text = result.get("stdout") or ""
+    match = _NODE_SEARCH_RE.search(text)
+    empty = "No recalled nodes" in text or (match is not None and int(match.group(1)) == 0)
+    auto_indexed: bool | None = None
+    if empty and pool.supports("scan"):
+        # First use on an unindexed repo: index it once, then answer. The
+        # engine reports an empty store as "0 results", not as an error.
+        # A whole-tree scan of a huge repo is not a context call; refuse it
+        # with an actionable message instead of hanging for minutes.
+        file_count = _count_files(path, 1500)
+        if file_count > 1500:
+            result["too_large_to_auto_index"] = True
+            result["hint"] = (
+                f"index is empty and the corpus is large ({file_count}+ files); "
+                "run physis_observe on a subdirectory, or pass a narrower path"
+            )
+        else:
+            scanned = _run(pool, ["scan", path], merged)
+            auto_indexed = bool(scanned.get("ok"))
+            if scanned.get("ok"):
+                result = _node_search()
+                text = result.get("stdout") or ""
+    if auto_indexed is not None:
+        result["auto_indexed"] = auto_indexed
+    if "No recalled nodes" in text:
+        result["hint"] = "index is empty and auto-scan did not add nodes; run physis_observe on the repository"
+    match = _NODE_SEARCH_RE.search(text)
+    if match and int(match.group(1)) == 0 and not result.get("too_large_to_auto_index"):
+        result["hint"] = "no node matched; try different wording or run physis_observe on a wider path"
+    if match:
+        result["results"], result["tokens"], result["budget_reported"] = (
+            int(match.group(1)),
+            int(match.group(2)),
+            int(match.group(3)),
+        )
+    result["mode"] = "code"
     result["task"] = task
+    result["budget"] = budget
     return result
 
 
@@ -802,10 +890,13 @@ def make_post_tool_call(config: dict[str, Any]):
                     "timeout": min(int(config.get("timeout") or 20), 8),
                 }
             )
-            if not pool.supports("watch"):
+            if not pool.supports("scan"):
                 return None
+            # `scan` is idempotent and registers searchable nodes; `watch`
+            # only appends to the observation log, so it would not make the
+            # edited file queryable.
             pool.run(
-                ["watch", "--source", "fs", "--path", folder, "--max", "200"],
+                ["scan", folder],
                 cwd=folder,
                 timeout=min(int(config.get("timeout") or 20), 8),
             )
