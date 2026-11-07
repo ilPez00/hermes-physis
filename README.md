@@ -1,5 +1,7 @@
 # hermes-physis
 
+https://github.com/ilPez00/hermes-physis · [install](#install) · [benchmark](#measured)
+
 Evidence-backed code context for Hermes Agent, with both engines bundled and
 working offline. No API key, no network call, no Python dependency beyond the
 standard library.
