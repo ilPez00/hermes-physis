@@ -73,30 +73,38 @@ def test_scan_search_and_snapshot(isolated_store, repo):
     assert snapshot["nodes"] >= 3
 
 
-def test_context_is_budgeted(isolated_store, repo):
-    HANDLERS["physis_observe"]({"path": str(repo), "timeout": 60})
+def test_context_compiles_packet(isolated_store, repo):
     result = HANDLERS["physis_context"](
         {"path": str(repo), "task": "authentication token rotation", "budget": 200, "timeout": 60}
     )
     assert result["ok"] is True
-    assert "Fixed-token search" in result["stdout"] or "No recalled nodes" in result["stdout"]
+    assert result["physis_tokens"] <= result["baseline_tokens"]
+    assert result.get("physis_context")
 
 
-def test_classify_and_diff(isolated_store, repo):
+def test_classify_and_direction(isolated_store, repo):
     before = repo / "before.txt"
     after = repo / "after.txt"
-    before.write_text("the pump failed because the seal wore out again")
-    after.write_text("def rotate_token(token):\n    return token[::-1]\n")
+    before.write_text("the pump failed because the seal wore out again and again")
+    after.write_text("seal worn out")
 
     classified = HANDLERS["physis_classify"]({"text": "def rotate_token(token): pass", "timeout": 60})
     assert classified["ok"] is True
     assert classified["cells"]
 
     diff = HANDLERS["physis_diff"](
-        {"before": str(before), "after": str(after), "timeout": 60}
+        {"before": str(before), "after": str(after), "want": "shorter", "timeout": 60}
     )
     assert diff["ok"] is True
-    assert diff["top_before"] and diff["top_after"]
+    assert "moved" in diff
+
+
+def test_chain_runs_on_real_corpus(isolated_store, repo):
+    result = HANDLERS["physis_chain"](
+        {"path": str(repo), "task": "authentication", "budget": 300, "timeout": 90}
+    )
+    assert result["ok"] is True
+    assert result["argv"][1] == "chain"
 
 
 def test_replant_demo_records_then_replays(tmp_path):

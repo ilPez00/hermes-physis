@@ -38,9 +38,10 @@ OBSERVE = {
 CONTEXT = {
     "name": "physis_context",
     "description": (
-        "Build a fixed-token context packet for a task: the most relevant "
-        "indexed nodes, packed under a token budget. Cheaper and more "
-        "traceable than pasting whole files. Requires physis_observe first."
+        "Compile a fixed-token context packet for a task directly from a "
+        "corpus directory: the engine reports baseline tokens, packed tokens, "
+        "compression ratio and the clusters it used, and returns the packed "
+        "context itself. Works on code and docs; no prior scan required."
     ),
     "parameters": {
         "type": "object",
@@ -49,14 +50,10 @@ CONTEXT = {
                 "type": "string",
                 "description": "The task or question the packet must support",
             },
-            "path": {"type": "string", "description": "Working directory (context only)"},
+            "path": {"type": "string", "description": "Corpus directory (default: current directory)"},
             "budget": {
                 "type": "integer",
                 "description": "Token budget for the packet (100-4000, default 800)",
-            },
-            "max": {
-                "type": "integer",
-                "description": "Maximum nodes to return (default 12)",
             },
         },
         "required": ["task"],
@@ -110,16 +107,21 @@ WHY = {
 DIFF = {
     "name": "physis_diff",
     "description": (
-        "Compare the structural classification of two text files: which "
-        "semiotic cells each occupies, the top cell in each, and the cells "
-        "that appeared or disappeared. Use it to judge whether a change altered "
-        "the character of a file, not to list line diffs."
+        "Ask whether a transformation went the way it was asked to: reads a "
+        "before and an after file, compares the change against the null of "
+        "doing nothing, and returns moved/tokens/retention. Use `want` to say "
+        "what the change was supposed to achieve."
     ),
     "parameters": {
         "type": "object",
         "properties": {
             "before": {"type": "string", "description": "Path to the before file"},
             "after": {"type": "string", "description": "Path to the after file"},
+            "want": {
+                "type": "string",
+                "enum": ["shorter", "longer", "rephrased"],
+                "description": "What the change was supposed to do (default: shorter)",
+            },
             "path": {"type": "string", "description": "Working directory"},
         },
         "required": ["before", "after"],
@@ -155,6 +157,29 @@ SNAPSHOT = {
         "type": "object",
         "properties": {
             "path": {"type": "string", "description": "Working directory"},
+        },
+        "required": [],
+    },
+}
+
+CHAIN = {
+    "name": "physis_chain",
+    "description": (
+        "One-pass analysis of a corpus: structure, bounded context, coverage "
+        "gaps with a shortlist per gap, drift detection, and the label-permuted "
+        "control the results are scored against. Heavier than physis_context; "
+        "use it for an overview or a gap audit, not for every question."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "Corpus directory (default: current directory)"},
+            "task": {"type": "string", "description": "Optional query to focus the pass"},
+            "budget": {"type": "integer", "description": "Token budget (100-4000, default 1200)"},
+            "threshold": {
+                "type": "number",
+                "description": "Cosine below which a record counts as unplaced (default 0.75)",
+            },
         },
         "required": [],
     },
@@ -294,6 +319,7 @@ ALL_SCHEMAS = [
     WHY,
     DIFF,
     CLASSIFY,
+    CHAIN,
     COMMAND,
     REPLANT_RUN,
     REPLANT_RECORD,

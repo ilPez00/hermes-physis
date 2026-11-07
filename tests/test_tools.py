@@ -13,6 +13,9 @@ CORE_COMMANDS = {
     "node-search",
     "snapshot",
     "classify",
+    "context",
+    "direction",
+    "chain",
     "assert",
     "facet",
 }
@@ -40,6 +43,15 @@ def make_binary(tmp_path: Path, supported: set[str]) -> str:
     if argv and argv[0] == "scan":
         print("Registered 3 files. Nodes: 42")
         print("Coherence index: 0.875")
+        raise SystemExit(0)
+    if argv and argv[0] == "context":
+        print('{{"source_documents": 2, "baseline_tokens": 1000, "physis_tokens": 200, "compression_ratio": 0.8, "clusters": ["src"], "physis_context": "packed"}}')
+        raise SystemExit(0)
+    if argv and argv[0] == "direction":
+        print('{{"direction": "shorter", "before_tokens": 12, "after_tokens": 8, "moved": true, "retention": 0.7}}')
+        raise SystemExit(0)
+    if argv and argv[0] == "chain":
+        print('{{"gaps": ["gap-a"], "control": {{"permuted": true}}, "drift": []}}')
         raise SystemExit(0)
     if argv and argv[0] == "classify":
         print("  HEAL        × MAINTAIN   0.940 ")
@@ -86,13 +98,15 @@ def test_observe_rejects_home(tmp_path):
     assert "home directory" in result["error"]
 
 
-def test_context_uses_node_search_budget(tmp_path):
+def test_context_compiles_packet(tmp_path):
     binary = make_binary(tmp_path, CORE_COMMANDS)
     result = HANDLERS["physis_context"](
         {"engine_bin": binary, "path": str(tmp_path), "task": "where is auth", "budget": 250}
     )
     assert result["ok"] is True
-    assert "ran:node-search where is auth --budget 250" in result["stdout"]
+    assert result["argv"][1] == "context"
+    assert result["physis_tokens"] == 200
+    assert result["physis_context"] == "packed"
 
 
 def test_context_requires_task(tmp_path):
@@ -130,18 +144,29 @@ def test_classify_parses_cells(tmp_path):
     assert result["tie"] is True
 
 
-def test_diff_compares_two_files(tmp_path):
+def test_diff_uses_native_direction(tmp_path):
     binary = make_binary(tmp_path, CORE_COMMANDS)
-    before = tmp_path / "before.py"
-    after = tmp_path / "after.py"
-    before.write_text("one")
-    after.write_text("two")
+    before = tmp_path / "before.txt"
+    after = tmp_path / "after.txt"
+    before.write_text("one two three")
+    after.write_text("one")
     result = HANDLERS["physis_diff"](
-        {"engine_bin": binary, "before": str(before), "after": str(after)}
+        {"engine_bin": binary, "before": str(before), "after": str(after), "want": "shorter"}
     )
     assert result["ok"] is True
-    assert result["top_before"]["cell"] == result["top_after"]["cell"]
-    assert result["top_changed"] is False
+    assert result["argv"][1] == "direction"
+    assert result["moved"] is True
+    assert result["direction"] == "shorter"
+
+
+def test_chain_passes_through_json(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_chain"](
+        {"engine_bin": binary, "path": str(tmp_path), "task": "gaps", "budget": 300}
+    )
+    assert result["ok"] is True
+    assert result["argv"][1] == "chain"
+    assert result["gaps"] == ["gap-a"]
 
 
 def test_unsupported_command_is_reported(tmp_path):

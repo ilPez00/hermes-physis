@@ -13,7 +13,8 @@ codebase, or when the same verified workflow will run again.
 1. `physis_engine_status` if anything looks off (missing engine, zero nodes).
 2. `physis_observe` on the repo before querying it. Re-run after large changes.
 3. `physis_query` for "where is X" questions; `physis_context` when you need a
-   packet under a token budget; `physis_snapshot` for graph health.
+   packet under a token budget (compiles straight from the corpus);
+   `physis_snapshot` for graph health; `physis_chain` for a gap/drift overview.
 4. `physis_classify` / `physis_diff` when the question is about the character
    of a file or whether a change altered it.
 5. `replant_run` before re-planning a recurring task; `replant_record` only

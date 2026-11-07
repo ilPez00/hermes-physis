@@ -10,12 +10,15 @@ The plugin answers four questions a model normally guesses at:
 2. **What is relevant to this task?** - `physis_context` packs the best nodes
    into a fixed token budget.
 3. **Where is it?** - `physis_query` returns scored file/snippet matches.
-4. **Did this change alter the file's character?** - `physis_diff` compares the
-   semiotic classification of two versions.
+4. **Did the change move the way it was asked to?** - `physis_diff` runs the
+   engine's `direction` check: before/after plus the null of doing nothing.
 
 Plus **replant**: record a verified tool recipe once, then re-execute the real
 actions and checks on later identical requests. The model is not called again;
 cached successes are never returned. `replant_demo` proves this in one call.
+
+`physis_chain` runs the engine's whole pass - structure, gaps, drift and the
+label-permuted control - when a task needs an overview rather than one query.
 
 ## What is bundled
 
@@ -52,6 +55,7 @@ physis_engine_status()                     # engines + store + node count
 physis_observe(path="/path/to/repo")       # index the repo
 physis_query(question="where is auth")     # scored matches
 physis_context(task="add token rotation", budget=600)
+physis_chain(task="coverage gaps in auth", budget=1200)
 physis_classify(file="src/auth.py")        # structural profile
 replant_demo()                             # record once, replay twice, 0 provider calls
 ```
@@ -65,11 +69,12 @@ replant_demo()                             # record once, replay twice, 0 provid
 | `physis_engine_status` | - | versions, capabilities, store path, node count |
 | `physis_observe` | `scan <dir>` | index a repo (run first) |
 | `physis_snapshot` | `snapshot` | graph health: nodes, coherence index, high/mid/low |
-| `physis_context` | `node-search` | fixed-token packet for a task |
+| `physis_context` | `context` | fixed-token packet + compression stats for a task |
 | `physis_query` | `search` | similarity search over indexed nodes |
 | `physis_why` | `node-search` | evidence/coherence around a named object |
 | `physis_classify` | `classify` | 5x14 semiotic grid cells for text or a file |
-| `physis_diff` | `classify` x2 | structural profile delta between two files |
+| `physis_diff` | `direction` | did the change move as asked, versus the null |
+| `physis_chain` | `chain` | one pass: structure, gaps, drift, control |
 | `physis_command` | any advertised | escape hatch for advanced commands |
 
 ### replant
@@ -108,7 +113,7 @@ replant_demo()                             # record once, replay twice, 0 provid
 ## Development
 
 ```bash
-python3.13 -m pytest          # 28 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # 30 tests: unit + integration against the bundled binaries
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
 

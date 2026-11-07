@@ -16,6 +16,7 @@ provides_tools:
   - physis_why
   - physis_diff
   - physis_classify
+  - physis_chain
   - physis_command
   - replant_run
   - replant_record

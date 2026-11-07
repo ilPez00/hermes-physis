@@ -255,30 +255,43 @@ def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
-    if not pool.supports("node-search"):
-        return _unsupported(pool, "node-search")
+    if not pool.supports("context"):
+        return _unsupported(pool, "context")
 
     task = str(merged.get("task") or merged.get("query") or "").strip()
     if not task:
         return {"ok": False, "error": "task is required (the question the packet must support)"}
+    path = _path(merged)
+    if not Path(path).is_dir():
+        return {"ok": False, "error": f"corpus directory not found: {path}"}
     try:
         budget = int(merged.get("budget") or DEFAULTS["budget"])
     except (TypeError, ValueError):
         budget = int(DEFAULTS["budget"])
     budget = min(4000, max(100, budget))
-    try:
-        limit = max(1, min(50, int(merged.get("max") or 12)))
-    except (TypeError, ValueError):
-        limit = 12
 
     result = _run(
         pool,
-        ["node-search", task, "--budget", str(budget), "--max", str(limit)],
+        ["context", "--corpus", path, "--query", task, "--budget", str(budget), "--json"],
         merged,
     )
+    payload = _json_payload(result)
+    if payload:
+        for key in (
+            "source_documents",
+            "baseline_tokens",
+            "physis_tokens",
+            "compression_ratio",
+            "repeats",
+            "differences",
+            "contradictions",
+            "clusters",
+            "physis_context",
+        ):
+            if key in payload:
+                result[key] = payload[key]
     result["budget"] = budget
-    if result.get("ok") and "No recalled nodes" in (result.get("stdout") or ""):
-        result["hint"] = "index is empty: run physis_observe on the repository first"
+    result["task"] = task
     return result
 
 
@@ -379,58 +392,93 @@ def physis_classify(args: Any = None, **kwargs: Any) -> dict[str, Any]:
 
 
 def physis_diff(args: Any = None, **kwargs: Any) -> dict[str, Any]:
-    """Structural delta between two files using the engine's classifier."""
+    """Did the change move the way it was asked to? Native `direction` command."""
     merged = _with_defaults(_merge(args, kwargs))
     try:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
-    if not pool.supports("classify"):
-        return _unsupported(pool, "classify")
+    if not pool.supports("direction"):
+        return _unsupported(pool, "direction")
 
     before = str(merged.get("before") or "").strip()
     after = str(merged.get("after") or "").strip()
     if not before or not after:
         return {"ok": False, "error": "before and after file paths are required"}
-    paths = [Path(before).expanduser(), Path(after).expanduser()]
-    for item in paths:
-        if not item.is_file():
+    for item in (before, after):
+        if not Path(item).expanduser().is_file():
             return {"ok": False, "error": f"file not found: {item}"}
+    want = str(merged.get("want") or "shorter").strip().lower()
+    if want not in {"shorter", "longer", "rephrased"}:
+        return {"ok": False, "error": "want must be shorter, longer or rephrased"}
 
-    outputs = []
-    for item in paths:
-        result = _run(pool, ["classify", _read_text(str(item))], merged)
-        outputs.append(result)
-    if not all(item.get("ok") for item in outputs):
-        return {
-            "ok": False,
-            "error": "classification failed",
-            "before": outputs[0],
-            "after": outputs[1],
-        }
+    result = _run(
+        pool,
+        [
+            "direction",
+            "--before", str(Path(before).expanduser()),
+            "--after", str(Path(after).expanduser()),
+            "--want", want,
+            "--json",
+        ],
+        merged,
+    )
+    payload = _json_payload(result)
+    if payload:
+        for key in (
+            "direction",
+            "before_tokens",
+            "after_tokens",
+            "moved",
+            "retention",
+            "null_retention",
+            "retention_is_lexical",
+            "embedder",
+        ):
+            if key in payload:
+                result[key] = payload[key]
+        # `direction` uses a non-zero exit to encode the verdict; the JSON
+        # payload is the result, not an engine failure.
+        if result.get("returncode") not in (0, None):
+            result["ok"] = True
+    result["note"] = (
+        "`moved` compares the change against the null of doing nothing; "
+        "retention_is_lexical=true means this is a lexical, not semantic, measure."
+    )
+    return result
 
-    before_cells = _parse_cells(outputs[0].get("stdout", ""))
-    after_cells = _parse_cells(outputs[1].get("stdout", ""))
-    before_map = {cell["cell"]: cell["score"] for cell in before_cells}
-    after_map = {cell["cell"]: cell["score"] for cell in after_cells}
-    added = sorted(set(after_map) - set(before_map))
-    removed = sorted(set(before_map) - set(after_map))
-    return {
-        "ok": True,
-        "before": before,
-        "after": after,
-        "top_before": before_cells[0] if before_cells else None,
-        "top_after": after_cells[0] if after_cells else None,
-        "top_changed": bool(
-            before_cells and after_cells
-            and before_cells[0]["cell"] != after_cells[0]["cell"]
-        ),
-        "cells_added": added,
-        "cells_removed": removed,
-        "cells_before": before_cells[:8],
-        "cells_after": after_cells[:8],
-        "note": "Structural profile change, not a line-by-line diff.",
-    }
+
+def physis_chain(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """Whole-engine pass: structure, context, gaps, drift and the control."""
+    merged = _with_defaults(_merge(args, kwargs))
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    if not pool.supports("chain"):
+        return _unsupported(pool, "chain")
+
+    path = _path(merged)
+    if not Path(path).is_dir():
+        return {"ok": False, "error": f"corpus directory not found: {path}"}
+    try:
+        budget = min(4000, max(100, int(merged.get("budget") or 1200)))
+    except (TypeError, ValueError):
+        budget = 1200
+    try:
+        threshold = float(merged.get("threshold") or 0.75)
+    except (TypeError, ValueError):
+        threshold = 0.75
+
+    argv = ["chain", "--corpus", path, "--budget", str(budget), "--threshold", str(threshold), "--json"]
+    task = str(merged.get("task") or merged.get("query") or "").strip()
+    if task:
+        argv += ["--query", task]
+    result = _run(pool, argv, merged)
+    payload = _json_payload(result)
+    if payload:
+        result.update(payload)
+    return result
 
 
 def physis_command(args: Any = None, **kwargs: Any) -> dict[str, Any]:
@@ -682,6 +730,7 @@ HANDLERS = {
     "physis_why": physis_why,
     "physis_diff": physis_diff,
     "physis_classify": physis_classify,
+    "physis_chain": physis_chain,
     "physis_command": physis_command,
     "replant_run": replant_run,
     "replant_record": replant_record,
