@@ -278,7 +278,18 @@ fn onnx_candidates() -> Vec<(
     crate::embed_onnx::PoolingStrategy,
     &'static str,
 )> {
-    use crate::embed_onnx::PoolingStrategy::Mean;
+    use crate::embed_onnx::PoolingStrategy::{Cls, Mean};
+    let env_pooling = || {
+        match std::env::var("PHYSIS_POOLING")
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "cls" => Cls,
+            _ => Mean,
+        }
+    };
     if let Ok(dir) = std::env::var("PHYSIS_MODEL_DIR") {
         let dir = dir.trim().to_string();
         if !dir.is_empty() {
@@ -286,7 +297,7 @@ fn onnx_candidates() -> Vec<(
                 .ok()
                 .and_then(|v| v.trim().parse().ok())
                 .unwrap_or(384);
-            return vec![(dir, dim, Mean, "onnx-explicit")];
+            return vec![(dir, dim, env_pooling(), "onnx-explicit")];
         }
     }
     let mut candidates: Vec<(String, usize, crate::embed_onnx::PoolingStrategy, &'static str)> = Vec::new();
@@ -297,7 +308,7 @@ fn onnx_candidates() -> Vec<(
             candidates.push((
                 format!("{home}/.physis/models/minilm"),
                 384,
-                Mean,
+                env_pooling(),
                 "minilm-home",
             ));
             let xdg = std::env::var("XDG_DATA_HOME")
@@ -307,14 +318,14 @@ fn onnx_candidates() -> Vec<(
             candidates.push((
                 format!("{xdg}/physis/models/minilm"),
                 384,
-                Mean,
+                env_pooling(),
                 "minilm-xdg",
             ));
         }
     }
-    candidates.push(("./models/bge-base-en-v1.5".into(), 768, Mean, "bge-base"));
-    candidates.push(("./models/minilm".into(), 384, Mean, "minilm"));
-    candidates.push(("./models".into(), 384, Mean, "minilm"));
+    candidates.push(("./models/bge-base-en-v1.5".into(), 768, env_pooling(), "bge-base"));
+    candidates.push(("./models/minilm".into(), 384, env_pooling(), "minilm"));
+    candidates.push(("./models".into(), 384, env_pooling(), "minilm"));
     candidates
 }
 

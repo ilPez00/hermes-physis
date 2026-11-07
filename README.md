@@ -31,7 +31,7 @@ label-permuted control - when a task needs an overview rather than one query.
 
 The binaries are Linux x86_64 and are used by default. `PHYSIS_BIN` or the
 `engine_bin` setting overrides discovery; a comma-separated list is accepted.
-`models/minilm/` ships the Apache-2.0 all-MiniLM-L6-v2 uint8 ONNX export, so
+`models/bge-small/` ships the MIT bge-small-en-v1.5 uint8 ONNX export, so
 semantic embeddings are on with no download and no network.
 
 ## Install
@@ -54,7 +54,7 @@ the graph node count.
 
 ```
 physis_engine_status()                     # engines + store + node count
-physis_grid()                              # adaptive grid: 7x16, all 112 cells populated
+physis_grid()                              # adaptive grid: 8x20, all 160 cells populated
 physis_ingest(source="fs", path="/repo")   # append file observations
 physis_observed(limit=10)                  # verify what entered the log
 physis_observe(path="/path/to/repo")       # index the repo
@@ -107,20 +107,46 @@ replant_demo()                             # record once, replay twice, 0 provid
 | `budget` | `800` | default `physis_context` token budget (100-4000) |
 | `timeout` | `20` | per-subprocess timeout (seconds) |
 
+## Measured
+
+Classification on two fixtures, reproducible with the bundled binary:
+
+```bash
+PHYSIS_CORE_DIR=/tmp/physis-bench ./bin/physis-core \
+  bench-semiotic benchmarks/semiotic_cases.json
+```
+
+| Fixture | Cases | top-1 cell | top-3 cell | domain | mode |
+|---|---|---|---|---|---|
+| calibration | 55 | 60.0% | 76.4% | 67.3% | 72.7% |
+| validation (authored after tuning) | 30 | 26.7% | 56.7% | 63.3% | 46.7% |
+
+With 160 cells the random baselines are 0.6% (top-1), 1.9% (top-3),
+12.5% (domain) and 5.0% (mode). The gap between the two fixtures is the
+honest limit: the grid is a coarse lens, not an oracle. On unfamiliar phrasing
+prefer the top-3 cells plus the `best_domain` / `best_mode` axes, and let
+auto-expansion record what the ontology missed.
+
+Context and replay are deterministic and measured separately: 62 Rust files
+compress to 176 tokens at a 300-token budget; a recorded replant recipe
+replays with `provider_calls=0`; 47 plugin tests and 295 engine tests cover
+the paths.
+
 ## Honest limits
 
-- The bundled embedder is **semantic** (MiniLM uint8, 384d) and on by default.
+- The bundled embedder is **semantic** (BGE-small uint8, 384d, CLS pooling) and on by default.
   The ontology-embedding cache ships warm (`models/cache`, ~3.5 MB), so the
   first call is ~0.2 s instead of ~6 s; `PHYSIS_CACHE_DIR` overrides it.
 - The grid is **adaptive**: it is whatever the loaded ontologies define. The
-  bundle ships 7 domains x 16 modes, all 112 cells populated (848 entries),
-  including an agent/world pack derived from physis-next's entity kinds.
-- **Auto-expansion**: when a classification is uncertain (margin < 0.02 or
-  best-entry cosine < 0.45), the engine adds one generic learned entry to the
-  top cell and persists it to `custom_ontology.json`; the grid grows on the
-  next call. `--no-expand` or `PHYSIS_AUTO_EXPAND=0` disables it. Near
-  duplicates (Jaccard >= 0.6) are refused, and the store is capped at 500
-  learned entries by default.
+  bundle ships 8 domains x 20 modes, all 160 cells populated (896 entries),
+  including agentic (GOVERN, DELEGATE, REFLECT, VERIFY, INFER) and
+  agent/world packs derived from physis-next's entity kinds.
+- **Auto-expansion**: when a classification is a tie (margin < 0.02), the
+  engine adds one learned entry to the top domain's INFER cell and persists it
+  to `custom_ontology.json`; the entry count grows on the next call.
+  `--no-expand` or `PHYSIS_AUTO_EXPAND=0` disables it. Near duplicates
+  (Jaccard >= 0.6) are refused, the store is capped at 500 learned entries,
+  and texts under 20 chars are ignored.
 - Add axes or entries at runtime with `PHYSIS_ONTOLOGY_DIR` /
   `PHYSIS_ONTOLOGY_FILES`; the grid, cache config and classifier pick them up.
 - `physis_context` defaults to `mode=code` (the scanned graph). `mode=docs`
@@ -139,7 +165,7 @@ replant_demo()                             # record once, replay twice, 0 provid
 ## Development
 
 ```bash
-python3.13 -m pytest          # 47 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # 50 tests: unit + integration against the bundled binaries
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
 

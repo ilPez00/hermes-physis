@@ -1,5 +1,5 @@
 name: physis
-version: 1.3.0
+version: 1.4.0
 description: >
   Evidence-backed code context with two bundled offline engines: physis-core
   (adaptive semiotic grid that grows when uncertain, semantic embeddings,
@@ -38,7 +38,7 @@ config_schema:
   model_dir:
     type: str
     default: ""
-    description: "Optional ONNX embedding model directory; empty = bundled MiniLM"
+    description: "Optional ONNX embedding model directory; empty = bundled BGE-small"
   auto_expand:
     type: bool
     default: true

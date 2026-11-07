@@ -84,7 +84,7 @@ def test_bundled_model_dir_is_injected(tmp_path, monkeypatch):
     engine = PhysisEngine(binary=binary, timeout=5)
     result = engine.run(["scan", "."])
     assert result["ok"] is True
-    assert "models/minilm" in result["stdout"].replace("\\", "/")
+    assert "models/bge-small" in result["stdout"].replace("\\", "/")
 
 
 def test_missing_binary_raises():

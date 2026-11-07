@@ -3,19 +3,19 @@
 This plugin ships binaries and source snapshots of two separate projects. Both
 are Apache-2.0; their LICENSE and NOTICE files are preserved verbatim.
 
-## physis-core 0.1.26
+## physis-core 0.2.0
 
 - Upstream: https://github.com/ilPez00/physis-core
 - License: Apache-2.0 (`vendor/physis-core/LICENSE`)
 - Bundled as: `bin/physis-core` + `vendor/physis-core/`
 - Build: `cargo build --release --manifest-path vendor/physis-core/Cargo.toml`
 
-## all-MiniLM-L6-v2 (embedding model)
+## bge-small-en-v1.5 (embedding model)
 
-- Upstream: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
-- Export: Xenova/all-MiniLM-L6-v2 `model_uint8.onnx` + `tokenizer.json`
-- License: Apache-2.0 (`models/minilm/LICENSE`)
-- Bundled as: `models/minilm/` so semantic embeddings work offline
+- Upstream: https://huggingface.co/BAAI/bge-small-en-v1.5
+- Export: Xenova/bge-small-en-v1.5 `model_uint8.onnx` + `tokenizer.json`
+- License: MIT (`models/bge-small/LICENSE`)
+- Bundled as: `models/bge-small/` so semantic embeddings work offline
 
 ## physis-replant 0.3.0
 

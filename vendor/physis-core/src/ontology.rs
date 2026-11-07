@@ -220,6 +220,10 @@ pub static EXTRA_ONTOLOGIES: &[(&str, &str)] = &[
         include_str!("../config/expanded_ontology.json"),
     ),
     (
+        "agentic",
+        include_str!("../config/agentic_ontology.json"),
+    ),
+    (
         "agent_world",
         include_str!("../config/agent_world_ontology.json"),
     ),

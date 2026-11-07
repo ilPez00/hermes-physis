@@ -1,0 +1,741 @@
+{
+  "kind": "agentic",
+  "domains": [
+    {
+      "name": "Quota Increase",
+      "domain": "GOVERN",
+      "mode": "LIFT",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Quota Increase",
+      "unit": "",
+      "hints": [
+        "raise limit",
+        "budget increase",
+        "capacity"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Service Freeze",
+      "domain": "GOVERN",
+      "mode": "REST",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Service Freeze",
+      "unit": "",
+      "hints": [
+        "moratorium",
+        "pause changes",
+        "code freeze"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Policy Walkthrough",
+      "domain": "GOVERN",
+      "mode": "WALK",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Policy Walkthrough",
+      "unit": "",
+      "hints": [
+        "compliance tour",
+        "rule walkthrough",
+        "review path"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Approval Workflow",
+      "domain": "GOVERN",
+      "mode": "WORK",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Approval Workflow",
+      "unit": "",
+      "hints": [
+        "sign-off",
+        "gate",
+        "authorize"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Policy Draft",
+      "domain": "GOVERN",
+      "mode": "CREATE",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Policy Draft",
+      "unit": "",
+      "hints": [
+        "rulebook",
+        "standard",
+        "regulation"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Regulation Study",
+      "domain": "GOVERN",
+      "mode": "LEARN",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Regulation Study",
+      "unit": "",
+      "hints": [
+        "compliance training",
+        "law",
+        "requirement"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Policy Sunset",
+      "domain": "GOVERN",
+      "mode": "DESTROY",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Policy Sunset",
+      "unit": "",
+      "hints": [
+        "deprecate rule",
+        "retire control",
+        "remove"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Compliance Monitoring",
+      "domain": "GOVERN",
+      "mode": "SENSE",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Compliance Monitoring",
+      "unit": "",
+      "hints": [
+        "audit signal",
+        "violation",
+        "watch"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Governance Framework",
+      "domain": "GOVERN",
+      "mode": "GUIDE",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Governance Framework",
+      "unit": "",
+      "hints": [
+        "decision guide",
+        "accountability",
+        "structure"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Sandbox Policy",
+      "domain": "GOVERN",
+      "mode": "PLAY",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Sandbox Policy",
+      "unit": "",
+      "hints": [
+        "safe experiment",
+        "limited scope",
+        "pilot"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Rule Design Session",
+      "domain": "GOVERN",
+      "mode": "BRAINSTORM",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Rule Design Session",
+      "unit": "",
+      "hints": [
+        "governance ideation",
+        "policy options",
+        "tradeoffs"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Access Review",
+      "domain": "GOVERN",
+      "mode": "MAINTAIN",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Access Review",
+      "unit": "",
+      "hints": [
+        "permissions",
+        "least privilege",
+        "recertify"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Authority Transfer",
+      "domain": "GOVERN",
+      "mode": "MOVE",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Authority Transfer",
+      "unit": "",
+      "hints": [
+        "jurisdiction",
+        "handoff",
+        "delegate control"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Budget Plan",
+      "domain": "GOVERN",
+      "mode": "PLAN",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Budget Plan",
+      "unit": "",
+      "hints": [
+        "roadmap",
+        "allocation",
+        "forecast"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Policy Advocacy",
+      "domain": "GOVERN",
+      "mode": "PERSUADE",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Policy Advocacy",
+      "unit": "",
+      "hints": [
+        "approval case",
+        "stakeholder",
+        "buy-in"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Governance Training",
+      "domain": "GOVERN",
+      "mode": "TEACH",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Governance Training",
+      "unit": "",
+      "hints": [
+        "onboarding",
+        "policy education",
+        "certify"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Authority Delegation",
+      "domain": "GOVERN",
+      "mode": "DELEGATE",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Authority Delegation",
+      "unit": "",
+      "hints": [
+        "grant approval",
+        "deputy",
+        "proxy"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Governance Retrospective",
+      "domain": "GOVERN",
+      "mode": "REFLECT",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Governance Retrospective",
+      "unit": "",
+      "hints": [
+        "decision review",
+        "what changed",
+        "audit findings"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Control Test",
+      "domain": "GOVERN",
+      "mode": "VERIFY",
+      "category": "governance",
+      "axis_kind": "operation",
+      "axis_name": "Control Test",
+      "unit": "",
+      "hints": [
+        "compliance check",
+        "evidence",
+        "attestation"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Referral",
+      "domain": "HEAL",
+      "mode": "DELEGATE",
+      "category": "care",
+      "axis_kind": "operation",
+      "axis_name": "Referral",
+      "unit": "",
+      "hints": [
+        "specialist",
+        "handoff",
+        "triage"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Work Package",
+      "domain": "CONSTRUCT",
+      "mode": "DELEGATE",
+      "category": "delivery",
+      "axis_kind": "operation",
+      "axis_name": "Work Package",
+      "unit": "",
+      "hints": [
+        "task assignment",
+        "owner",
+        "scope"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Production Handoff",
+      "domain": "FABRICATE",
+      "mode": "DELEGATE",
+      "category": "manufacturing",
+      "axis_kind": "operation",
+      "axis_name": "Production Handoff",
+      "unit": "",
+      "hints": [
+        "build assignment",
+        "shift handoff",
+        "queue"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Relationship Handoff",
+      "domain": "BOND",
+      "mode": "DELEGATE",
+      "category": "social",
+      "axis_kind": "operation",
+      "axis_name": "Relationship Handoff",
+      "unit": "",
+      "hints": [
+        "introducer",
+        "account handoff",
+        "warm intro"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Research Assignment",
+      "domain": "STUDY",
+      "mode": "DELEGATE",
+      "category": "research",
+      "axis_kind": "operation",
+      "axis_name": "Research Assignment",
+      "unit": "",
+      "hints": [
+        "literature request",
+        "delegate reading",
+        "question"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Security Handoff",
+      "domain": "DEFEND",
+      "mode": "DELEGATE",
+      "category": "security",
+      "axis_kind": "operation",
+      "axis_name": "Security Handoff",
+      "unit": "",
+      "hints": [
+        "escalation",
+        "on-call",
+        "incident transfer"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Account Transfer",
+      "domain": "EXCHANGE",
+      "mode": "DELEGATE",
+      "category": "commerce",
+      "axis_kind": "operation",
+      "axis_name": "Account Transfer",
+      "unit": "",
+      "hints": [
+        "contract handoff",
+        "ownership transfer",
+        "billing"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Recovery Review",
+      "domain": "HEAL",
+      "mode": "REFLECT",
+      "category": "care",
+      "axis_kind": "operation",
+      "axis_name": "Recovery Review",
+      "unit": "",
+      "hints": [
+        "outcome check",
+        "wellbeing",
+        "follow-up"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Design Review",
+      "domain": "CONSTRUCT",
+      "mode": "REFLECT",
+      "category": "delivery",
+      "axis_kind": "operation",
+      "axis_name": "Design Review",
+      "unit": "",
+      "hints": [
+        "build retrospective",
+        "architecture review",
+        "lessons"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Quality Retrospective",
+      "domain": "FABRICATE",
+      "mode": "REFLECT",
+      "category": "manufacturing",
+      "axis_kind": "operation",
+      "axis_name": "Quality Retrospective",
+      "unit": "",
+      "hints": [
+        "defect review",
+        "root cause",
+        "yield"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Relationship Retrospective",
+      "domain": "BOND",
+      "mode": "REFLECT",
+      "category": "social",
+      "axis_kind": "operation",
+      "axis_name": "Relationship Retrospective",
+      "unit": "",
+      "hints": [
+        "feedback session",
+        "trust review",
+        "check-in"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Learning Review",
+      "domain": "STUDY",
+      "mode": "REFLECT",
+      "category": "research",
+      "axis_kind": "operation",
+      "axis_name": "Learning Review",
+      "unit": "",
+      "hints": [
+        "study retrospective",
+        "what was learned",
+        "gap"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Incident Retrospective",
+      "domain": "DEFEND",
+      "mode": "REFLECT",
+      "category": "security",
+      "axis_kind": "operation",
+      "axis_name": "Incident Retrospective",
+      "unit": "",
+      "hints": [
+        "postmortem",
+        "timeline",
+        "action items"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Deal Retrospective",
+      "domain": "EXCHANGE",
+      "mode": "REFLECT",
+      "category": "commerce",
+      "axis_kind": "operation",
+      "axis_name": "Deal Retrospective",
+      "unit": "",
+      "hints": [
+        "customer feedback",
+        "win loss",
+        "renewal"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Outcome Verification",
+      "domain": "HEAL",
+      "mode": "VERIFY",
+      "category": "care",
+      "axis_kind": "operation",
+      "axis_name": "Outcome Verification",
+      "unit": "",
+      "hints": [
+        "recovery check",
+        "result",
+        "evidence"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Acceptance Test",
+      "domain": "CONSTRUCT",
+      "mode": "VERIFY",
+      "category": "delivery",
+      "axis_kind": "operation",
+      "axis_name": "Acceptance Test",
+      "unit": "",
+      "hints": [
+        "build verification",
+        "criteria",
+        "pass"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Quality Inspection",
+      "domain": "FABRICATE",
+      "mode": "VERIFY",
+      "category": "manufacturing",
+      "axis_kind": "operation",
+      "axis_name": "Quality Inspection",
+      "unit": "",
+      "hints": [
+        "dimensional check",
+        "inspection",
+        "tolerance"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Reference Check",
+      "domain": "BOND",
+      "mode": "VERIFY",
+      "category": "social",
+      "axis_kind": "operation",
+      "axis_name": "Reference Check",
+      "unit": "",
+      "hints": [
+        "trust verification",
+        "vouch",
+        "background"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Source Verification",
+      "domain": "STUDY",
+      "mode": "VERIFY",
+      "category": "research",
+      "axis_kind": "operation",
+      "axis_name": "Source Verification",
+      "unit": "",
+      "hints": [
+        "fact check",
+        "citation",
+        "provenance"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Control Verification",
+      "domain": "DEFEND",
+      "mode": "VERIFY",
+      "category": "security",
+      "axis_kind": "operation",
+      "axis_name": "Control Verification",
+      "unit": "",
+      "hints": [
+        "security check",
+        "control test",
+        "attestation"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Invoice Reconciliation",
+      "domain": "EXCHANGE",
+      "mode": "VERIFY",
+      "category": "commerce",
+      "axis_kind": "operation",
+      "axis_name": "Invoice Reconciliation",
+      "unit": "",
+      "hints": [
+        "contract check",
+        "payment match",
+        "ledger"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Care Case",
+      "domain": "HEAL",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Care Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Build Case",
+      "domain": "CONSTRUCT",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Build Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Production Case",
+      "domain": "FABRICATE",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Production Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Social Case",
+      "domain": "BOND",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Social Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Knowledge Case",
+      "domain": "STUDY",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Knowledge Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Threat Case",
+      "domain": "DEFEND",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Threat Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Trade Case",
+      "domain": "EXCHANGE",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Trade Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    },
+    {
+      "name": "Unresolved Policy Case",
+      "domain": "GOVERN",
+      "mode": "INFER",
+      "category": "inference",
+      "axis_kind": "operation",
+      "axis_name": "Unresolved Policy Case",
+      "unit": "",
+      "hints": [
+        "uncertain",
+        "unclassified",
+        "infer",
+        "unknown",
+        "unresolved"
+      ],
+      "facets": {}
+    }
+  ]
+}

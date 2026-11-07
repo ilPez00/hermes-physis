@@ -34,7 +34,94 @@ pub enum TopKStrategy {
 }
 
 /// Nested-classification blend weight: final = ALPHA·domain + (1-ALPHA)·cell.
-const ALPHA: f32 = 0.4;
+const ALPHA: f32 = 0.2;
+
+/// Runtime override for calibration sweeps (`PHYSIS_ALPHA`).
+fn beta_weight() -> f32 {
+    std::env::var("PHYSIS_BETA")
+        .ok()
+        .and_then(|v| v.trim().parse::<f32>().ok())
+        .map(|v| v.clamp(0.0, 1.0))
+        .unwrap_or(0.3)
+}
+
+fn alpha_weight() -> f32 {
+    std::env::var("PHYSIS_ALPHA")
+        .ok()
+        .and_then(|v| v.trim().parse::<f32>().ok())
+        .map(|v| v.clamp(0.0, 1.0))
+        .unwrap_or(ALPHA)
+}
+
+/// Domain cues for instruction text. Embedding alone drifts between domains
+/// that share vocabulary ("service", "review", "audit"); these are generic
+/// nouns, not fixture answers, and they only break near-ties (max +0.15).
+const DOMAIN_LEXICON: &[(&str, &[&str])] = &[
+    ("HEAL", &["patient", "health", "medical", "recovery", "therapy", "care", "wellbeing", "symptom", "treatment", "injury", "clinic", "mental"]),
+    ("CONSTRUCT", &["build", "code", "deploy", "deployment", "architecture", "software", "system", "pipeline", "release", "repository", "api", "database", "migration", "compile", "test"]),
+    ("FABRICATE", &["manufacturing", "production", "machine", "part", "assembly", "line", "material", "factory", "pump", "seal", "inventory", "equipment", "fabricate", "weld"]),
+    ("BOND", &["customer", "client", "relationship", "team", "people", "trust", "community", "partner", "stakeholder", "user", "feedback", "onboarding", "colleague"]),
+    ("STUDY", &["research", "study", "learn", "knowledge", "paper", "data", "analysis", "experiment", "question", "source", "documentation", "evidence", "literature"]),
+    ("DEFEND", &["security", "threat", "attack", "vulnerability", "incident", "firewall", "token", "credential", "breach", "malware", "risk", "attack", "exploit", "patch", "secret"]),
+    ("EXCHANGE", &["trade", "buy", "sell", "price", "invoice", "payment", "contract", "order", "vendor", "cost", "billing", "account", "shipping", "delivery", "purchase", "refund"]),
+    ("GOVERN", &["policy", "compliance", "rule", "approval", "regulation", "governance", "budget", "authority", "audit", "control", "law", "company", "permission", "quota"]),
+];
+
+/// Mode cues: task verbs. These are the words agents actually use when they
+/// ask for work, and they are much more stable than cell-level embeddings.
+const MODE_LEXICON: &[(&str, &[&str])] = &[
+    ("LIFT", &["raise", "increase", "expand", "scale", "upgrade", "boost", "grow", "quota", "limit"]),
+    ("REST", &["pause", "freeze", "stop", "halt", "suspend", "wait", "rest", "break", "delay", "defer", "recovery day"]),
+    ("WALK", &["walk", "tour", "visit", "show around", "walkthrough", "inspect", "audit"]),
+    ("WORK", &["run", "process", "execute", "compute", "calculate", "handle", "operate", "apply", "estimate"]),
+    ("CREATE", &["create", "draft", "write", "make", "generate", "design", "compose", "produce", "author"]),
+    ("LEARN", &["learn", "study", "read", "research", "understand", "explore", "absorb"]),
+    ("DESTROY", &["delete", "remove", "revoke", "destroy", "tear down", "dismantle", "purge", "wipe", "kill", "drop", "retire"]),
+    ("SENSE", &["detect", "monitor", "observe", "watch", "scan", "sense", "alert", "measure", "signal"]),
+    ("GUIDE", &["guide", "manual", "playbook", "runbook", "reference", "handbook", "how-to"]),
+    ("PLAY", &["simulate", "practice", "drill", "rehearsal", "sandbox", "roleplay", "experiment"]),
+    ("BRAINSTORM", &["brainstorm", "ideate", "ideas", "names", "options", "possibilities", "slogan"]),
+    ("MAINTAIN", &["maintain", "service", "repair", "replace", "patch", "update", "upgrade", "sustain", "tune", "fix"]),
+    ("MOVE", &["move", "migrate", "transfer", "route", "shift", "relocate", "failover", "hand over"]),
+    ("PLAN", &["plan", "schedule", "roadmap", "strategy", "sequence", "forecast", "outline", "budget"]),
+    ("PERSUADE", &["persuade", "convince", "argue", "pitch", "sell", "advocate", "case for", "influence"]),
+    ("TEACH", &["teach", "train", "tutorial", "educate", "explain", "onboard", "walk through"]),
+    ("DELEGATE", &["delegate", "assign", "hand off", "hand to", "ask the", "refer", "escalate", "outsource"]),
+    ("REFLECT", &["review", "retrospective", "postmortem", "post-mortem", "debrief", "reflect", "feedback", "lessons", "went well"]),
+    ("VERIFY", &["verify", "check", "confirm", "validate", "test", "assert", "prove", "ensure", "reconcile", "match", "measure"]),
+];
+
+fn term_hits(query: &str, terms: &[&str]) -> usize {
+    let words: std::collections::HashSet<&str> = query
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .collect();
+    terms
+        .iter()
+        .filter(|term| {
+            if term.contains(' ') {
+                query.contains(**term)
+            } else {
+                words.contains(**term)
+            }
+        })
+        .count()
+}
+
+fn lexicon_bonus(query: &str, domain: &str, mode: &str) -> f32 {
+    let q = query.to_lowercase();
+    let d = DOMAIN_LEXICON
+        .iter()
+        .find(|(name, _)| *name == domain)
+        .map(|(_, terms)| term_hits(&q, terms))
+        .unwrap_or(0);
+    let m = MODE_LEXICON
+        .iter()
+        .find(|(name, _)| *name == mode)
+        .map(|(_, terms)| term_hits(&q, terms))
+        .unwrap_or(0);
+    0.03 * (d.min(3) + m.min(3)) as f32
+}
 
 /// Mean of the top-`k` values of an already-descending-sorted slice.
 fn topk_mean(sorted_desc: &[f32], k: usize) -> f32 {
@@ -536,11 +623,14 @@ impl CellClassifier {
     /// smoothing buckets and cell-level precision fell. This lets a harness
     /// sweep strategies against fixtures and pick a new default on measurement.
     pub fn classify_with_topk(&self, embedding: &[f32], strat: TopKStrategy) -> Vec<CellScore> {
+        let alpha = alpha_weight();
+        let beta = beta_weight().min(1.0 - alpha);
         let k_of = |n: usize| match strat {
             TopKStrategy::Adaptive => Self::adaptive_top_k(n),
             TopKStrategy::Fixed(k) => k,
         };
         let mut domain_cell_scores: HashMap<&str, Vec<f32>> = HashMap::new();
+        let mut mode_cell_scores: HashMap<&str, Vec<f32>> = HashMap::new();
         let mut cell_scores: Vec<f32> = Vec::with_capacity(self.cells.len());
         let mut ranked_entries: Vec<Vec<String>> = Vec::with_capacity(self.cells.len());
         for cell in &self.cells {
@@ -562,6 +652,10 @@ impl CellClassifier {
                 .entry(cell.domain.as_str())
                 .or_default()
                 .push(cs);
+            mode_cell_scores
+                .entry(cell.mode.as_str())
+                .or_default()
+                .push(cs);
         }
 
         let domain_score: HashMap<&str, f32> = domain_cell_scores
@@ -572,6 +666,14 @@ impl CellClassifier {
             })
             .collect();
 
+        let mode_score: HashMap<&str, f32> = mode_cell_scores
+            .into_iter()
+            .map(|(m, mut cs)| {
+                cs.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+                (m, topk_mean(&cs, 2))
+            })
+            .collect();
+
         let mut results: Vec<CellScore> = self
             .cells
             .iter()
@@ -579,6 +681,7 @@ impl CellClassifier {
             .zip(ranked_entries)
             .map(|((cell, cell_score), entries)| {
                 let ds = *domain_score.get(cell.domain.as_str()).unwrap_or(&0.0);
+                let ms = *mode_score.get(cell.mode.as_str()).unwrap_or(&0.0);
                 // Population weight: larger cells have more reliable top entries,
                 // so their scores get a modest boost; small cells get a small boost
                 // to prevent them from being drowned out by big cells.
@@ -589,7 +692,8 @@ impl CellClassifier {
                 } else {
                     1.0
                 };
-                let score = (ALPHA * ds + (1.0 - ALPHA) * cell_score) * pop_weight;
+                let score = (alpha * ds + beta * ms + (1.0 - alpha - beta) * cell_score)
+                    * pop_weight;
                 CellScore {
                     domain: cell.domain.clone(),
                     mode: cell.mode.clone(),
@@ -687,7 +791,23 @@ impl CellClassifier {
 
     /// Embed `text` and classify it in one call.
     pub fn classify_text(&self, text: &str, embedder: &dyn VectorEmbed) -> Vec<CellScore> {
-        self.classify(&embedder.embed(text))
+        let prefix = std::env::var("PHYSIS_QUERY_PREFIX")
+            .unwrap_or_else(|_| "Instruction: ".to_string());
+        let query = if prefix.is_empty() {
+            text.to_string()
+        } else {
+            format!("{prefix}{text}")
+        };
+        let mut results = self.classify(&embedder.embed(&query));
+        for r in &mut results {
+            r.score += lexicon_bonus(text, &r.domain, &r.mode);
+        }
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        results
     }
 
     /// Propose top-k cells from accumulated decisions for a given text.

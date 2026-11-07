@@ -72,7 +72,7 @@ def make_binary(tmp_path: Path, supported: set[str]) -> str:
     if argv and argv[0] == "classify":
         print("  HEAL        × MAINTAIN   0.940 ")
         print("  CONSTRUCT   × CREATE     0.921 ")
-        print("Grid: 7×16 = 112 cells (87 populated, 761 entries)")
+        print("Grid: 8×20 = 160 cells (160 populated, 896 entries)")
         print("Margin over runner-up: 0.019  effectively a tie")
         print("Embedder: onnx-explicit (384d) — semantic")
         if "--no-expand" not in argv:

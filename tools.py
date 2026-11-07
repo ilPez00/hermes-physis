@@ -483,7 +483,7 @@ def physis_classify(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if not text:
         return {"ok": False, "error": "text or file is required"}
 
-    argv = ["classify", text]
+    argv = ["classify", "--json", text]
     if merged.get("auto_expand") is False:
         argv.append("--no-expand")
     result = _run(pool, argv, merged)
@@ -498,10 +498,34 @@ def physis_classify(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     shape = _GRID_LINE_RE.search(result.get("stdout", ""))
     if shape:
         result["grid_shape"] = [int(shape.group(1)), int(shape.group(2))]
-    embedder = _EMBEDDER_LINE_RE.search(result.get("stdout", ""))
+    stdout = (result.get("stdout") or "").strip()
+    if stdout.startswith("{"):
+        try:
+            payload = json.loads(stdout)
+        except (ValueError, TypeError):
+            payload = None
+        if isinstance(payload, dict):
+            result["classification"] = payload
+            result["cells"] = payload.get("top", [])
+            result["margin"] = payload.get("margin")
+            result["confidence"] = payload.get("confidence")
+            result["best_entry"] = payload.get("best_entry")
+            result["best_domain"] = payload.get("best_domain")
+            result["best_mode"] = payload.get("best_mode")
+            result["grid_shape"] = (payload.get("grid") or {}).get("shape")
+            result["grid_entries"] = (payload.get("grid") or {}).get("entries")
+            if payload.get("created_entry"):
+                result["created_entry"] = payload["created_entry"]
+                result["created_cell"] = payload.get("created_cell")
+            embedder = (payload.get("embedder") or {}).get("kind")
+            if embedder:
+                result["embedder_kind"] = embedder
+            return result
+
+    embedder = _EMBEDDER_LINE_RE.search(stdout)
     if embedder:
         result["embedder_kind"] = embedder.group(1)
-    expanded = _EXPANDED_RE.search(result.get("stdout", ""))
+    expanded = _EXPANDED_RE.search(stdout)
     if expanded:
         result["created_entry"] = expanded.group(1).strip()
         result["created_cell"] = expanded.group(2).strip()

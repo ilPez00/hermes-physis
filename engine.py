@@ -27,7 +27,7 @@ MAX_OUTPUT = 16000
 
 PLUGIN_DIR = Path(__file__).resolve().parent
 BUNDLED_BIN_DIR = PLUGIN_DIR / "bin"
-BUNDLED_MODEL_DIR = PLUGIN_DIR / "models" / "minilm"
+BUNDLED_MODEL_DIR = PLUGIN_DIR / "models" / "bge-small"
 BUNDLED_CACHE_DIR = PLUGIN_DIR / "models" / "cache"
 
 # Names looked up on PATH when no bundled binary is present.

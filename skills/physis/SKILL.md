@@ -28,7 +28,7 @@ codebase, or when the same verified workflow will run again.
 - Never invent evidence Physis did not return. If the index is empty or the
   object is absent, say so and run `physis_observe` or widen the query.
 - `physis_why` returns evidence around a label, not a causal story.
-- The bundled embedder is semantic (MiniLM) and on by default; the ontology
+- The bundled embedder is semantic (BGE-small, CLS pooling) and on by default; the ontology
   cache makes calls fast after the first build.
 - When a classification is a tie or the best entry is weak, the engine may add
   a learned ontology entry (`Ontology expanded: ...`). Treat it as a generic

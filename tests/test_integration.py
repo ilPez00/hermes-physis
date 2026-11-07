@@ -146,7 +146,7 @@ def test_classify_uses_semantic_embedder(isolated_store):
     assert result["ok"] is True
     assert "onnx" in result["stdout"], result["stdout"]
     assert result["embedder_kind"].startswith("onnx")
-    assert result["grid_shape"] == [7, 16]
+    assert result["grid_shape"] == [8, 20]
 
 
 def test_ingest_and_observed_roundtrip(isolated_store, repo):

@@ -38,9 +38,20 @@ enum Command {
         /// Do not add a learned ontology entry when the result is uncertain
         #[arg(long)]
         no_expand: bool,
+        /// Machine-readable output (top cells, confidence, expansion)
+        #[arg(long)]
+        json: bool,
     },
     /// Show ontology stats.
     Ontology,
+    /// Benchmark classification on a labelled JSON fixture.
+    BenchSemiotic {
+        /// Path to {"cases":[{"text","domain","mode"}]}
+        fixture: std::path::PathBuf,
+        /// Machine-readable output
+        #[arg(long)]
+        json: bool,
+    },
     /// Show the adaptive semiotic grid (axes, shape, populated cells).
     Grid {
         /// Machine-readable output
@@ -548,8 +559,9 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     store::ensure_data_dir()?;
     match cli.command {
-        Command::Classify { text, no_expand } => run_classify(&text, no_expand),
+        Command::Classify { text, no_expand, json } => run_classify(&text, no_expand, json),
         Command::Ontology => run_ontology(),
+        Command::BenchSemiotic { fixture, json } => cmd_bench_semiotic(&fixture, json),
         Command::Grid { json, cells } => run_grid(json, cells),
         Command::Facet {
             lifecycle,
@@ -851,7 +863,7 @@ fn load_quality() -> QualityTracker {
     QualityTracker::load_or_new(&store::quality_path())
 }
 
-fn run_classify(text: &str, no_expand: bool) -> anyhow::Result<()> {
+fn run_classify(text: &str, no_expand: bool, as_json: bool) -> anyhow::Result<()> {
     let ontology = OntologyLoader::load_all();
     let (embedder, embedder_kind) = load_embedder_kind();
     let classifier = build_classifier(&ontology, embedder.as_ref(), embedder_kind);
@@ -867,9 +879,112 @@ fn run_classify(text: &str, no_expand: bool) -> anyhow::Result<()> {
             r2
         })
         .collect();
+    let grid = physis_core::GridView::from_classifier(&classifier);
+    let best_entry = classifier.best_entry_sim(&embedder.embed(text));
+    let margin = match (adjusted.first(), adjusted.get(1)) {
+        (Some(a), Some(b)) => a.score - b.score,
+        _ => 0.0,
+    };
+    let confidence = if margin >= 0.08 {
+        "high"
+    } else if margin >= 0.02 {
+        "weak"
+    } else {
+        "tie"
+    };
+
+    // Auto-expansion: a weak margin or a weak best-entry cosine means the
+    // ontology has no good home for this text. Add one generic entry instead
+    // of pretending the top cell is a decision.
+    // A tie alone is not enough: semantic scores often tie at 0.85+ on short
+    // text. Expansion is for text the ontology genuinely does not cover
+    // (weak match), or a tie with a mediocre best entry. Weak matches go to a
+    // new INFER mode for their domain, so the grid grows an axis instead of
+    // forcing the text into a cell that does not fit.
+    // A tie is the uncertainty signal: semantic scores compress, so an
+    // absolute cosine threshold would almost never fire. Unresolved text goes
+    // to the INFER mode of its best domain, which is a real cell in the grid,
+    // so the ontology grows without inventing axes per sentence.
+    let uncertain = margin < 0.02;
+    let mut created: Option<(String, String, String)> = None;
+    if uncertain && !no_expand {
+        let domain = adjusted
+            .first()
+            .map(|r| r.domain.clone())
+            .unwrap_or_else(|| "GENERAL".to_string());
+        match auto_expand_ontology(text, &domain, "INFER") {
+            Ok(Some(name)) => created = Some((name, domain, "INFER".to_string())),
+            Ok(None) => {}
+            Err(e) => eprintln!("warning: could not persist learned entry: {e}"),
+        }
+    }
+
+    let best_domain = adjusted.first().map(|r| {
+        let score = adjusted
+            .iter()
+            .filter(|x| x.domain == r.domain)
+            .take(2)
+            .map(|x| x.score)
+            .sum::<f32>()
+            / 2.0;
+        (r.domain.clone(), score)
+    });
+    let best_mode = adjusted.first().map(|r| {
+        let score = adjusted
+            .iter()
+            .filter(|x| x.mode == r.mode)
+            .take(2)
+            .map(|x| x.score)
+            .sum::<f32>()
+            / 2.0;
+        (r.mode.clone(), score)
+    });
+
+    if as_json {
+        let top: Vec<serde_json::Value> = adjusted
+            .iter()
+            .take(5)
+            .map(|r| {
+                serde_json::json!({
+                    "cell": format!("{}×{}", r.domain, r.mode),
+                    "domain": r.domain,
+                    "mode": r.mode,
+                    "score": r.score,
+                    "entries": r.entries.iter().take(5).collect::<Vec<_>>(),
+                })
+            })
+            .collect();
+        let payload = serde_json::json!({
+            "query": text,
+            "grid": {
+                "shape": grid.shape,
+                "domains": grid.domains,
+                "modes": grid.modes,
+                "total_cells": grid.total_cells,
+                "populated_cells": grid.populated_cells,
+                "entries": grid.entries,
+                "expanded": grid.is_expanded(),
+            },
+            "embedder": {"kind": embedder_kind, "dimension": embedder.dimension()},
+            "top": top,
+            "margin": margin,
+            "confidence": confidence,
+            "best_domain": best_domain.as_ref().map(|(name, score)| serde_json::json!({"name": name, "score": score})),
+            "best_mode": best_mode.as_ref().map(|(name, score)| serde_json::json!({"name": name, "score": score})),
+            "best_entry": best_entry.map(|(score, domain, mode)| serde_json::json!({
+                "score": score, "cell": format!("{domain}×{mode}")
+            })),
+            "created_entry": created.as_ref().map(|(name, _, _)| name),
+            "created_cell": created.as_ref().map(|(_, d, m)| format!("{d}×{m}")),
+        });
+        println!("{}", serde_json::to_string_pretty(&payload)?);
+        return Ok(());
+    }
 
     println!("Query: {text}");
-    let grid = physis_core::GridView::from_classifier(&classifier);
+    if let (Some((domain, ds)), Some((mode, ms))) = (&best_domain, &best_mode) {
+        println!("Best domain: {domain} ({ds:.3})   best mode: {mode} ({ms:.3})");
+    }
     println!(
         "Grid: {}×{} = {} cells ({} populated, {} entries){}",
         grid.shape[0],
@@ -912,10 +1027,7 @@ fn run_classify(text: &str, no_expand: bool) -> anyhow::Result<()> {
         shown.len()
     );
 
-    // The gap to the runner-up is the confidence signal. Without it a reader has
-    // to subtract two numbers to notice the engine effectively did not choose.
-    if let (Some(first), Some(second)) = (adjusted.first(), adjusted.get(1)) {
-        let margin = first.score - second.score;
+    if adjusted.len() >= 2 {
         let verdict = if margin < 0.02 {
             "  ⚠ effectively a tie — treat the top cell as unresolved"
         } else if margin < 0.08 {
@@ -924,9 +1036,10 @@ fn run_classify(text: &str, no_expand: bool) -> anyhow::Result<()> {
             ""
         };
         println!("Margin over runner-up: {margin:.3}{verdict}");
+        println!("Confidence: {confidence}");
     }
 
-    if let Some((sim, domain, mode)) = classifier.best_entry_sim(&embedder.embed(text)) {
+    if let Some((sim, domain, mode)) = &best_entry {
         println!("Best entry cosine: {sim:.3} ({domain}×{mode})");
     }
     let semantic = embedder_kind != "random-projection";
@@ -940,32 +1053,8 @@ fn run_classify(text: &str, no_expand: bool) -> anyhow::Result<()> {
             "deterministic feature hashing, reproducible but NOT semantic"
         }
     );
-
-    // Auto-expansion: a weak margin or a weak best-entry cosine means the
-    // ontology has no good home for this text. Add one generic entry instead
-    // of pretending the top cell is a decision.
-    let best_entry = classifier.best_entry_sim(&embedder.embed(text));
-    let margin = match (adjusted.first(), adjusted.get(1)) {
-        (Some(a), Some(b)) => a.score - b.score,
-        _ => 0.0,
-    };
-    let uncertain = margin < 0.02
-        || best_entry
-            .as_ref()
-            .map(|(sim, _, _)| *sim < 0.45)
-            .unwrap_or(true);
-    if uncertain && !no_expand {
-        let (domain, mode) = adjusted
-            .first()
-            .map(|r| (r.domain.clone(), r.mode.clone()))
-            .unwrap_or_else(|| ("GENERIC".to_string(), "INFER".to_string()));
-        match auto_expand_ontology(text, &domain, &mode) {
-            Ok(Some(name)) => {
-                println!("Ontology expanded: {name} ({domain}×{mode}) — learned entry saved");
-            }
-            Ok(None) => {}
-            Err(e) => eprintln!("warning: could not persist learned entry: {e}"),
-        }
+    if let Some((name, domain, mode)) = created {
+        println!("Ontology expanded: {name} ({domain}×{mode}) — learned entry saved");
     }
     Ok(())
 }
@@ -2824,6 +2913,123 @@ fn cmd_context(corpus: &Path, query: &str, budget: usize, json: bool) -> anyhow:
             "{}",
             report.physis_context.chars().take(400).collect::<String>()
         );
+    }
+    Ok(())
+}
+
+fn cmd_bench_semiotic(fixture: &std::path::Path, as_json: bool) -> anyhow::Result<()> {
+    let body = std::fs::read_to_string(fixture)?;
+    let value: serde_json::Value = serde_json::from_str(&body)?;
+    let cases = value
+        .get("cases")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    anyhow::ensure!(!cases.is_empty(), "fixture has no cases");
+
+    let ontology = OntologyLoader::load_all();
+    let (embedder, kind) = load_embedder_kind();
+    let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
+    let grid = physis_core::GridView::from_classifier(&classifier);
+
+    let mut n = 0usize;
+    let mut top1 = 0usize;
+    let mut top3 = 0usize;
+    let mut domain_ok = 0usize;
+    let mut mode_ok = 0usize;
+    let mut ties = 0usize;
+    let mut margins: Vec<f32> = Vec::new();
+    let mut misses: Vec<serde_json::Value> = Vec::new();
+
+    for case in &cases {
+        let text = case.get("text").and_then(|v| v.as_str()).unwrap_or("");
+        let want_domain = case.get("domain").and_then(|v| v.as_str()).unwrap_or("");
+        let want_mode = case.get("mode").and_then(|v| v.as_str()).unwrap_or("");
+        if text.is_empty() || want_domain.is_empty() || want_mode.is_empty() {
+            continue;
+        }
+        n += 1;
+        let want = format!("{want_domain}×{want_mode}");
+        let results = classifier.classify_text(text, &embedder);
+        let Some(top) = results.first() else { continue };
+        let got = format!("{}×{}", top.domain, top.mode);
+        if got == want {
+            top1 += 1;
+        } else {
+            misses.push(serde_json::json!({
+                "text": text, "want": want, "got": got, "score": top.score
+            }));
+        }
+        if results
+            .iter()
+            .take(3)
+            .any(|r| format!("{}×{}", r.domain, r.mode) == want)
+        {
+            top3 += 1;
+        }
+        if top.domain == want_domain {
+            domain_ok += 1;
+        }
+        if top.mode == want_mode {
+            mode_ok += 1;
+        }
+        let margin = results
+            .get(1)
+            .map(|second| top.score - second.score)
+            .unwrap_or(0.0);
+        margins.push(margin);
+        if margin < 0.02 {
+            ties += 1;
+        }
+    }
+
+    let pct = |x: usize| if n == 0 { 0.0 } else { 100.0 * x as f32 / n as f32 };
+    let mean_margin = if margins.is_empty() {
+        0.0
+    } else {
+        margins.iter().sum::<f32>() / margins.len() as f32
+    };
+
+    if as_json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "cases": n,
+                "top1_cell_accuracy": pct(top1),
+                "top3_cell_accuracy": pct(top3),
+                "domain_accuracy": pct(domain_ok),
+                "mode_accuracy": pct(mode_ok),
+                "ties": ties,
+                "mean_margin": mean_margin,
+                "grid": {"shape": grid.shape, "populated_cells": grid.populated_cells, "entries": grid.entries},
+                "embedder": {"kind": kind, "dimension": embedder.dimension()},
+                "misses": misses,
+            }))?
+        );
+        return Ok(());
+    }
+
+    println!("Semiotic benchmark: {n} held-out cases");
+    println!(
+        "  grid: {}×{} = {} cells ({} entries)",
+        grid.shape[0], grid.shape[1], grid.total_cells, grid.entries
+    );
+    println!("  top-1 cell accuracy: {:.1}% ({top1}/{n})", pct(top1));
+    println!("  top-3 cell accuracy: {:.1}% ({top3}/{n})", pct(top3));
+    println!("  domain accuracy:     {:.1}% ({domain_ok}/{n})", pct(domain_ok));
+    println!("  mode accuracy:       {:.1}% ({mode_ok}/{n})", pct(mode_ok));
+    println!("  ties (margin<0.02): {ties}/{n}   mean margin: {mean_margin:.3}");
+    println!("  embedder: {kind} ({}d)", embedder.dimension());
+    if !misses.is_empty() {
+        println!("  first misses:");
+        for miss in misses.iter().take(8) {
+            println!(
+                "    want {} got {} — {}",
+                miss.get("want").and_then(|v| v.as_str()).unwrap_or(""),
+                miss.get("got").and_then(|v| v.as_str()).unwrap_or(""),
+                miss.get("text").and_then(|v| v.as_str()).unwrap_or("")
+            );
+        }
     }
     Ok(())
 }
