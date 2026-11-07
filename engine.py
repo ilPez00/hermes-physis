@@ -28,6 +28,7 @@ MAX_OUTPUT = 16000
 PLUGIN_DIR = Path(__file__).resolve().parent
 BUNDLED_BIN_DIR = PLUGIN_DIR / "bin"
 BUNDLED_MODEL_DIR = PLUGIN_DIR / "models" / "minilm"
+BUNDLED_CACHE_DIR = PLUGIN_DIR / "models" / "cache"
 
 # Names looked up on PATH when no bundled binary is present.
 CANDIDATES = ("physis-core", "replant", "physis-replant", "physis", "physis-next")
@@ -143,6 +144,14 @@ class PhysisEngine:
         ):
             extra_env["PHYSIS_MODEL_DIR"] = str(BUNDLED_MODEL_DIR)
             extra_env.setdefault("PHYSIS_MODEL_DIM", "384")
+        # Ship the ontology-embedding cache too: the first call drops from ~6 s
+        # to ~0.2 s instead of re-embedding 761 entries on a new machine.
+        if (
+            "PHYSIS_CACHE_DIR" not in extra_env
+            and not os.environ.get("PHYSIS_CACHE_DIR")
+            and BUNDLED_CACHE_DIR.is_dir()
+        ):
+            extra_env["PHYSIS_CACHE_DIR"] = str(BUNDLED_CACHE_DIR)
         run_env = {**os.environ, **extra_env} if extra_env else None
         try:
             proc = subprocess.run(

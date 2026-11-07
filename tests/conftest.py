@@ -7,6 +7,10 @@ from pathlib import Path
 # package the way Hermes does.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-# One embedding cache for the whole suite: the first integration test pays the
-# one-time model cost, every later test reuses it.
-os.environ.setdefault("PHYSIS_CACHE_DIR", tempfile.mkdtemp(prefix="physis-cache-"))
+# Reuse the shipped warm cache when present; otherwise one temp cache for the
+# whole suite so only the first integration test pays the model cost.
+_bundled_cache = Path(__file__).resolve().parents[1] / "models" / "cache"
+os.environ.setdefault(
+    "PHYSIS_CACHE_DIR",
+    str(_bundled_cache) if _bundled_cache.is_dir() else tempfile.mkdtemp(prefix="physis-cache-"),
+)

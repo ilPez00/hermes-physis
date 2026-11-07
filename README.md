@@ -106,9 +106,8 @@ replant_demo()                             # record once, replay twice, 0 provid
 ## Honest limits
 
 - The bundled embedder is **semantic** (MiniLM uint8, 384d) and on by default.
-  The first classifier build on a machine takes ~6 s; it caches the ontology
-  embeddings under `PHYSIS_CORE_DIR/cache` (override with `PHYSIS_CACHE_DIR`),
-  so later calls take ~0.2 s.
+  The ontology-embedding cache ships warm (`models/cache`, ~3.5 MB), so the
+  first call is ~0.2 s instead of ~6 s; `PHYSIS_CACHE_DIR` overrides it.
 - The grid is **adaptive**: it is whatever the loaded ontologies define. The
   bundle ships 7 domains x 16 modes (112 cells, 87 populated); add axes at
   runtime with `PHYSIS_ONTOLOGY_DIR` or `PHYSIS_ONTOLOGY_FILES`.

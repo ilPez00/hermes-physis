@@ -716,10 +716,23 @@ fn build_classifier(
         .filter(|v| !v.trim().is_empty())
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| physis_core::store::data_dir().join("cache"));
-    let model_key = format!(
-        "{kind}|{}",
-        std::env::var("PHYSIS_MODEL_DIR").unwrap_or_default()
-    );
+    // Stable across installs: the absolute model path changes with the
+    // plugin directory, which would make a shipped warm cache useless.
+    let model_dir = std::env::var("PHYSIS_MODEL_DIR").unwrap_or_default();
+    let model_identity = if model_dir.trim().is_empty() {
+        "default".to_string()
+    } else {
+        let p = std::path::Path::new(&model_dir);
+        let name = p
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("model");
+        let size = std::fs::metadata(p.join("model.onnx"))
+            .map(|m| m.len())
+            .unwrap_or(0);
+        format!("{name}|{size}")
+    };
+    let model_key = format!("{kind}|{}d|{model_identity}", embedder.dimension());
     physis_core::classify::CellClassifier::build_cached(ontology, embedder, &cache_dir, &model_key)
 }
 
