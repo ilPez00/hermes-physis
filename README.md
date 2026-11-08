@@ -118,19 +118,46 @@ run that again, the world changed".
 | `replant_stats` | `stats` | records, replays, misses, blocks, replay share |
 | `replant_show` | `show` | inspect a learned record |
 | `replant_demo` | `record` + `run` + `stats` | zero-config proof, bundled counter fixture |
+| `physis_candidates` | - | workflows learned from verified sessions, awaiting approval |
+
+### Learned workflows (opt-in)
+
+With `auto_learn: true` and `verify_cmd` set, a session that passes its check is
+turned into a **candidate**: the request it answered (`pre_llm_call`), the exact
+foreground `terminal` commands, the files it edited, and the check that passed.
+Candidates are stored under `.replant/candidates/` and nothing replays until an
+operator approves one by id. Approval executes the steps and the check through
+replant (`provider_calls: 0`), which is what makes them replayable later.
+
+```bash
+/physis candidates          # id, request, steps, files, check
+/physis approve 32d149d9    # record it: replay is now allowed
+/physis replay say hi       # operation: replay, provider_calls: 0
+```
+
+The generated registry names only `stepN` / `verify` and always runs them
+through `sys.executable` plus a fixed wrapper, so a learned plan can never
+choose its own executable.
 
 ### Command
 
 `/physis status` (engines + graph), `/physis recipes` (receipt stats),
-`/physis replay <prompt>` (repeat a recorded recipe with no model call). Set
-`replant_tools` when the registry is not `<path>/.replant/tools.json`.
+`/physis candidates` (learned, unapproved work), `/physis replay <prompt>`
+(repeat a recorded recipe with no model call), `/physis approve <id>` (record a
+candidate). Set `replant_tools` when the registry is not
+`<path>/.replant/tools.json`; an approved candidate resolves to
+`<path>/.replant/learned/tools.json` automatically.
 
 ### Hooks
 
-- `post_tool_call` - with `auto_observe: true`, re-indexes the edited folder.
+- `post_tool_call` - with `auto_observe: true`, re-indexes the edited folder;
+  with `auto_learn: true`, records replayable steps (errors are skipped).
 - `pre_verify` - with `verify_cmd` set, runs that command after code edits; a
   non-zero exit keeps the turn going with the real failure tail, so a
-  deterministic check decides whether the work is done.
+  deterministic check decides whether the work is done. A passing run is what
+  creates a candidate.
+- `pre_llm_call` - with `auto_learn: true`, remembers the user request so a
+  candidate knows which prompt it answers.
 
 ## Configuration
 
@@ -141,7 +168,8 @@ run that again, the world changed".
 | `engine_bin` | `""` | override engine path(s); empty = bundled |
 | `auto_observe` | `false` | after write/patch, re-index (`scan`) the edited folder |
 | `verify_cmd` | `""` | command run by the `pre_verify` hook after edits; non-zero keeps the turn going |
-| `replant_tools` | `""` | tools registry for `/physis replay`; empty = `<path>/.replant/tools.json` |
+| `auto_learn` | `false` | after `verify_cmd` passes, save the session as an approvable workflow candidate |
+| `replant_tools` | `""` | tools registry for `/physis replay`; empty = `<path>/.replant/tools.json`, or the learned one if present |
 | `budget` | `800` | default `physis_context` token budget (100-4000) |
 | `timeout` | `20` | per-subprocess timeout (seconds) |
 
@@ -167,7 +195,7 @@ auto-expansion record what the ontology missed.
 
 Context and replay are deterministic and measured separately: 62 Rust files
 compress to 176 tokens at a 300-token budget; a recorded replant recipe
-replays with `provider_calls=0`; 55 plugin tests and 295 engine tests cover
+replays with `provider_calls=0`; 60 plugin tests and 295 engine tests cover
 the paths.
 
 Verified loop, measured on the bundled fixtures (real binaries, temp store):
@@ -178,6 +206,9 @@ Verified loop, measured on the bundled fixtures (real binaries, temp store):
 | replay unchanged inputs | `replant_run` | `operation: replay`, `provider_calls: 0` |
 | replay after editing `input.txt` | `replant_run` | `blocked: true`, `changed: ["input.txt"]`, engine never invoked |
 | per-repo isolation | `physis_observe` on A, then `physis_snapshot` on B | A `nodes: 1`, B `nodes: 0` |
+| learn a verified session | `pre_verify` passing with `auto_learn: true` | 1 candidate, 0 replays |
+| approve it | `/physis approve <id>` | `status: succeeded`, `provider_calls: 0` |
+| replay it | `/physis replay <prompt>` | `operation: replay`, `provider_calls: 0` |
 
 ## Honest limits
 
@@ -212,6 +243,12 @@ Verified loop, measured on the bundled fixtures (real binaries, temp store):
   tool implementation.
 - `pre_verify` runs one command, once per turn (`attempt` > 0 is a no-op), with
   the working directory of the first changed file.
+- Learning is opt-in and **advisory**: only foreground `terminal` commands
+  (≤2000 chars) and the edited files are kept, up to 12 steps and 16 files per
+  session, 32 sessions in memory. A candidate is written only when both an
+  intent (`pre_llm_call`) and a passing check exist. Nothing learned replays
+  until an operator approves it by id; approval re-runs the steps and the check
+  against the current tree, so a stale candidate fails at approval, not later.
 - `physis_why` is **evidence retrieval**, not a causal-chain generator. If the
   label is absent, that is missing evidence, not a verdict.
 - replant is deliberately narrow: exact request match, registered tools only.
@@ -220,7 +257,7 @@ Verified loop, measured on the bundled fixtures (real binaries, temp store):
 ## Development
 
 ```bash
-python3.13 -m pytest          # 55 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # 60 tests: unit + integration against the bundled binaries
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
 

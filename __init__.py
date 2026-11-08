@@ -14,6 +14,7 @@ try:
     from .tools import (
         make_physis_command,
         make_post_tool_call,
+        make_pre_llm_call,
         make_pre_verify,
         register_tools,
     )
@@ -21,6 +22,7 @@ except ImportError:  # pragma: no cover - direct import from the plugin director
     from tools import (
         make_physis_command,
         make_post_tool_call,
+        make_pre_llm_call,
         make_pre_verify,
         register_tools,
     )
@@ -40,6 +42,7 @@ def register(ctx) -> None:
         for name, factory in (
             ("post_tool_call", make_post_tool_call),
             ("pre_verify", make_pre_verify),
+            ("pre_llm_call", make_pre_llm_call),
         ):
             try:
                 hook(name, factory(ctx))
@@ -53,8 +56,8 @@ def register(ctx) -> None:
             command(
                 "physis",
                 make_physis_command(ctx),
-                description="Physis status, recipe stats, and model-free recipe replay",
-                args_hint="[status|recipes|replay <prompt>]",
+                description="Physis status, learned workflow candidates, and model-free recipe replay",
+                args_hint="[status|recipes|candidates|replay <prompt>|approve <id>]",
             )
         except Exception:
             pass

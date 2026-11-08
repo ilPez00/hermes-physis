@@ -24,6 +24,10 @@ codebase, or when the same verified workflow will run again.
    after a recipe's actions AND independent checks succeeded. Pass
    `artifacts=[...]` so a later replay is refused when those inputs changed.
    `/physis replay <prompt>` repeats a recorded recipe without a model turn.
+6. With `auto_learn` on, a session that passed `verify_cmd` becomes a candidate.
+   Read it with `physis_candidates` and record only the ones worth keeping:
+   `replant_record(candidate=<id>)` or `/physis approve <id>`. Approving is the
+   only thing that makes a learned workflow replayable.
 
 ## Rules
 
@@ -31,6 +35,9 @@ codebase, or when the same verified workflow will run again.
   object is absent, say so and run `physis_observe` or widen the query.
 - A replay that answers `blocked: true` is the correct outcome: the inputs
   changed since verification. Re-verify with `replant_record`; do not force it.
+  A candidate that fails at approval is the same signal: the world moved.
+- Never approve a candidate you have not read: its steps are shell commands
+  that will run again unattended.
 - `physis_why` returns evidence around a label, not a causal story.
 - The bundled embedder is semantic (BGE-small, CLS pooling) and on by default; the ontology
   cache makes calls fast after the first build.

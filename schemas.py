@@ -300,7 +300,9 @@ REPLANT_RECORD = {
         "Record a verified recipe once: execute its actions and independent "
         "checks, then persist it for replay. Pass artifacts= (files the work "
         "depends on) to fingerprint the inputs; a later replay whose inputs "
-        "changed is refused instead of repeated. Requires tools= and a recipe."
+        "changed is refused instead of repeated. Pass candidate=<id> to record "
+        "a workflow Physis learned from a verified session instead of a "
+        "hand-written recipe (see physis_candidates)."
     ),
     "parameters": {
         "type": "object",
@@ -315,6 +317,10 @@ REPLANT_RECORD = {
                 "type": "array",
                 "items": {"type": "string"},
                 "description": "Input files this recipe depends on (hashed at record time)",
+            },
+            "candidate": {
+                "type": "string",
+                "description": "Candidate id from physis_candidates: record that learned workflow",
             },
             "path": {"type": "string", "description": "Working directory"},
             "tools": {"type": "string", "description": "Path to replant tools registry JSON"},
@@ -381,6 +387,28 @@ REPLANT_SHOW = {
     },
 }
 
+CANDIDATES = {
+    "name": "physis_candidates",
+    "description": (
+        "List workflow candidates Physis learned from sessions that passed their "
+        "verification command (auto_learn). Each candidate carries the request it "
+        "answered, the exact shell steps, the edited files and the check. Nothing "
+        "replays until an operator records it: replant_record(candidate=<id>) or "
+        "/physis approve <id>."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "Working directory"},
+            "store": {
+                "type": "string",
+                "description": "Replant state directory (default: <path>/.replant)",
+            },
+        },
+        "required": [],
+    },
+}
+
 ALL_SCHEMAS = [
     ENGINE_STATUS,
     OBSERVE,
@@ -400,5 +428,6 @@ ALL_SCHEMAS = [
     REPLANT_STATS,
     REPLANT_DEMO,
     REPLANT_SHOW,
+    CANDIDATES,
 ]
 ALL_NAMES = [s["name"] for s in ALL_SCHEMAS]

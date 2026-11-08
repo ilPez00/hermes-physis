@@ -111,7 +111,7 @@ def test_register_adds_hooks_and_command():
     plugin = load_package()
     ctx = FakeContext()
     plugin.register(ctx)
-    assert set(ctx.hooks) == {"post_tool_call", "pre_verify"}
+    assert set(ctx.hooks) == {"post_tool_call", "pre_verify", "pre_llm_call"}
     assert "physis" in ctx.commands
 
 

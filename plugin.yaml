@@ -1,10 +1,11 @@
 name: physis
-version: 1.5.0
+version: 1.6.0
 description: >
   Evidence-backed execution memory: per-repo graph context, a deterministic
   verify hook, and verified tool recipes that replay with zero provider calls
-  and refuse when their inputs changed. Two bundled offline engines, no API
-  key, no network, no Python dependencies.
+  and refuse when their inputs changed. Sessions that pass their check become
+  approvable workflow candidates. Two bundled offline engines, no API key, no
+  network, no Python dependencies.
 author: Giovanni Pezzulli
 requires_hermes: ">=0.23.0"
 provides_tools:
@@ -26,9 +27,11 @@ provides_tools:
   - replant_stats
   - replant_demo
   - replant_show
+  - physis_candidates
 provides_hooks:
   - post_tool_call
   - pre_verify
+  - pre_llm_call
 config_schema:
   engine_bin:
     type: str
@@ -50,10 +53,14 @@ config_schema:
     type: str
     default: ""
     description: "Command run after code edits; a non-zero exit keeps the turn going with the real failure output"
+  auto_learn:
+    type: bool
+    default: false
+    description: "After verify_cmd passes, save the session's shell steps as a workflow candidate (never replayed until approved)"
   replant_tools:
     type: str
     default: ""
-    description: "Tools registry used by /physis replay; empty = <path>/.replant/tools.json"
+    description: "Tools registry used by /physis replay; empty = <path>/.replant/tools.json, or the learned registry when present"
   budget:
     type: int
     default: 800

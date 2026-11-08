@@ -13,6 +13,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,7 @@ DEFAULTS: dict[str, Any] = {
     "auto_expand": True,
     "verify_cmd": "",
     "replant_tools": "",
+    "auto_learn": False,
 }
 
 _POOL: EnginePool | None = None
@@ -815,12 +817,24 @@ def _artifacts_file(args: dict[str, Any]) -> Path:
     return Path(_store(args)) / "artifacts" / f"{_request_digest(args)}.json"
 
 
+def _private_store(args: dict[str, Any]) -> Path:
+    """replant refuses a state dir other users can read; create it the same way."""
+    store = Path(_store(args))
+    store.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        os.chmod(store, 0o700)
+    except OSError:
+        pass
+    return store
+
+
 def _write_artifacts(args: dict[str, Any], artifacts: list[Any]) -> None:
     target = _artifacts_file(args)
     if not artifacts:
         if target.is_file():
             target.unlink()  # a re-record without artifacts invalidates the old set
         return
+    _private_store(args)
     target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     target.write_text(json.dumps({"artifacts": _artifact_hashes(artifacts)}, indent=2))
 
@@ -838,6 +852,183 @@ def _changed_artifacts(args: dict[str, Any]) -> list[str]:
         return []
     current = _artifact_hashes(list(recorded))
     return sorted(path for path, digest in recorded.items() if current.get(path) != digest)
+
+
+# --------------------------------------------------------------------------- #
+# Learning: a session that passed a real check becomes a reviewable candidate
+# --------------------------------------------------------------------------- #
+
+MAX_LEARN_STEPS = 12
+MAX_LEARN_FILES = 16
+MAX_LEARN_SESSIONS = 32
+MAX_LEARN_COMMAND = 2000
+
+_LEARN: dict[str, dict[str, Any]] = {}
+
+STEP_WRAPPER = '''#!/usr/bin/env python3
+"""Replay-step wrapper: run one recorded command, report one JSON object."""
+import json, subprocess, sys
+
+command = sys.argv[1]
+cwd = sys.argv[2] or None
+proc = subprocess.run(
+    command, shell=True, cwd=cwd, capture_output=True, text=True,
+    stdin=subprocess.DEVNULL,
+)
+output = ((proc.stdout or "") + (proc.stderr or "")).strip()[-2000:]
+print(json.dumps({"ok": proc.returncode == 0, "exit": proc.returncode, "output": output}))
+'''
+
+
+def _learn_state(session: str) -> dict[str, Any]:
+    state = _LEARN.get(session)
+    if state is None:
+        if len(_LEARN) >= MAX_LEARN_SESSIONS:
+            _LEARN.pop(next(iter(_LEARN)))
+        state = {"user": "", "steps": [], "files": []}
+        _LEARN[session] = state
+    return state
+
+
+def reset_learned() -> None:
+    """Drop the in-memory traces (tests)."""
+    _LEARN.clear()
+
+
+def _learn_observe(session: str, tool_name: str, call_args: dict[str, Any]) -> None:
+    """Remember only what is replayable: shell steps and edited files."""
+    state = _learn_state(session)
+    if tool_name == "terminal":
+        command = str(call_args.get("command") or "").strip()
+        if not command or call_args.get("background") or len(command) > MAX_LEARN_COMMAND:
+            return
+        workdir = str(call_args.get("workdir") or "").strip()
+        step = {"command": command, "workdir": workdir}
+        if step not in state["steps"] and len(state["steps"]) < MAX_LEARN_STEPS:
+            state["steps"].append(step)
+    elif tool_name in {"write_file", "patch", "edit_file", "apply_patch"}:
+        target = str(call_args.get("path") or call_args.get("file_path") or "").strip()
+        if target and target not in state["files"] and len(state["files"]) < MAX_LEARN_FILES:
+            path = Path(target).expanduser()
+            if path.is_file() and path.stat().st_size <= MAX_ARTIFACT_BYTES:
+                state["files"].append(str(path.resolve()))
+
+
+def _candidates_dir(args: dict[str, Any]) -> Path:
+    return Path(_store(args)) / "candidates"
+
+
+def _write_candidate(args: dict[str, Any], state: dict[str, Any], check: str) -> dict[str, Any] | None:
+    """Persist a candidate for operator approval; never replay it automatically."""
+    steps = list(state.get("steps") or [])
+    if not steps or not check.strip():
+        return None
+    prompt = str(state.get("user") or "").strip()[:MAX_LEARN_COMMAND]
+    if not prompt:
+        return None  # no intent recorded: a recipe without a request cannot be matched
+    identity = hashlib.sha256(
+        json.dumps({"prompt": prompt, "steps": steps}, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:16]
+    candidate = {
+        "id": identity,
+        "prompt": prompt,
+        "steps": steps,
+        "files": list(state.get("files") or []),
+        "check": check,
+        "created": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    target = _candidates_dir(args) / f"{identity}.json"
+    _private_store(args)
+    target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    target.write_text(json.dumps(candidate, indent=2))
+    return candidate
+
+
+def _load_candidate(args: dict[str, Any], candidate_id: str) -> dict[str, Any] | None:
+    identity = str(candidate_id).strip().lower().lstrip("#")
+    if not identity or not re.fullmatch(r"[0-9a-f]{4,64}", identity):
+        return None
+    # The candidate is stored next to the edited file; approve may run from the
+    # repo root, so look through the tree before giving up.
+    directories = [_candidates_dir(args)]
+    try:
+        for found in Path.cwd().glob("**/candidates/*.json"):
+            if found.parent not in directories:
+                directories.append(found.parent)
+    except OSError:
+        pass
+    for directory in directories:
+        for path in sorted(directory.glob(f"{identity}*.json")):
+            try:
+                candidate = json.loads(path.read_text())
+            except (OSError, ValueError, TypeError):
+                continue
+            if isinstance(candidate, dict) and candidate.get("steps"):
+                return candidate
+    return None
+
+
+def _learned_registry(args: dict[str, Any], candidate: dict[str, Any]) -> Path:
+    """Generate the operator-reviewed registry that replant needs.
+
+    Every step is the bundled Python running a fixed wrapper, so the model never
+    names an executable: it can only name ``stepN`` / ``verify``.
+    """
+    store = _private_store(args)
+    learned = store / "learned"
+    learned.mkdir(parents=True, exist_ok=True, mode=0o700)
+    wrapper = learned / "step.py"
+    wrapper.write_text(STEP_WRAPPER)
+    os.chmod(wrapper, 0o700)
+
+    def spec(script: str, cwd: str) -> dict[str, Any]:
+        return {
+            "kind": "action",
+            "program": str(Path(sys.executable).resolve()),
+            "args": [str(wrapper), script, cwd],
+            "fingerprint_files": [str(wrapper)],
+            "timeout_ms": 120_000,
+        }
+
+    tools = {f"step{index}": spec(str(step["command"]), str(step.get("workdir") or ""))
+             for index, step in enumerate(candidate["steps"], 1)}
+    first = str((candidate.get("files") or [str(Path.cwd())])[0])
+    check_cwd = str(Path(first).parent) if Path(first).is_file() else str(Path.cwd())
+    verify = spec(str(candidate["check"]), check_cwd)
+    verify["kind"] = "check"
+    tools["verify"] = verify
+
+    registry = learned / "tools.json"
+    registry.write_text(json.dumps(tools, indent=2))
+    return registry
+
+
+def physis_candidates(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    merged = _with_defaults(_merge(args, kwargs))
+    directory = _candidates_dir(merged)
+    if not directory.is_dir():
+        return {
+            "ok": True,
+            "count": 0,
+            "candidates": [],
+            "hint": "no candidate yet: enable auto_learn and set verify_cmd, then let one turn pass its check",
+        }
+    candidates = []
+    for path in sorted(directory.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+        try:
+            candidate = json.loads(path.read_text())
+        except (OSError, ValueError, TypeError):
+            continue
+        if not isinstance(candidate, dict):
+            continue
+        candidates.append(
+            {
+                key: candidate.get(key)
+                for key in ("id", "prompt", "steps", "files", "check", "created")
+            }
+        )
+    return {"ok": True, "count": len(candidates), "candidates": candidates}
+
 
 
 def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
@@ -888,6 +1079,32 @@ def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
+
+    candidate_id = str(merged.get("candidate") or "").strip()
+    if candidate_id:
+        # Approval path: the candidate carries the intent, the steps, the files
+        # and the check; the operator still names it explicitly.
+        candidate = _load_candidate(merged, candidate_id)
+        if candidate is None:
+            return {
+                "ok": False,
+                "error": f"candidate not found: {candidate_id}",
+                "hint": "run physis_candidates",
+            }
+        merged["input"] = candidate["prompt"]
+        merged["tools"] = str(_learned_registry(merged, candidate))
+        merged["artifacts"] = list(candidate.get("files") or [])
+        merged["recipe"] = json.dumps(
+            {
+                "steps": [
+                    {"tool": f"step{index}", "input": {}}
+                    for index in range(1, len(candidate["steps"]) + 1)
+                ],
+                "checks": [{"tool": "verify", "input": {}}],
+            }
+        )
+        merged["candidate_id"] = candidate["id"]
+
     value = str(merged.get("input") or merged.get("value") or "").strip()
     if not value:
         return {"ok": False, "error": "input is required"}
@@ -938,6 +1155,8 @@ def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
             _write_artifacts(merged, list(artifacts))
         except OSError as exc:
             result["artifacts_warning"] = f"could not persist artifact fingerprints: {exc}"
+    if merged.get("candidate_id"):
+        result["candidate_id"] = merged["candidate_id"]
     return result
 
 
@@ -1083,6 +1302,7 @@ HANDLERS = {
     "replant_stats": replant_stats,
     "replant_demo": replant_demo,
     "replant_show": replant_show,
+    "physis_candidates": physis_candidates,
 }
 
 
@@ -1144,17 +1364,35 @@ def _live_config(config: Any) -> dict[str, Any]:
 
 
 def make_post_tool_call(config: Any):
-    """Incremental, bounded re-index after a file write when auto_observe is on."""
-    def _hook(tool_name=None, args=None, tool_args=None, result=None, **kwargs):
+    """Observe real work: bounded re-index, and (opt-in) learn replayable steps."""
+    def _hook(
+        tool_name=None,
+        args=None,
+        tool_args=None,
+        result=None,
+        status="ok",
+        session_id="",
+        **kwargs,
+    ):
+        live = _live_config(config)
+        # Hermes dispatches ``args``; ``tool_args`` is kept as an alias so a
+        # caller using the older spelling still works.
+        call_args = args if isinstance(args, dict) else tool_args
         try:
-            live = _live_config(config)
+            if (
+                live.get("auto_learn")
+                and isinstance(call_args, dict)
+                and str(status or "ok") != "error"
+            ):
+                _learn_observe(str(session_id or "default"), str(tool_name or ""), call_args)
+        except Exception:
+            pass
+
+        try:
             if not live.get("auto_observe"):
                 return None
             if tool_name not in {"write_file", "patch", "edit_file", "apply_patch"}:
                 return None
-            # Hermes dispatches ``args``; ``tool_args`` is kept as an alias so a
-            # caller using the older spelling still works.
-            call_args = args if isinstance(args, dict) else tool_args
             if not isinstance(call_args, dict):
                 return None
             target = call_args.get("path") or call_args.get("file_path")
@@ -1183,15 +1421,34 @@ def make_post_tool_call(config: Any):
     return _hook
 
 
+def make_pre_llm_call(config: Any):
+    """Remember the request, so a verified session knows what it was asked for."""
+
+    def _hook(session_id="", user_message="", **kwargs):
+        try:
+            if not _live_config(config).get("auto_learn"):
+                return None
+            if isinstance(user_message, str) and user_message.strip():
+                _learn_state(str(session_id or "default"))["user"] = user_message.strip()[
+                    :MAX_LEARN_COMMAND
+                ]
+        except Exception:
+            pass
+        return None
+
+    return _hook
+
+
 def make_pre_verify(config: Any):
     """Run the operator's own verification command after code edits.
 
     Hermes calls ``pre_verify`` once per turn when the agent edited files and is
     about to finish. A failing command keeps the turn going with the tail of the
     real output, so the deterministic check - not another model - decides
-    whether the work is done.
+    whether the work is done. A passing one is also the moment a session earns
+    the right to become a reusable recipe candidate.
     """
-    def _hook(changed_paths=None, attempt=0, coding=False, **kwargs):
+    def _hook(changed_paths=None, attempt=0, coding=False, session_id="", **kwargs):
         try:
             # One nudge per turn: attempt > 0 means the operator/message loop
             # already got the failure and the turn is allowed to finish.
@@ -1214,16 +1471,24 @@ def make_pre_verify(config: Any):
                 timeout=min(int(live.get("timeout") or 20), 300),
                 check=False,
             )
-            if proc.returncode == 0:
-                return None
-            tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-15:]
-            return {
-                "action": "continue",
-                "message": (
-                    f"Physis verify failed (exit {proc.returncode}): {command}\n"
-                    + "\n".join(tail)
-                ),
-            }
+            if proc.returncode != 0:
+                tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-15:]
+                return {
+                    "action": "continue",
+                    "message": (
+                        f"Physis verify failed (exit {proc.returncode}): {command}\n"
+                        + "\n".join(tail)
+                    ),
+                }
+            if live.get("auto_learn"):
+                state = _learn_state(str(session_id or "default"))
+                try:
+                    _write_candidate(
+                        {"path": cwd, "store": live.get("store") or ""}, state, command
+                    )
+                except Exception:
+                    pass  # learning is best-effort, never a turn failure
+            return None
         except Exception:
             return None
 
@@ -1234,11 +1499,13 @@ _COMMAND_TOOLS: dict[str, str] = {
     "status": "physis_engine_status",
     "recipes": "replant_stats",
     "replay": "replant_run",
+    "candidates": "physis_candidates",
+    "approve": "replant_record",
 }
 
 
 def make_physis_command(config: Any):
-    """``/physis [status|recipes|replay <prompt>]`` - no model call to repeat work."""
+    """``/physis [status|recipes|candidates|replay|approve]`` - no model call to repeat work."""
 
     def _handler(raw_args: str = "", **kwargs):
         live = _live_config(config)
@@ -1246,7 +1513,7 @@ def make_physis_command(config: Any):
         verb = (parts[0] if parts else "status").lower()
         rest = parts[1].strip() if len(parts) > 1 else ""
         if verb not in _COMMAND_TOOLS:
-            return f"Usage: /physis {'|'.join(_COMMAND_TOOLS)} [prompt]"
+            return f"Usage: /physis {'|'.join(_COMMAND_TOOLS)} [prompt|id]"
         payload: dict[str, Any] = dict(live)
         payload["path"] = str(Path.cwd())
         if verb == "replay":
@@ -1254,13 +1521,26 @@ def make_physis_command(config: Any):
                 return "Usage: /physis replay <prompt>"
             registry = str(live.get("replant_tools") or "").strip()
             if not registry:
-                registry = str(Path(_store(payload)) / "tools.json")
+                store = _store(payload)
+                learned = Path(store) / "learned" / "tools.json"
+                # An approved candidate writes its registry under learned/.
+                registry = str(learned) if learned.is_file() else str(Path(store) / "tools.json")
             payload.update({"input": rest, "tools": registry})
+        if verb == "approve":
+            if not rest:
+                return "Usage: /physis approve <candidate-id>"
+            payload["candidate"] = rest
         result = HANDLERS[_COMMAND_TOOLS[verb]](payload)
         if verb == "replay":
             result = {
                 key: result.get(key)
                 for key in ("ok", "operation", "status", "provider_calls", "reason", "blocked", "changed")
+                if key in result
+            }
+        if verb == "approve":
+            result = {
+                key: result.get(key)
+                for key in ("ok", "operation", "status", "provider_calls", "reason", "candidate_id", "error")
                 if key in result
             }
         return json.dumps(result, default=str)

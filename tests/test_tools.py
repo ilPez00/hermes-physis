@@ -442,6 +442,116 @@ def test_replant_run_blocks_when_inputs_changed(tmp_path):
     assert result["changed"] == [str(target)]
 
 
+# --- learned workflow candidates -------------------------------------------- #
+
+
+def test_verified_session_becomes_a_candidate(tmp_path):
+    tools.reset_learned()
+    target = tmp_path / "out.txt"
+    target.write_text("v1")
+    config = {"auto_learn": True, "verify_cmd": "true", "timeout": 10}
+
+    tools.make_pre_llm_call(config)(session_id="s1", user_message="deploy the api")
+    post = tools.make_post_tool_call(config)
+    post(tool_name="terminal", args={"command": "echo build", "workdir": str(tmp_path)}, session_id="s1")
+    post(tool_name="write_file", args={"path": str(target)}, session_id="s1")
+    # A failed check must not learn anything.
+    pre = tools.make_pre_verify({**config, "verify_cmd": "exit 1"})
+    assert pre(changed_paths=[str(target)], session_id="s1")["action"] == "continue"
+    assert tools.physis_candidates({"path": str(tmp_path)})["count"] == 0
+
+    assert tools.make_pre_verify(config)(changed_paths=[str(target)], session_id="s1") is None
+    listed = tools.physis_candidates({"path": str(tmp_path)})
+    assert listed["count"] == 1
+    candidate = listed["candidates"][0]
+    assert candidate["prompt"] == "deploy the api"
+    assert candidate["steps"] == [{"command": "echo build", "workdir": str(tmp_path)}]
+    assert candidate["files"] == [str(target.resolve())]
+    assert candidate["check"] == "true"
+
+
+def test_candidate_without_check_or_intent_is_not_saved(tmp_path):
+    tools.reset_learned()
+    target = tmp_path / "out.txt"
+    target.write_text("v1")
+    pre = tools.make_pre_verify({"auto_learn": True, "verify_cmd": "true", "timeout": 10})
+    post = tools.make_post_tool_call({"auto_learn": True})
+
+    post(tool_name="terminal", args={"command": "echo hi"}, session_id="no-intent")
+    pre(changed_paths=[str(target)], session_id="no-intent")
+    assert tools.physis_candidates({"path": str(tmp_path)})["count"] == 0
+
+
+def test_approve_records_and_replays_then_blocks_on_change(tmp_path):
+    tools.reset_learned()
+    store = tmp_path / ".replant"
+    artifact = tmp_path / "input.txt"
+    artifact.write_text("v1")
+    config = {"auto_learn": True, "verify_cmd": "test -f input.txt", "timeout": 30}
+
+    tools.make_pre_llm_call(config)(session_id="s2", user_message="append a step")
+    tools.make_post_tool_call(config)(
+        tool_name="terminal",
+        args={"command": "printf s >> steps.log", "workdir": str(tmp_path)},
+        session_id="s2",
+    )
+    tools.make_post_tool_call(config)(
+        tool_name="write_file", args={"path": str(artifact)}, session_id="s2"
+    )
+    assert tools.make_pre_verify(config)(changed_paths=[str(artifact)], session_id="s2") is None
+    candidate = tools.physis_candidates({"path": str(tmp_path)})["candidates"][0]
+
+    approved = HANDLERS["replant_record"](
+        {"path": str(tmp_path), "store": str(store), "candidate": candidate["id"]}
+    )
+    assert approved["ok"] is True, approved
+    assert approved["status"] == "succeeded"
+    assert approved["provider_calls"] == 0
+    assert approved["candidate_id"] == candidate["id"]
+
+    registry = str(store / "learned" / "tools.json")
+    args = {"path": str(tmp_path), "store": str(store), "input": "append a step", "tools": registry}
+    assert HANDLERS["replant_run"](args)["operation"] == "replay"
+
+    artifact.write_text("v2")  # the ground moves
+    blocked = HANDLERS["replant_run"](args)
+    assert blocked["blocked"] is True
+    assert blocked["changed"] == [str(artifact)]
+
+
+def test_approve_unknown_candidate_is_actionable(tmp_path):
+    result = HANDLERS["replant_record"](
+        {"path": str(tmp_path), "store": str(tmp_path / ".replant"), "candidate": "deadbeef"}
+    )
+    assert result["ok"] is False
+    assert "candidate not found" in result["error"]
+    assert result["hint"] == "run physis_candidates"
+
+
+def test_command_replay_finds_the_learned_registry(tmp_path, monkeypatch):
+    """An approved candidate writes learned/tools.json; /physis replay must find it."""
+    artifact = tmp_path / "input.txt"
+    artifact.write_text("v1")
+    tools.reset_learned()
+    config = {"auto_learn": True, "verify_cmd": "true", "timeout": 30}
+    tools.make_pre_llm_call(config)(session_id="s3", user_message="greet")
+    tools.make_post_tool_call(config)(
+        tool_name="terminal", args={"command": "echo hi", "workdir": str(tmp_path)}, session_id="s3"
+    )
+    tools.make_post_tool_call(config)(
+        tool_name="write_file", args={"path": str(artifact)}, session_id="s3"
+    )
+    tools.make_pre_verify(config)(changed_paths=[str(artifact)], session_id="s3")
+    candidate = tools.physis_candidates({"path": str(tmp_path)})["candidates"][0]
+
+    monkeypatch.chdir(tmp_path)
+    handler = tools.make_physis_command({"timeout": 30})
+    assert json.loads(handler("approve " + candidate["id"]))["ok"] is True
+    replayed = json.loads(handler("replay greet"))
+    assert replayed["operation"] == "replay"
+    assert replayed["provider_calls"] == 0
+
+
 # --- /physis command -------------------------------------------------------- #
 
 
@@ -449,3 +559,4 @@ def test_physis_command_usage_and_unknown_verb():
     handler = tools.make_physis_command({})
     assert "Usage: /physis" in handler("nope")
     assert handler("replay") == "Usage: /physis replay <prompt>"
+    assert handler("approve") == "Usage: /physis approve <candidate-id>"
