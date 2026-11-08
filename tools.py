@@ -28,6 +28,7 @@ DEFAULT_STORE = ".replant"
 DEFAULTS: dict[str, Any] = {
     "engine_bin": "",
     "model_dir": "",
+    "semantic": True,
     "timeout": 20,
     "budget": 800,
     "auto_observe": False,
@@ -127,9 +128,16 @@ def _store(args: dict[str, Any]) -> str:
 
 def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
     model_dir = str(args.get("model_dir") or "").strip()
+    semantic = args.get("semantic", True)
+    if isinstance(semantic, str):
+        semantic = semantic.strip().lower() not in ("0", "false", "no", "off")
+    env: dict[str, str] = {}
     if model_dir:
-        return {"PHYSIS_MODEL_DIR": model_dir, "PHYSIS_MODEL_DIM": "384"}
-    return None
+        env["PHYSIS_MODEL_DIR"] = model_dir
+        env["PHYSIS_MODEL_DIM"] = "384"
+    if not semantic:
+        env["PHYSIS_SEMANTIC"] = "0"
+    return env or None
 
 
 def _index_env(args: dict[str, Any]) -> dict[str, str]:

@@ -166,12 +166,49 @@ candidate). Set `replant_tools` when the registry is not
 | Key | Default | Meaning |
 |---|---|---|
 | `engine_bin` | `""` | override engine path(s); empty = bundled |
+| `model_dir` | `""` | ONNX embedding model directory; empty = bundled BGE-small |
+| `semantic` | `true` | use the semantic embedder; `false` = deterministic hashing (reproducible, not semantic) |
 | `auto_observe` | `false` | after write/patch, re-index (`scan`) the edited folder |
 | `verify_cmd` | `""` | command run by the `pre_verify` hook after edits; non-zero keeps the turn going |
 | `auto_learn` | `false` | after `verify_cmd` passes, save the session as an approvable workflow candidate |
 | `replant_tools` | `""` | tools registry for `/physis replay`; empty = `<path>/.replant/tools.json`, or the learned one if present |
 | `budget` | `800` | default `physis_context` token budget (100-4000) |
 | `timeout` | `20` | per-subprocess timeout (seconds) |
+
+## Environment variables
+
+All settings above can also be driven (or overridden) through environment
+variables. These are read by the engine directly and work without Hermes config.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `PHYSIS_BIN` | (bundled) | override engine path(s); comma-separated list accepted |
+| `PHYSIS_MODEL_DIR` | (bundled BGE-small) | ONNX embedding model directory |
+| `PHYSIS_MODEL_DIM` | `384` | embedding dimension; must match `PHYSIS_MODEL_DIR` |
+| `PHYSIS_SEMANTIC` | `1` | `0`/`false`/`no`/`off` disables the semantic embedder (deterministic hashing instead) |
+| `PHYSIS_CACHE_DIR` | (bundled cache) | ontology-embedding cache directory (~3.5 MB, ~0.2 s first call) |
+| `PHYSIS_CORE_DIR` | per-repo hash | graph store location; set explicitly for one shared store |
+| `PHYSIS_AUTO_EXPAND` | `1` | `0` disables learning a new ontology entry on uncertain classifications |
+| `PHYSIS_ONTOLOGY_DIR` / `PHYSIS_ONTOLOGY_FILES` | (bundled) | add axes or entries at runtime |
+| `PHYSIS_NO_...` | - | see `--no-expand` flag on `physis_classify` |
+
+### Turning semantics off
+
+Set `semantic: false` in `plugins.entries.physis.settings`, or `PHYSIS_SEMANTIC=0` in
+the environment. The engine falls back to deterministic hashing: reproducible and
+offline, but not semantic. Useful for reproducible CI or to drop the embedder
+dependency entirely.
+
+### Swapping the embedder
+
+1. Place an ONNX embedding model (`model.onnx` + `tokenizer.json`) in a directory.
+2. Set `model_dir` to that directory (or `PHYSIS_MODEL_DIR`).
+3. Set `PHYSIS_MODEL_DIM` to the model's output dimension (e.g. `768` for BGE-base).
+4. Restart the session. `physis_grid` reports the active embedder.
+
+The model must use the same loader as the bundled BGE-small (CLS pooling, uint8
+or float). Heavier models trade bundle size and first-call latency for accuracy;
+the default keeps the "no download, no network" guarantee.
 
 ## Measured
 
@@ -301,9 +338,9 @@ tests/               unit + integration
 
 ## Publishing
 
-The plugin is already published at https://github.com/ilPez00/hermes-physis
-(release v1.4.1, commit 95f7b23). It is also listed in the Hermes plugin
-catalog via PR #151008 (pinned to the attested commit).
+The plugin is published at https://github.com/ilPez00/hermes-physis
+(release v1.6.0). It is listed in the Hermes plugin catalog via PR #151275
+(pinned to the attested commit 8602dbbccea9e9a80944ce847b3c2fad0d8b3ec0).
 
 To ship a new version:
 

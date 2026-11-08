@@ -136,9 +136,13 @@ class PhysisEngine:
         extra_env = {str(k): str(v) for k, v in (env or {}).items()}
         # Semantic embeddings by default: point the engine at the bundled
         # MiniLM model unless the operator already chose one.
+        _semantic = str(
+            extra_env.get("PHYSIS_SEMANTIC", os.environ.get("PHYSIS_SEMANTIC", "1"))
+        ).strip().lower()
         if (
             "PHYSIS_MODEL_DIR" not in extra_env
             and not os.environ.get("PHYSIS_MODEL_DIR")
+            and _semantic not in ("0", "false", "no", "off")
             and _is_executable(BUNDLED_BIN_DIR / "physis-core")
             and (BUNDLED_MODEL_DIR / "model.onnx").is_file()
         ):
