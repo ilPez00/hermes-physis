@@ -1,5 +1,5 @@
 name: physis
-version: 1.4.0
+version: 1.4.1
 description: >
   Evidence-backed code context with two bundled offline engines: physis-core
   (adaptive semiotic grid that grows when uncertain, semantic embeddings,
