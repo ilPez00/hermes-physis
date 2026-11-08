@@ -1,0 +1,40 @@
+name: build-binaries
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build engines
+        run: |
+          cargo build --release --manifest-path vendor/physis-core/Cargo.toml
+          cargo build --release --manifest-path vendor/physis-replant/Cargo.toml
+          mkdir -p bin
+          cp vendor/physis-core/target/release/physis-core bin/physis-core
+          cp vendor/physis-replant/target/release/replant bin/replant
+          chmod +x bin/physis-core bin/replant
+          cd bin && sha256sum physis-core replant > SHA256SUMS && cat SHA256SUMS
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "bin/physis-core\nbin/replant"
+      - name: Upload release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bin/physis-core
+            bin/replant
+            bin/SHA256SUMS
