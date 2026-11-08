@@ -21,12 +21,16 @@ codebase, or when the same verified workflow will run again.
 4. `physis_classify` / `physis_diff` when the question is about the character
    of a file or whether a change altered it.
 5. `replant_run` before re-planning a recurring task; `replant_record` only
-   after a recipe's actions AND independent checks succeeded.
+   after a recipe's actions AND independent checks succeeded. Pass
+   `artifacts=[...]` so a later replay is refused when those inputs changed.
+   `/physis replay <prompt>` repeats a recorded recipe without a model turn.
 
 ## Rules
 
 - Never invent evidence Physis did not return. If the index is empty or the
   object is absent, say so and run `physis_observe` or widen the query.
+- A replay that answers `blocked: true` is the correct outcome: the inputs
+  changed since verification. Re-verify with `replant_record`; do not force it.
 - `physis_why` returns evidence around a label, not a causal story.
 - The bundled embedder is semantic (BGE-small, CLS pooling) and on by default; the ontology
   cache makes calls fast after the first build.

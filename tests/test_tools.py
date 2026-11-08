@@ -321,3 +321,131 @@ def test_command_passes_stdin(tmp_path):
         {"engine_bin": binary, "command": "search", "args": ["x"], "stdin": "{}"}
     )
     assert result["ok"] is True
+
+
+# --- hook contract ---------------------------------------------------------- #
+
+
+def make_recording_engine(tmp_path: Path) -> tuple[str, Path]:
+    """Engine that appends its argv to a log, so a hook can be observed."""
+    log = tmp_path / "calls.log"
+    path = tmp_path / "recording-engine"
+    script = textwrap.dedent(f"""\
+    #!/usr/bin/env python3
+    import sys
+    with open({str(log)!r}, "a") as handle:
+        handle.write(" ".join(sys.argv[1:]) + "\\n")
+    if sys.argv[1:] == ["--help"]:
+        print("Commands:\\n  scan  Scan a directory")
+    raise SystemExit(0)
+    """)
+    path.write_text(script)
+    path.chmod(path.stat().st_mode | stat.S_IEXEC)
+    return str(path), log
+
+
+def test_post_tool_call_reads_args_kwarg(tmp_path):
+    """Hermes dispatches ``args``; reading only ``tool_args`` silently disabled the hook."""
+    binary, log = make_recording_engine(tmp_path)
+    target = tmp_path / "pkg" / "mod.py"
+    target.parent.mkdir()
+    target.write_text("x = 1\n")
+
+    hook = tools.make_post_tool_call({"auto_observe": True, "engine_bin": binary, "timeout": 5})
+    assert hook(tool_name="write_file", args={"path": str(target)}, result="{}") is None
+
+    calls = [line for line in log.read_text().splitlines() if line.startswith("scan ")]
+    assert calls, log.read_text()
+    assert str(target.parent) in calls[0]
+
+
+def test_post_tool_call_rereads_live_config(tmp_path):
+    binary, log = make_recording_engine(tmp_path)
+    target = tmp_path / "mod.py"
+    target.write_text("x = 1\n")
+
+    class Ctx:
+        settings = {"auto_observe": False, "engine_bin": binary}
+
+        def get_config(self, key, default=None):
+            return self.settings.get(key, default)
+
+    ctx = Ctx()
+    hook = tools.make_post_tool_call(ctx)
+    hook(tool_name="write_file", args={"path": str(target)})
+    logged = log.read_text() if log.exists() else ""
+    assert "scan " not in logged
+
+    ctx.settings["auto_observe"] = True  # enabled after load
+    hook(tool_name="write_file", args={"path": str(target)})
+    assert "scan " in log.read_text()
+
+
+# --- pre_verify ------------------------------------------------------------- #
+
+
+def test_pre_verify_nudges_on_failure_only(tmp_path):
+    target = tmp_path / "mod.py"
+    target.write_text("x = 1\n")
+    config = {"verify_cmd": "exit 3", "timeout": 10}
+
+    result = tools.make_pre_verify(config)(changed_paths=[str(target)], attempt=0)
+    assert result["action"] == "continue"
+    assert "exit 3" in result["message"]
+
+    assert tools.make_pre_verify({"verify_cmd": "true"})(changed_paths=[str(target)]) is None
+    assert tools.make_pre_verify(config)(changed_paths=[str(target)], attempt=1) is None
+    assert tools.make_pre_verify({"verify_cmd": ""})(changed_paths=[str(target)]) is None
+
+
+# --- artifact freshness ------------------------------------------------------ #
+
+
+def test_artifacts_are_fingerprinted_and_detect_change(tmp_path):
+    target = tmp_path / "input.txt"
+    target.write_text("one")
+    args = {"input": "deploy", "path": str(tmp_path), "store": str(tmp_path / ".replant")}
+
+    assert tools._changed_artifacts(args) == []
+
+    tools._write_artifacts(args, [str(target)])
+    assert tools._changed_artifacts(args) == []
+
+    target.write_text("two")
+    assert tools._changed_artifacts(args) == [str(target)]
+
+    # Re-recording without artifacts drops the old set instead of blocking forever.
+    tools._write_artifacts(args, [])
+    assert tools._changed_artifacts(args) == []
+
+
+def test_replant_run_blocks_when_inputs_changed(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    registry = tmp_path / "tools.json"
+    registry.write_text("{}")
+    target = tmp_path / "input.txt"
+    target.write_text("one")
+    args = {
+        "engine_bin": binary,
+        "path": str(tmp_path),
+        "input": "deploy",
+        "tools": str(registry),
+        "store": str(tmp_path / ".replant"),
+    }
+    tools._write_artifacts(args, [str(target)])
+    target.write_text("two")
+
+    result = HANDLERS["replant_run"](args)
+    assert result["ok"] is False
+    assert result["blocked"] is True
+    assert result["provider_calls"] == 0
+    assert result["changed"] == [str(target)]
+
+
+# --- /physis command -------------------------------------------------------- #
+
+
+def test_physis_command_usage_and_unknown_verb():
+    handler = tools.make_physis_command({})
+    assert "Usage: /physis" in handler("nope")
+    assert handler("replay") == "Usage: /physis replay <prompt>"

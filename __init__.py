@@ -11,25 +11,52 @@ from __future__ import annotations
 from pathlib import Path
 
 try:
-    from .tools import make_post_tool_call, plugin_config, register_tools
+    from .tools import (
+        make_physis_command,
+        make_post_tool_call,
+        make_pre_verify,
+        register_tools,
+    )
 except ImportError:  # pragma: no cover - direct import from the plugin directory
-    from tools import make_post_tool_call, plugin_config, register_tools
+    from tools import (
+        make_physis_command,
+        make_post_tool_call,
+        make_pre_verify,
+        register_tools,
+    )
 
 PLUGIN_DIR = Path(__file__).resolve().parent
 SKILL_PATH = PLUGIN_DIR / "skills" / "physis" / "SKILL.md"
 
 
 def register(ctx) -> None:
-    """Register tools, the optional incremental-index hook and the skill."""
-    config = plugin_config(ctx)
+    """Register tools, the optional hooks, the /physis command and the skill."""
     register_tools(ctx)
 
+    # Hooks get the context, not a settings snapshot: both re-read per call, so
+    # a config edit applies without reloading the plugin.
     hook = getattr(ctx, "register_hook", None)
     if callable(hook):
+        for name, factory in (
+            ("post_tool_call", make_post_tool_call),
+            ("pre_verify", make_pre_verify),
+        ):
+            try:
+                hook(name, factory(ctx))
+            except Exception:
+                # A hook is an optimization; never fail plugin load over it.
+                pass
+
+    command = getattr(ctx, "register_command", None)
+    if callable(command):
         try:
-            hook("post_tool_call", make_post_tool_call(config))
+            command(
+                "physis",
+                make_physis_command(ctx),
+                description="Physis status, recipe stats, and model-free recipe replay",
+                args_hint="[status|recipes|replay <prompt>]",
+            )
         except Exception:
-            # A hook is an optimization; never fail plugin load over it.
             pass
 
     register_skill = getattr(ctx, "register_skill", None)

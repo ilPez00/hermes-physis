@@ -15,6 +15,7 @@ class FakeContext:
         self.tools = {}
         self.hooks = {}
         self.skills = {}
+        self.commands = {}
 
     def get_config(self, key, default=None):
         return self.settings.get(key, default)
@@ -25,6 +26,9 @@ class FakeContext:
 
     def register_hook(self, name, callback):
         self.hooks[name] = callback
+
+    def register_command(self, name, handler, description="", args_hint=""):
+        self.commands[name] = handler
 
     def register_skill(self, name, path, description="", frontmatter=None):
         self.skills[name] = Path(path)
@@ -97,7 +101,18 @@ def test_hook_is_safe_without_engine(tmp_path):
     ctx = FakeContext(settings={"auto_observe": True, "engine_bin": str(tmp_path / "nope")})
     plugin.register(ctx)
     hook = ctx.hooks["post_tool_call"]
+    # ``args`` is what Hermes dispatches (model_tools._emit_post_tool_call_hook);
+    # ``tool_args`` is only a compatibility alias.
+    assert hook(tool_name="write_file", args={"path": str(tmp_path / "x.py")}) is None
     assert hook(tool_name="write_file", tool_args={"path": str(tmp_path / "x.py")}) is None
+
+
+def test_register_adds_hooks_and_command():
+    plugin = load_package()
+    ctx = FakeContext()
+    plugin.register(ctx)
+    assert set(ctx.hooks) == {"post_tool_call", "pre_verify"}
+    assert "physis" in ctx.commands
 
 
 def test_manifest_matches_registered_tools():

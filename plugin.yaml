@@ -1,12 +1,10 @@
 name: physis
-version: 1.4.2
+version: 1.5.0
 description: >
-  Evidence-backed code context with two bundled offline engines: physis-core
-  (adaptive semiotic grid that grows when uncertain, semantic embeddings,
-  coherence index, structural search, fixed-token context over any text file,
-  observation ingestion) and replant (verified
-  tool-recipe replay with zero provider calls). No API key, no network, no
-  Python dependencies.
+  Evidence-backed execution memory: per-repo graph context, a deterministic
+  verify hook, and verified tool recipes that replay with zero provider calls
+  and refuse when their inputs changed. Two bundled offline engines, no API
+  key, no network, no Python dependencies.
 author: Giovanni Pezzulli
 requires_hermes: ">=0.23.0"
 provides_tools:
@@ -30,6 +28,7 @@ provides_tools:
   - replant_show
 provides_hooks:
   - post_tool_call
+  - pre_verify
 config_schema:
   engine_bin:
     type: str
@@ -47,6 +46,14 @@ config_schema:
     type: bool
     default: false
     description: "After file writes, incrementally re-index the edited folder (bounded, best-effort)"
+  verify_cmd:
+    type: str
+    default: ""
+    description: "Command run after code edits; a non-zero exit keeps the turn going with the real failure output"
+  replant_tools:
+    type: str
+    default: ""
+    description: "Tools registry used by /physis replay; empty = <path>/.replant/tools.json"
   budget:
     type: int
     default: 800

@@ -2,11 +2,12 @@
 
 https://github.com/ilPez00/hermes-physis · [install](#install) · [benchmark](#measured)
 
-Evidence-backed code context for Hermes Agent, with both engines bundled and
+Evidence-backed execution memory for Hermes Agent, with both engines bundled and
 working offline. No API key, no network call, no Python dependency beyond the
 standard library.
 
-The plugin answers four questions a model normally guesses at:
+Physis answers four questions a model normally guesses at, and then remembers
+the answer as a verified procedure:
 
 1. **What is in this repo?** - `physis_observe` indexes it into a coherence graph.
 2. **What is relevant to this task?** - `physis_context` packs the best nodes
@@ -17,7 +18,10 @@ The plugin answers four questions a model normally guesses at:
 
 Plus **replant**: record a verified tool recipe once, then re-execute the real
 actions and checks on later identical requests. The model is not called again;
-cached successes are never returned. `replant_demo` proves this in one call.
+cached successes are never returned. Record `artifacts=` with it and the recipe
+is also bound to its inputs: change one and replay is refused instead of
+repeated. `replant_demo` proves the loop in one call; `/physis replay <prompt>`
+repeats it without a model turn at all.
 
 `physis_chain` runs the engine's whole pass - structure, gaps, drift and the
 label-permuted control - when a task needs an overview rather than one query.
@@ -72,10 +76,18 @@ physis_diff(before="auth.py@before", after="auth.py@after", ask="shorter, safer"
 
 # Repeat the verified deploy with no model call.
 replant_demo()   # record once, replay twice, provider_calls = 0
+
+# Bind the recipe to its inputs, then let the ground move.
+replant_record(input="deploy api", artifacts=["requirements.txt"], ...)
+replant_run(input="deploy api")      # replay, provider_calls = 0
+#   -> edit requirements.txt
+replant_run(input="deploy api")
+# -> blocked: "task inputs changed since verification", changed: ["requirements.txt"]
 ```
 
 The plugin is not a collection of tools: it is the path from "what is in this
-repo" to "did the change move as asked" to "run that again for free".
+repo" to "did the change move as asked" to "run that again for free" to "do not
+run that again, the world changed".
 
 ## Tools
 
@@ -101,11 +113,24 @@ repo" to "did the change move as asked" to "run that again for free".
 
 | Tool | Engine command | Use it for |
 |---|---|---|
-| `replant_run` | `run` | replay an exact request, or return miss |
-| `replant_record` | `record` | execute + check a recipe, then persist it |
+| `replant_run` | `run` | replay an exact request, or return miss/blocked |
+| `replant_record` | `record` | execute + check a recipe, then persist it (with optional `artifacts=` fingerprints) |
 | `replant_stats` | `stats` | records, replays, misses, blocks, replay share |
 | `replant_show` | `show` | inspect a learned record |
 | `replant_demo` | `record` + `run` + `stats` | zero-config proof, bundled counter fixture |
+
+### Command
+
+`/physis status` (engines + graph), `/physis recipes` (receipt stats),
+`/physis replay <prompt>` (repeat a recorded recipe with no model call). Set
+`replant_tools` when the registry is not `<path>/.replant/tools.json`.
+
+### Hooks
+
+- `post_tool_call` - with `auto_observe: true`, re-indexes the edited folder.
+- `pre_verify` - with `verify_cmd` set, runs that command after code edits; a
+  non-zero exit keeps the turn going with the real failure tail, so a
+  deterministic check decides whether the work is done.
 
 ## Configuration
 
@@ -114,7 +139,9 @@ repo" to "did the change move as asked" to "run that again for free".
 | Key | Default | Meaning |
 |---|---|---|
 | `engine_bin` | `""` | override engine path(s); empty = bundled |
-| `auto_observe` | `false` | after write/patch, run bounded `watch --source fs` on the edited folder |
+| `auto_observe` | `false` | after write/patch, re-index (`scan`) the edited folder |
+| `verify_cmd` | `""` | command run by the `pre_verify` hook after edits; non-zero keeps the turn going |
+| `replant_tools` | `""` | tools registry for `/physis replay`; empty = `<path>/.replant/tools.json` |
 | `budget` | `800` | default `physis_context` token budget (100-4000) |
 | `timeout` | `20` | per-subprocess timeout (seconds) |
 
@@ -140,8 +167,17 @@ auto-expansion record what the ontology missed.
 
 Context and replay are deterministic and measured separately: 62 Rust files
 compress to 176 tokens at a 300-token budget; a recorded replant recipe
-replays with `provider_calls=0`; 48 plugin tests and 295 engine tests cover
+replays with `provider_calls=0`; 55 plugin tests and 295 engine tests cover
 the paths.
+
+Verified loop, measured on the bundled fixtures (real binaries, temp store):
+
+| Step | Command | Result |
+|---|---|---|
+| record with `artifacts=["input.txt"]` | `replant_record` | `status: succeeded`, `provider_calls: 0` |
+| replay unchanged inputs | `replant_run` | `operation: replay`, `provider_calls: 0` |
+| replay after editing `input.txt` | `replant_run` | `blocked: true`, `changed: ["input.txt"]`, engine never invoked |
+| per-repo isolation | `physis_observe` on A, then `physis_snapshot` on B | A `nodes: 1`, B `nodes: 0` |
 
 ## Honest limits
 
@@ -164,10 +200,18 @@ the paths.
   runs the compiler, which now ingests **any text file** (source included),
   skips binaries and build dirs, and chunks documents so a file larger than
   the budget can still contribute.
-- The index is **global** (`~/.physis`, or `PHYSIS_CORE_DIR`). Scanning two
-  repos puts both in one graph; queries can surface nodes from either.
+- The index is **per repository**: the graph store is derived from the resolved
+  `path`, so scanning two repos keeps their nodes apart. `PHYSIS_CORE_DIR` still
+  overrides it with one explicit store (the pre-1.5 behaviour). Queries can no
+  longer surface nodes from an unrelated project.
 - Auto-indexing is bounded: `physis_context` refuses to scan a corpus over
   ~1500 files and the docs compiler refuses over ~5000; pass a narrower path.
+- Replay freshness is per file: `artifacts=` hashes each recorded input (≤1 MiB
+  each) at record time; a changed or missing input blocks replay. It does not
+  hash a whole tree, and it does not replace replant's own fingerprint of the
+  tool implementation.
+- `pre_verify` runs one command, once per turn (`attempt` > 0 is a no-op), with
+  the working directory of the first changed file.
 - `physis_why` is **evidence retrieval**, not a causal-chain generator. If the
   label is absent, that is missing evidence, not a verdict.
 - replant is deliberately narrow: exact request match, registered tools only.
@@ -176,7 +220,7 @@ the paths.
 ## Development
 
 ```bash
-python3.13 -m pytest          # 48 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # 55 tests: unit + integration against the bundled binaries
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
 

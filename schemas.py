@@ -20,8 +20,8 @@ OBSERVE = {
     "description": (
         "Index a repository into the local coherence graph. Run this before "
         "physis_query/physis_context/physis_why on a repo that may have "
-        "changed. The index is global (one node graph); the path argument "
-        "selects what gets scanned."
+        "changed. The store is per repository (derived from path); the path "
+        "argument selects what gets scanned."
     ),
     "parameters": {
         "type": "object",
@@ -276,7 +276,8 @@ REPLANT_RUN = {
     "description": (
         "Replay a verified tool recipe for an exact request, or return miss. "
         "The recipe's real actions and checks run again - no cached success is "
-        "returned. Requires an operator-owned tools registry (tools=...)."
+        "returned. Refuses with blocked=true when the task inputs fingerprinted "
+        "at record time have changed. Requires an operator-owned tools registry."
     ),
     "parameters": {
         "type": "object",
@@ -297,7 +298,9 @@ REPLANT_RECORD = {
     "name": "replant_record",
     "description": (
         "Record a verified recipe once: execute its actions and independent "
-        "checks, then persist it for replay. Requires tools= and a recipe."
+        "checks, then persist it for replay. Pass artifacts= (files the work "
+        "depends on) to fingerprint the inputs; a later replay whose inputs "
+        "changed is refused instead of repeated. Requires tools= and a recipe."
     ),
     "parameters": {
         "type": "object",
@@ -308,6 +311,11 @@ REPLANT_RECORD = {
                 "description": "JSON recipe: {\"steps\":[{\"tool\",\"input\"}],\"checks\":[...]}",
             },
             "trace": {"type": "string", "description": "JSON trace metadata (optional)"},
+            "artifacts": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Input files this recipe depends on (hashed at record time)",
+            },
             "path": {"type": "string", "description": "Working directory"},
             "tools": {"type": "string", "description": "Path to replant tools registry JSON"},
             "store": {

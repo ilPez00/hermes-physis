@@ -7,9 +7,11 @@ model can use. No handler invents evidence the engine did not return.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -29,6 +31,8 @@ DEFAULTS: dict[str, Any] = {
     "budget": 800,
     "auto_observe": False,
     "auto_expand": True,
+    "verify_cmd": "",
+    "replant_tools": "",
 }
 
 _POOL: EnginePool | None = None
@@ -126,6 +130,26 @@ def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
     return None
 
 
+def _index_env(args: dict[str, Any]) -> dict[str, str]:
+    """One graph store per repository, derived from the resolved path.
+
+    A single global ``~/.physis`` graph mixes nodes from every scanned repo, so
+    a query for this task can return evidence from an unrelated project.
+    ``PHYSIS_CORE_DIR`` still wins when an operator sets it explicitly.
+    """
+    if os.environ.get("PHYSIS_CORE_DIR"):
+        return {}
+    root = _path(args)
+    digest = hashlib.sha256(root.encode("utf-8")).hexdigest()[:12]
+    return {"PHYSIS_CORE_DIR": str(Path.home() / ".physis" / "repos" / digest)}
+
+
+def _index_dir(args: dict[str, Any]) -> str:
+    return _index_env(args).get("PHYSIS_CORE_DIR") or os.environ.get(
+        "PHYSIS_CORE_DIR", str(Path.home() / ".physis")
+    )
+
+
 def _run(
     pool: EnginePool,
     argv: list[str],
@@ -135,8 +159,9 @@ def _run(
     engine: str | None = None,
 ) -> dict[str, Any]:
     call_env = _model_env(args)
+    call_env = {**(call_env or {}), **_index_env(args)}
     if env:
-        call_env = {**(call_env or {}), **env}
+        call_env = {**call_env, **env}
     return pool.run(
         argv,
         cwd=_path(args),
@@ -213,7 +238,7 @@ def physis_engine_status(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return _engine_error(exc)
     info = pool.info()
     info["ok"] = True
-    info["store"] = os.environ.get("PHYSIS_CORE_DIR") or str(Path.home() / ".physis")
+    info["store"] = _index_dir(merged)
     info["graph"] = _graph_summary(pool, merged)
     return info
 
@@ -753,6 +778,68 @@ def _replant_ready(pool: EnginePool) -> dict[str, Any] | None:
     return None
 
 
+# --------------------------------------------------------------------------- #
+# Artifact freshness: a verified recipe is only reusable while its inputs are
+# the ones the checks passed against. replant itself fingerprints the *tool*
+# implementation (program + declared deps); these sidecars cover the task inputs.
+# --------------------------------------------------------------------------- #
+
+MAX_ARTIFACT_BYTES = 1 << 20
+
+
+def _request_digest(args: dict[str, Any]) -> str:
+    """Key the sidecar by the same request the engine is sent."""
+    request = {
+        "prompt": str(args.get("input") or args.get("value") or "").strip(),
+        "input": {},
+        "context": {},
+    }
+    return hashlib.sha256(json.dumps(request, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _artifact_hashes(paths: list[Any]) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for raw in paths:
+        path = Path(str(raw)).expanduser()
+        try:
+            if path.is_file() and path.stat().st_size <= MAX_ARTIFACT_BYTES:
+                hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+            else:
+                hashes[str(path)] = ""
+        except OSError:
+            hashes[str(path)] = ""
+    return hashes
+
+
+def _artifacts_file(args: dict[str, Any]) -> Path:
+    return Path(_store(args)) / "artifacts" / f"{_request_digest(args)}.json"
+
+
+def _write_artifacts(args: dict[str, Any], artifacts: list[Any]) -> None:
+    target = _artifacts_file(args)
+    if not artifacts:
+        if target.is_file():
+            target.unlink()  # a re-record without artifacts invalidates the old set
+        return
+    target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    target.write_text(json.dumps({"artifacts": _artifact_hashes(artifacts)}, indent=2))
+
+
+def _changed_artifacts(args: dict[str, Any]) -> list[str]:
+    """Inputs recorded at verification time whose content changed since."""
+    target = _artifacts_file(args)
+    if not target.is_file():
+        return []
+    try:
+        recorded = json.loads(target.read_text()).get("artifacts") or {}
+    except (OSError, ValueError, TypeError):
+        return []
+    if not isinstance(recorded, dict) or not recorded:
+        return []
+    current = _artifact_hashes(list(recorded))
+    return sorted(path for path, digest in recorded.items() if current.get(path) != digest)
+
+
 def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _with_defaults(_merge(args, kwargs))
     try:
@@ -767,6 +854,19 @@ def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return {"ok": False, "error": "tools registry path is required (tools=...)"}
     if not Path(tools).expanduser().is_file():
         return {"ok": False, "error": f"tools registry not found: {tools}"}
+
+    changed = _changed_artifacts(merged)
+    if changed:
+        # Refuse rather than replay under preconditions the checks never saw.
+        return {
+            "ok": False,
+            "blocked": True,
+            "operation": "lookup",
+            "status": "blocked",
+            "provider_calls": 0,
+            "reason": "task inputs changed since verification; re-verify with replant_record",
+            "changed": changed,
+        }
     if not pool.supports("run"):
         return _unsupported(pool, "run")
 
@@ -827,7 +927,17 @@ def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         stdin=stdin,
         engine="replant",
     )
-    _copy_keys(result, _json_payload(result))
+    payload = _json_payload(result)
+    _copy_keys(result, payload)
+    if payload and payload.get("status") == "succeeded":
+        # Only a verified record earns a freshness sidecar.
+        artifacts = merged.get("artifacts") or []
+        if isinstance(artifacts, str):
+            artifacts = [item.strip() for item in artifacts.split(",") if item.strip()]
+        try:
+            _write_artifacts(merged, list(artifacts))
+        except OSError as exc:
+            result["artifacts_warning"] = f"could not persist artifact fingerprints: {exc}"
     return result
 
 
@@ -1022,24 +1132,38 @@ def register_tools(ctx: Any) -> list[str]:
     return registered
 
 
-def make_post_tool_call(config: dict[str, Any]):
+def _live_config(config: Any) -> dict[str, Any]:
+    """Settings for a hook: re-read per call when given the PluginContext.
+
+    A config snapshot taken at load time silently ignores a setting the
+    operator changes afterwards; tools.py already re-reads per call.
+    """
+    if hasattr(config, "get_config"):
+        return plugin_config(config)
+    return dict(config or DEFAULTS)
+
+
+def make_post_tool_call(config: Any):
     """Incremental, bounded re-index after a file write when auto_observe is on."""
-    def _hook(tool_name=None, tool_args=None, result=None, **kwargs):
+    def _hook(tool_name=None, args=None, tool_args=None, result=None, **kwargs):
         try:
-            if not config.get("auto_observe"):
+            live = _live_config(config)
+            if not live.get("auto_observe"):
                 return None
             if tool_name not in {"write_file", "patch", "edit_file", "apply_patch"}:
                 return None
-            args = tool_args if isinstance(tool_args, dict) else {}
-            target = args.get("path") or args.get("file_path")
+            # Hermes dispatches ``args``; ``tool_args`` is kept as an alias so a
+            # caller using the older spelling still works.
+            call_args = args if isinstance(args, dict) else tool_args
+            if not isinstance(call_args, dict):
+                return None
+            target = call_args.get("path") or call_args.get("file_path")
             if not target:
                 return None
             folder = str(Path(target).expanduser().resolve().parent)
+            timeout = min(int(live.get("timeout") or 20), 8)
             pool = _pool_from_args(
-                {
-                    "engine_bin": config.get("engine_bin", ""),
-                    "timeout": min(int(config.get("timeout") or 20), 8),
-                }
+                {"engine_bin": live.get("engine_bin", ""), "timeout": timeout}
             )
             if not pool.supports("scan"):
                 return None
@@ -1049,10 +1173,96 @@ def make_post_tool_call(config: dict[str, Any]):
             pool.run(
                 ["scan", folder],
                 cwd=folder,
-                timeout=min(int(config.get("timeout") or 20), 8),
+                timeout=timeout,
+                env=_index_env({"path": folder}),
             )
         except Exception:
             return None
         return None
 
     return _hook
+
+
+def make_pre_verify(config: Any):
+    """Run the operator's own verification command after code edits.
+
+    Hermes calls ``pre_verify`` once per turn when the agent edited files and is
+    about to finish. A failing command keeps the turn going with the tail of the
+    real output, so the deterministic check - not another model - decides
+    whether the work is done.
+    """
+    def _hook(changed_paths=None, attempt=0, coding=False, **kwargs):
+        try:
+            # One nudge per turn: attempt > 0 means the operator/message loop
+            # already got the failure and the turn is allowed to finish.
+            if attempt:
+                return None
+            live = _live_config(config)
+            command = str(live.get("verify_cmd") or "").strip()
+            if not command:
+                return None
+            paths = [str(item) for item in (changed_paths or []) if str(item).strip()]
+            if not paths:
+                return None
+            cwd = str(Path(paths[0]).expanduser().resolve().parent)
+            proc = subprocess.run(
+                command,
+                shell=True,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=min(int(live.get("timeout") or 20), 300),
+                check=False,
+            )
+            if proc.returncode == 0:
+                return None
+            tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-15:]
+            return {
+                "action": "continue",
+                "message": (
+                    f"Physis verify failed (exit {proc.returncode}): {command}\n"
+                    + "\n".join(tail)
+                ),
+            }
+        except Exception:
+            return None
+
+    return _hook
+
+
+_COMMAND_TOOLS: dict[str, str] = {
+    "status": "physis_engine_status",
+    "recipes": "replant_stats",
+    "replay": "replant_run",
+}
+
+
+def make_physis_command(config: Any):
+    """``/physis [status|recipes|replay <prompt>]`` - no model call to repeat work."""
+
+    def _handler(raw_args: str = "", **kwargs):
+        live = _live_config(config)
+        parts = (raw_args or "").split(maxsplit=1)
+        verb = (parts[0] if parts else "status").lower()
+        rest = parts[1].strip() if len(parts) > 1 else ""
+        if verb not in _COMMAND_TOOLS:
+            return f"Usage: /physis {'|'.join(_COMMAND_TOOLS)} [prompt]"
+        payload: dict[str, Any] = dict(live)
+        payload["path"] = str(Path.cwd())
+        if verb == "replay":
+            if not rest:
+                return "Usage: /physis replay <prompt>"
+            registry = str(live.get("replant_tools") or "").strip()
+            if not registry:
+                registry = str(Path(_store(payload)) / "tools.json")
+            payload.update({"input": rest, "tools": registry})
+        result = HANDLERS[_COMMAND_TOOLS[verb]](payload)
+        if verb == "replay":
+            result = {
+                key: result.get(key)
+                for key in ("ok", "operation", "status", "provider_calls", "reason", "blocked", "changed")
+                if key in result
+            }
+        return json.dumps(result, default=str)
+
+    return _handler
