@@ -232,6 +232,264 @@ def _parse_snapshot(text: str) -> dict[str, Any]:
     return summary
 
 
+def physis_trace(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """Port of ReasonTrace's trace diagnostics: evidence coverage, grounding,
+    unsupported claims, unexplained actions, repeated calls, loops."""
+    import json as _json
+
+    merged = args if isinstance(args, dict) else {}
+    raw = merged.get("trace")
+    path = merged.get("path")
+    if raw in (None, "") and path:
+        try:
+            with open(str(path), "r", encoding="utf-8") as f:
+                raw = f.read()
+        except OSError as exc:
+            return {"ok": False, "error": f"cannot read trace: {exc}"}
+    if raw in (None, ""):
+        return {"ok": False, "error": "trace or path is required"}
+    if isinstance(raw, str):
+        try:
+            trace = _json.loads(raw)
+        except _json.JSONDecodeError as exc:
+            return {"ok": False, "error": f"invalid trace JSON: {exc}"}
+    else:
+        trace = raw
+    if not isinstance(trace, dict):
+        return {"ok": False, "error": "trace must be a JSON object"}
+    events = trace.get("events")
+    if not isinstance(events, list):
+        return {"ok": False, "error": "trace.events must be an array"}
+
+    TYPE_BIT = {
+        "hypothesis": 1, "action": 2, "observation": 4, "belief_update": 8,
+        "failure": 16, "decision": 32, "final_answer": 64, "reasoning": 128,
+        "activation": 256, "derivation": 512, "translation": 1024,
+    }
+
+    def bit(t):
+        return TYPE_BIT.get(str(t), 0)
+
+    by_id = {}
+    for e in events:
+        if isinstance(e, dict) and "id" in e:
+            by_id[e["id"]] = e
+
+    waiting = {}
+    children = {}
+    for e in events:
+        if not isinstance(e, dict):
+            continue
+        eid = e.get("id")
+        known = [s for s in (e.get("supports") or []) if s in by_id]
+        waiting[eid] = len(known)
+        for sid in known:
+            children.setdefault(sid, []).append(eid)
+    order = [e.get("id") for e in events if isinstance(e, dict) and waiting.get(e.get("id"), 0) == 0]
+    i = 0
+    while i < len(order):
+        for child in children.get(order[i], []):
+            waiting[child] = waiting.get(child, 0) - 1
+            if waiting[child] == 0:
+                order.append(child)
+        i += 1
+    if len(order) != len(by_id):
+        return {"ok": False, "error": "support graph has a cycle"}
+
+    upstream = {}
+    for eid in order:
+        e = by_id[eid]
+        mask = 0
+        for parent in (e.get("supports") or []):
+            if parent in by_id:
+                mask |= upstream.get(parent, 0) | bit(by_id[parent].get("type"))
+        upstream[eid] = mask
+    downstream = {eid: 0 for eid in by_id}
+    for i in range(len(order) - 1, -1, -1):
+        eid = order[i]
+        e = by_id[eid]
+        below = downstream.get(eid, 0) | bit(e.get("type"))
+        for parent in (e.get("supports") or []):
+            if parent in by_id:
+                downstream[parent] = downstream.get(parent, 0) | below
+
+    def can_reach(eid, types):
+        mask = 0
+        for t in types:
+            mask |= TYPE_BIT.get(t, 0)
+        return (downstream.get(eid, 0) & mask) != 0
+
+    def has_ancestor(eid, types):
+        mask = 0
+        for t in types:
+            mask |= TYPE_BIT.get(t, 0)
+        return (upstream.get(eid, 0) & mask) != 0
+
+    children_count = {}
+    for e in events:
+        if isinstance(e, dict):
+            for sid in (e.get("supports") or []):
+                children_count[sid] = children_count.get(sid, 0) + 1
+
+    counts = {
+        "hypothesis": 0, "action": 0, "observation": 0, "failure": 0,
+        "belief_update": 0, "decision": 0, "final_answer": 0,
+    }
+    for e in events:
+        if isinstance(e, dict):
+            t = e.get("type")
+            if t in counts:
+                counts[t] += 1
+
+    findings = []
+    warnings = []
+    def add_finding(rule, fid, severity, category, title, detail, event_ids, recommendation):
+        findings.append({
+            "rule": rule, "id": fid, "severity": severity, "category": category,
+            "title": title, "detail": detail, "eventIds": event_ids,
+            "recommendation": recommendation,
+        })
+        warnings.append(f"{title}: {detail}")
+
+    records_support = any(isinstance(e, dict) and (e.get("supports") or []) for e in events)
+
+    if not records_support:
+        add_finding("support-not-recorded", "support-not-recorded", "info", "visibility",
+                    "Support links not recorded",
+                    "This trace does not say which events support which, so grounding, "
+                    "unsupported claims and unexplained actions cannot be checked.",
+                    [], "Use a trace format that records which observations each claim relies on.")
+
+    unsupported = []
+    if records_support:
+        for e in events:
+            if isinstance(e, dict) and e.get("type") == "hypothesis":
+                eid = e.get("id")
+                if not children_count.get(eid) or not can_reach(eid, ["action", "observation", "belief_update", "final_answer"]):
+                    unsupported.append(eid)
+                    add_finding("unsupported-claim", f"unsupported-{eid}", "warning", "grounding",
+                                "Unsupported claim",
+                                f"Step {e.get('step')} does not lead to an action, observation, update, or answer.",
+                                [eid], "Collect evidence for this claim or mark it as abandoned.")
+
+    unplanned = []
+    if records_support:
+        for e in events:
+            if isinstance(e, dict) and e.get("type") == "action":
+                eid = e.get("id")
+                if not has_ancestor(eid, ["hypothesis", "decision"]):
+                    unplanned.append(eid)
+                    add_finding("unplanned-action", f"unplanned-{eid}", "info", "planning",
+                                "Unexplained action",
+                                f"Step {e.get('step')} has no linked hypothesis or decision. This may be normal for an opaque agent.",
+                                [eid], "Link the action to a goal or keep it classified as an observed behavior.")
+
+    final_answers = [e for e in events if isinstance(e, dict) and e.get("type") == "final_answer"]
+    ungrounded = [fa for fa in final_answers if not has_ancestor(fa.get("id"), ["observation"])] if records_support else []
+    if not final_answers:
+        answer_grounding = "no_answer"
+    elif not records_support:
+        answer_grounding = "not_recorded"
+    elif ungrounded:
+        answer_grounding = "ungrounded"
+    else:
+        answer_grounding = "grounded"
+    if answer_grounding == "ungrounded":
+        add_finding("ungrounded-answer", "ungrounded-answer", "critical", "grounding",
+                    "Answer lacks an evidence path",
+                    f"{len(ungrounded)} of {len(final_answers)} final answers have no support path back to an observation.",
+                    [e.get("id") for e in ungrounded],
+                    "Inspect the answer's support links and add the observations that justify it.")
+
+    actions = [e for e in events if isinstance(e, dict) and e.get("type") == "action"]
+    def call_key(e):
+        return f"{e.get('tool') or ''}\x00{str(e.get('content') or '').strip().lower()}"
+    identical = {}
+    for a in actions:
+        identical.setdefault(call_key(a), []).append(a)
+    for group in identical.values():
+        if len(group) < 2:
+            continue
+        add_finding("same-call", f"same-call-{group[0].get('id')}", "warning", "loop",
+                    "Same call repeated",
+                    f"The same {group[0].get('tool') and (str(group[0].get('tool')) + ' call') or 'action'} "
+                    f"appears {len(group)} times, at steps {', '.join(str(e.get('step')) for e in group)}.",
+                    [e.get("id") for e in group],
+                    "Check whether anything changed between the calls that could give a different result.")
+
+    run = []
+    def close_run():
+        nonlocal run
+        if len(run) >= 2 and len(set(call_key(e) for e in run)) > 1:
+            add_finding("tool-run", f"tool-run-{run[0].get('id')}", "warning", "loop",
+                        "Repeated tool call",
+                        f"{run[0].get('tool')} is called {len(run)} times in a row, at steps "
+                        f"{', '.join(str(e.get('step')) for e in run)}, with no other action between.",
+                        [e.get("id") for e in run],
+                        "Check whether each call used what the previous one returned, or repeated a step that was not working.")
+        run = []
+    for a in actions:
+        if not a.get("tool") or (run and run[0].get("tool") != a.get("tool")):
+            close_run()
+        if a.get("tool"):
+            run.append(a)
+    close_run()
+
+    for e in events:
+        if isinstance(e, dict) and e.get("type") == "belief_update" and e.get("label") == "stated" and e.get("confidence") is None:
+            add_finding("missing-confidence", f"missing-confidence-{e.get('id')}", "info", "confidence",
+                        "Uncalibrated update",
+                        f"Step {e.get('step')} changes a belief without a confidence value.",
+                        [e.get("id")],
+                        "Record confidence when the runtime provides it; do not invent it after the fact.")
+
+    for e in events:
+        if isinstance(e, dict) and e.get("type") == "failure":
+            add_finding("failure-recorded", f"failure-{e.get('id')}", "critical", "failure",
+                        "Failure recorded",
+                        f"A failure event appears at step {e.get('step')}.",
+                        [e.get("id")],
+                        "Trace the incoming evidence and the next recovery action.")
+
+    claims = [e for e in events if isinstance(e, dict) and e.get("type") in ("hypothesis", "belief_update", "decision", "final_answer")]
+    supported_claims = [e for e in claims if has_ancestor(e.get("id"), ["observation"])] if records_support else []
+    evidence_coverage = round((len(supported_claims) / len(claims)) * 100) if (records_support and claims) else None
+
+    opaque_count = sum(1 for e in events if isinstance(e, dict) and e.get("label") == "observed")
+    inferred_count = sum(1 for e in events if isinstance(e, dict) and e.get("label") == "inferred")
+    if opaque_count:
+        add_finding("observed-events", "opaque-trace", "info", "visibility",
+                    "Observed behavior trace",
+                    f"{opaque_count} events are observable outputs or tool records, not private model reasoning.",
+                    [e.get("id") for e in events if isinstance(e, dict) and e.get("label") == "observed"],
+                    "Use this trace to evaluate behavior and evidence paths; do not infer hidden thoughts from it.")
+    if inferred_count:
+        add_finding("inferred-events", "inferred-events", "info", "visibility",
+                    "Analyst inferences present",
+                    f"{inferred_count} events were reconstructed from behavior.",
+                    [e.get("id") for e in events if isinstance(e, dict) and e.get("label") == "inferred"],
+                    "Treat inferred nodes as hypotheses about behavior, not observations.")
+
+    return {
+        "ok": True,
+        "trace_title": trace.get("title"),
+        "event_count": len(events),
+        "counts": counts,
+        "hypothesis_to_observation_ratio": (
+            round(counts["hypothesis"] / counts["observation"], 2) if counts["observation"] else None
+        ),
+        "unsupported_hypotheses": unsupported,
+        "actions_without_prior_hypothesis": unplanned,
+        "answer_grounding": answer_grounding,
+        "grounded_answer_count": len(final_answers) - len(ungrounded),
+        "evidence_coverage": evidence_coverage,
+        "opaque_event_count": opaque_count,
+        "inferred_event_count": inferred_count,
+        "findings": findings,
+        "warnings": warnings,
+    }
+
+
 def physis_engine_status(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _with_defaults(_merge(args, kwargs))
     try:
@@ -1285,6 +1543,7 @@ def replant_show(args: Any = None, **kwargs: Any) -> dict[str, Any]:
 
 HANDLERS = {
     "physis_engine_status": physis_engine_status,
+    "physis_trace": physis_trace,
     "physis_observe": physis_observe,
     "physis_snapshot": physis_snapshot,
     "physis_context": physis_context,
@@ -1339,7 +1598,13 @@ def register_tools(ctx: Any) -> list[str]:
                 else:
                     merged.setdefault(key, config.get(key, DEFAULTS.get(key)))
             merged = _with_defaults(merged)
-            return _handler(merged)
+            result = _handler(merged)
+            if isinstance(result, str):
+                return result
+            try:
+                return json.dumps(result, default=str)
+            except (TypeError, ValueError):
+                return str(result)
 
         ctx.register_tool(
             name,

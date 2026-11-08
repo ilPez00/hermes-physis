@@ -409,7 +409,26 @@ CANDIDATES = {
     },
 }
 
+
+TRACE = {
+    "name": "physis_trace",
+    "description": (
+        "Port of ReasonTrace diagnostics: compute evidence coverage, answer "
+        "grounding, unsupported claims, unexplained actions, repeated calls "
+        "and loops for a reasoning trace JSON (ReasonTrace format)."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "trace": {"type": "string", "description": "ReasonTrace JSON (string or object)"},
+            "path": {"type": "string", "description": "Path to a ReasonTrace JSON file"},
+        },
+        "required": [],
+    },
+}
+
 ALL_SCHEMAS = [
+    TRACE,
     ENGINE_STATUS,
     OBSERVE,
     SNAPSHOT,

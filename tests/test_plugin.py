@@ -79,7 +79,10 @@ def test_registered_handler_runs(tmp_path):
     )
     binary.chmod(0o755)
 
+    import json as _json
     result = ctx.tools["physis_snapshot"]["handler"]({"engine_bin": str(binary)})
+    if isinstance(result, str):
+        result = _json.loads(result)
     assert result["ok"] is True
     assert result["nodes"] == 7
 
@@ -93,6 +96,9 @@ def test_settings_flow_into_handlers():
     assert DEFAULTS["timeout"] == 20  # config is resolved per call, not global
     handler = ctx.tools["physis_engine_status"]["handler"]
     result = handler({})
+    import json as _json
+    if isinstance(result, str):
+        result = _json.loads(result)
     assert result["ok"] is True
 
 
