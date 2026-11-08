@@ -52,21 +52,30 @@ hermes plugins list | grep physis
 In a session, ask for `physis_engine_status`; it should list two engines and
 the graph node count.
 
-## 60-second demo
+## 60-second demo: one task, evidence and a repeat
+
+Task: add token rotation to `auth`. Baseline without the plugin: grep, open three
+files, paste ~1200 tokens into context, then guess whether the change helped.
 
 ```
-physis_engine_status()                     # engines + store + node count
-physis_grid()                              # adaptive grid: 8x20, all 160 cells populated
-physis_ingest(source="fs", path="/repo")   # append file observations
-physis_observed(limit=10)                  # verify what entered the log
-physis_observe(path="/path/to/repo")       # index the repo
-physis_query(question="where is auth")     # scored matches
-physis_context(task="add token rotation", budget=600)   # code, auto-indexed
-physis_context(task="what does the runbook say", mode="docs")
-physis_chain(task="coverage gaps in auth", budget=1200)
-physis_classify(file="src/auth.py")        # adaptive grid cells
-replant_demo()                             # record once, replay twice, 0 provider calls
+# Index once.
+physis_observe(path="/path/to/repo")          # 62 files -> coherence graph
+
+# Ask, with a budget. Returns the relevant functions plus the evidence trail.
+physis_context(task="add token rotation", budget=300, mode="code")
+# -> 3 nodes, 176 tokens (4.5x compression vs. ~800 tokens of raw hits)
+#    evidence: physis_why("rotate_token") lists the nodes and coherence score
+
+# Make the change, then check direction against the do-nothing baseline.
+physis_diff(before="auth.py@before", after="auth.py@after", ask="shorter, safer")
+# -> moved: true, retention 0.7
+
+# Repeat the verified deploy with no model call.
+replant_demo()   # record once, replay twice, provider_calls = 0
 ```
+
+The plugin is not a collection of tools: it is the path from "what is in this
+repo" to "did the change move as asked" to "run that again for free".
 
 ## Tools
 
@@ -131,7 +140,7 @@ auto-expansion record what the ontology missed.
 
 Context and replay are deterministic and measured separately: 62 Rust files
 compress to 176 tokens at a 300-token budget; a recorded replant recipe
-replays with `provider_calls=0`; 47 plugin tests and 295 engine tests cover
+replays with `provider_calls=0`; 48 plugin tests and 295 engine tests cover
 the paths.
 
 ## Honest limits
@@ -167,7 +176,7 @@ the paths.
 ## Development
 
 ```bash
-python3.13 -m pytest          # 50 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # 48 tests: unit + integration against the bundled binaries
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
 
@@ -204,19 +213,26 @@ tests/               unit + integration
   `physis_observe` first, or check `PHYSIS_CORE_DIR`.
 - **`physis_context` says "no corpus documents".** It compiles markdown/text
   documents; point `path` at a directory that contains them.
-- **Everything looks lexical.** The bundled embedder is random-projection; only
-  an ONNX-enabled build with real weights changes that.
+- **Everything looks lexical.** The bundled embedder is BGE-small-en-v1.5 (ONNX,
+  384d, CLS pooling). If you override `model_dir`, point it at a directory
+  containing `model.onnx` and `tokenizer.json`; an empty or wrong directory
+  falls back to deterministic hashing, which is reproducible but not semantic.
 
 ## Publishing
 
-The repo is release-ready (MIT plugin, Apache-2.0 engines/model, CI, checksums).
-To publish as a new GitHub repo:
+The plugin is already published at https://github.com/ilPez00/hermes-physis
+(release v1.4.1, commit 95f7b23). It is also listed in the Hermes plugin
+catalog via PR #151008 (pinned to the attested commit).
+
+To ship a new version:
 
 ```bash
-scripts/publish.sh   # gh repo create ilPez00/hermes-physis --public --push
+scripts/publish.sh   # bumps nothing by itself; review, tag, push
 ```
 
-Review the tree first: `git status`, `bin/SHA256SUMS`, `THIRD_PARTY_NOTICES.md`.
+Then open a SHA-bump PR against NousResearch/hermes-agent updating
+`plugin-catalog/physis.yaml`. Review the tree first: `git status`,
+`bin/SHA256SUMS`, `THIRD_PARTY_NOTICES.md`.
 
 ## License
 

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from tools import HANDLERS, reset_pool
+import tools
 
 CORE_COMMANDS = {
     "scan",
@@ -225,6 +226,52 @@ def test_ingest_parses_appended(tmp_path):
     assert result["ok"] is True
     assert result["appended"] == 3
     assert result["argv"][1] == "watch"
+
+
+def test_register_tools_uses_plugin_config(tmp_path, monkeypatch):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    settings = {
+        "engine_bin": binary,
+        "timeout": 7,
+        "budget": 123,
+        "auto_expand": False,
+        "auto_observe": True,
+        "model_dir": str(tmp_path / "model"),
+    }
+    captured = {}
+
+    def fake_run(pool, argv, merged):
+        captured.update(merged)
+        captured["argv"] = list(argv)
+        return {"ok": True, "argv": list(argv), "stdout": ""}
+
+    monkeypatch.setattr(tools, "_run", fake_run)
+
+    class Ctx:
+        handlers: dict = {}
+
+        def get_config(self, key, default=None):
+            return settings.get(key, default)
+
+        def register_tool(self, name, toolset, schema, handler, description=None):
+            self.handlers[name] = handler
+
+    ctx = Ctx()
+    ctx.handlers = {}
+    names = tools.register_tools(ctx)
+    assert "physis_classify" in names
+    assert "physis_context" in names
+
+    ctx.handlers["physis_classify"]({"text": "hello"})
+    assert captured["engine_bin"] == binary
+    assert captured["timeout"] == 7
+    assert captured["auto_expand"] is False
+    assert "--no-expand" in captured["argv"]
+
+    captured.clear()
+    ctx.handlers["physis_context"]({"query": "hello", "path": str(tmp_path)})
+    assert captured["budget"] == 123
+    assert captured["timeout"] == 7
 
 
 def test_observed_reads_log(tmp_path):

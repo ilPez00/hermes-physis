@@ -997,12 +997,18 @@ def register_tools(ctx: Any) -> list[str]:
         name = schema["name"]
         handler = HANDLERS[name]
 
-        def wrapped(args=None, _handler=handler, **kwargs):
-            merged = _with_defaults(_merge(args, kwargs))
-            # Lazy so tests and re-registration read current config.
-            for key in ("engine_bin", "timeout"):
-                if not merged.get(key) and DEFAULTS[key]:
-                    merged[key] = DEFAULTS[key]
+        def wrapped(args=None, _handler=handler, _ctx=ctx, **kwargs):
+            # Read the live plugin config on every call so a config edit applies
+            # without reloading the plugin; user-supplied args override it.
+            config = plugin_config(_ctx)
+            user = _merge(args, kwargs)
+            merged = dict(config)
+            for key, value in user.items():
+                if value not in (None, ""):
+                    merged[key] = value
+                else:
+                    merged.setdefault(key, config.get(key, DEFAULTS.get(key)))
+            merged = _with_defaults(merged)
             return _handler(merged)
 
         ctx.register_tool(
