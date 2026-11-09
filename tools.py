@@ -1141,8 +1141,11 @@ proc = subprocess.run(
     command, shell=True, cwd=cwd, capture_output=True, text=True,
     stdin=subprocess.DEVNULL,
 )
+stdout = ((proc.stdout or "").strip())[-2000:]
+stderr = ((proc.stderr or "").strip())[-2000:]
 output = ((proc.stdout or "") + (proc.stderr or "")).strip()[-2000:]
-print(json.dumps({"ok": proc.returncode == 0, "exit": proc.returncode, "output": output}))
+print(json.dumps({"ok": proc.returncode == 0, "exit": proc.returncode,
+                  "output": output, "stdout": stdout, "stderr": stderr}))
 '''
 
 
@@ -1248,10 +1251,14 @@ def _learned_registry(args: dict[str, Any], candidate: dict[str, Any]) -> Path:
     os.chmod(wrapper, 0o700)
 
     def spec(script: str, cwd: str) -> dict[str, Any]:
+        # Run the wrapper directly so replant fingerprints only this small
+        # file. Invoking it through a (possibly huge) interpreter would make
+        # the interpreter binary part of the fingerprint and trip replant's
+        # 64 MiB per-file limit on hosts whose python is larger than that.
         return {
             "kind": "action",
-            "program": str(Path(sys.executable).resolve()),
-            "args": [str(wrapper), script, cwd],
+            "program": str(wrapper),
+            "args": [script, cwd],
             "fingerprint_files": [str(wrapper)],
             "timeout_ms": 120_000,
         }
