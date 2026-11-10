@@ -178,7 +178,7 @@ def test_replant_demo_records_then_replays(tmp_path):
     assert result["counter"] == "3"  # record + two replays, each a real action
     assert result["stats"]["verified_records"] == 1
     assert result["stats"]["verified_replays"] == 2
-    assert result["stats"]["provider_calls"] if "provider_calls" in result["stats"] else True
+    assert result["provider_calls"] == 0
 
 
 def test_no_recalled_nodes_hint(isolated_store, repo):
