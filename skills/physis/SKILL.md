@@ -21,7 +21,7 @@ codebase, or when the same verified workflow will run again.
 4. `physis_classify` / `physis_diff` when the question is about the character
    of a file or whether a change altered it.
 5. Ask the operator to use `/physis replay <prompt>` for an approved workflow.
-   Model-triggered replay and ad-hoc recipe recording are disabled.
+   The model no longer calls replay or record; both are operator-only.
 6. With `auto_learn` on, a session that passed `verify_cmd` becomes a candidate.
    Read it with `physis_candidates`. Only the operator can approve a candidate,
    using `/physis approve <id>`; approval makes the workflow replayable.
@@ -37,8 +37,9 @@ codebase, or when the same verified workflow will run again.
 - Never approve a candidate you have not read: its steps are shell commands
   that will run again unattended.
 - `physis_why` returns evidence around a label, not a causal story.
-- The bundled embedder is semantic (BGE-small, CLS pooling) and on by default; the ontology
-  cache makes calls fast after the first build.
+- The bundled embedder is semantic (BGE-small, CLS pooling) and on by default;
+  the ontology cache makes calls fast after the first build. This does not make
+  host commands network-free, sandboxed, or deterministic.
 - When a classification is a tie or the best entry is weak, the engine may add
   a learned ontology entry (`Ontology expanded: ...`). Treat it as a generic
   placeholder, not a certified category.
@@ -46,5 +47,8 @@ codebase, or when the same verified workflow will run again.
   custom registry.
 - replant uses the operator-configured `replant_tools` registry or the
   plugin-generated learned registry. A model cannot supply a registry path.
+- Approval and replay are operator-only. A same-user model can modify the
+  registry and approval manifest together; an on-disk checksum is not
+  authentication.
 - If a command is unsupported, report the limitation plainly instead of
   substituting a different tool that looks similar.

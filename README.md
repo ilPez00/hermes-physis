@@ -2,9 +2,8 @@
 
 https://github.com/ilPez00/hermes-physis · [install](#install) · [benchmark](#measured)
 
-Evidence-backed execution memory for Hermes Agent, with both engines bundled and
-working offline. No API key, no network call, no Python dependency beyond the
-standard library.
+Evidence-backed execution memory for Hermes Agent, with both engines bundled.
+No API key. Python stdlib is required when running Python entry points.
 
 Physis answers four questions a model normally guesses at, and then remembers
 the answer as a verified procedure:
@@ -18,10 +17,10 @@ the answer as a verified procedure:
 
 Plus **replant**: record a verified tool recipe once, then re-execute the real
 actions and checks on later identical requests. The model is not called again;
-cached successes are never returned. Record `artifacts=` with it and the recipe
-is also bound to its inputs: change one and replay is refused instead of
-repeated. `replant_demo` proves the loop in one call; `/physis replay <prompt>`
-repeats it without a model turn at all.
+cached successes are never returned. Changes to captured edited files block
+replay, but untracked dependencies are not checked. `replant_demo` exercises a
+separate counter fixture; `/physis replay <prompt>` repeats an approved recipe
+without a model turn.
 
 `physis_chain` runs the engine's whole pass - structure, gaps, drift and the
 label-permuted control - when a task needs an overview rather than one query.
@@ -38,7 +37,7 @@ label-permuted control - when a task needs an overview rather than one query.
 The binaries are Linux x86_64 and are used by default. `PHYSIS_BIN` or the
 `engine_bin` setting overrides discovery; a comma-separated list is accepted.
 `models/bge-small/` ships the MIT bge-small-en-v1.5 uint8 ONNX export, so
-semantic embeddings are on with no download and no network.
+semantic embeddings are on without a model download.
 
 ## Install
 
@@ -132,9 +131,10 @@ which is what makes them replayable later.
 /physis replay say hi             # operation: replay, provider_calls: 0
 ```
 
-The generated registry names only `stepN` / `verify` and always runs them
-through `sys.executable` plus a fixed wrapper, so a learned plan can never
-choose its own executable.
+The generated registry names only `stepN` / `verify` and runs a fixed Python
+wrapper. `verify_cmd` and approved commands still
+run with the configured user's filesystem and network access; this is not a
+sandbox or deterministic execution environment.
 
 ### Command
 
@@ -148,7 +148,9 @@ registry is the operator's `replant_tools` setting, or
 `~/.physis/replant/learned/tools.json` after `/physis approve`. `approve` is not
 a registered tool. Both approval and replay require the operator's slash
 command; neither is model-callable. The model may have write access as the same
-OS user, so private file permissions alone do not establish an approval boundary.
+OS user; that user can modify the registry and approval manifest together, so
+an on-disk checksum is not authentication. Private file permissions alone do
+not establish an approval boundary.
 This is not a sandbox against a compromised local user or tampered plugin files.
 Only recorded edited files are fingerprinted; other dependencies must be
 independently reviewed. Missing or invalid freshness evidence blocks replay.
@@ -214,7 +216,7 @@ dependency entirely.
 
 The model must use the same loader as the bundled BGE-small (CLS pooling, uint8
 or float). Heavier models trade bundle size and first-call latency for accuracy;
-the default keeps the "no download, no network" guarantee.
+the default keeps the bundled model available without a download.
 
 ## Measured
 
@@ -236,10 +238,9 @@ honest limit: the grid is a coarse lens, not an oracle. On unfamiliar phrasing
 prefer the top-3 cells plus the `best_domain` / `best_mode` axes, and let
 auto-expansion record what the ontology missed.
 
-Context and replay are deterministic and measured separately: 62 Rust files
-compress to 176 tokens at a 300-token budget; a recorded replant recipe
-replays with `provider_calls=0`; 60 plugin tests and 295 engine tests cover
-the paths.
+Context and replay are measured separately: 62 Rust files compress to 176
+tokens at a 300-token budget; a recorded replant recipe replays with
+`provider_calls=0`.
 
 Verified loop, measured on the bundled fixtures (real binaries, temp store):
 
@@ -280,10 +281,10 @@ Verified loop, measured on the bundled fixtures (real binaries, temp store):
   longer surface nodes from an unrelated project.
 - Auto-indexing is bounded: `physis_context` refuses to scan a corpus over
   ~1500 files and the docs compiler refuses over ~5000; pass a narrower path.
-- Replay freshness is per file: `artifacts=` hashes each recorded input (≤1 MiB
-  each) at record time; a changed or missing input blocks replay. It does not
-  hash a whole tree, and it does not replace replant's own fingerprint of the
-  tool implementation.
+- Replay freshness covers only captured edited files up to 1 MiB each. The
+  capture can be empty, and it is not a check of all inputs or a whole tree.
+  A changed or missing captured file blocks replay; this does not replace
+  replant's own fingerprint of the tool implementation.
 - `pre_verify` runs one command, once per turn (`attempt` > 0 is a no-op), with
   the working directory of the first changed file.
 - Learning is opt-in and **advisory**: only foreground `terminal` commands
@@ -300,13 +301,13 @@ Verified loop, measured on the bundled fixtures (real binaries, temp store):
 ## Development
 
 ```bash
-python3.13 -m pytest          # 60 tests: unit + integration against the bundled binaries
+python3.13 -m pytest          # requires pytest and PyYAML
 scripts/build-engines.sh      # rebuild both binaries from vendor/ (needs Rust 1.89+)
 ```
 
-Rebuilding from `vendor/` reproduces the shipped binaries byte-for-byte (same
-SHA256; see `bin/SHA256SUMS`), so the source snapshot is the one that built the
-bundle.
+On 2026-11-10, 84 plugin tests passed locally. The local plugin validator
+reported dependency preparation failed because local Hermes 0.22.7 is below
+the required 0.23.0, although its static probe passed.
 
 The integration tests are the regression net for the original packaging bug:
 unit tests with fake engines passed while the shipped binary advertised a
@@ -330,9 +331,8 @@ tests/               unit + integration
 ## Troubleshooting
 
 - **Installer flags the bundle.** Hermes scans third-party plugins. The two
-  Linux binaries are the only opaque files; their hashes are in
-  `bin/SHA256SUMS` and they rebuild from the vendored source. Review, then
-  re-run with `--force` if your installer asks.
+  Linux binaries are the only opaque files. Review the bundle, then re-run with
+  `--force` if your installer asks.
 - **`No recalled nodes`.** The index is empty for that store; run
   `physis_observe` first, or check `PHYSIS_CORE_DIR`.
 - **`physis_context` says "no corpus documents".** It compiles markdown/text
@@ -345,8 +345,11 @@ tests/               unit + integration
 ## Publishing
 
 The plugin is published at https://github.com/ilPez00/hermes-physis
-(release v1.6.0). It is listed in the Hermes plugin catalog via PR #151275
-(pinned to the attested commit 8602dbbccea9e9a80944ce847b3c2fad0d8b3ec0).
+(release v1.6.0). On 2026-11-10, GitHub attestation verification for the
+binaries committed at ee8483c returned 404. A separate build from ee8483c
+produced successfully attested artifacts, but their hashes differed from the
+committed binaries; it does not attest the committed files. Catalog review
+remains changes requested.
 
 To ship a new version:
 

@@ -1,11 +1,12 @@
 name: physis
 version: 1.6.0
 description: >
-  Evidence-backed execution memory: per-repo graph context, a deterministic
-  verify hook, and verified tool recipes that replay with zero provider calls
-  and refuse when their inputs changed. Sessions that pass their check become
-  approvable workflow candidates. Two bundled offline engines, no API key, no
-  network, no Python dependencies.
+  Evidence-backed execution memory: per-repo graph context, a verify hook, and
+  verified tool recipes that replay with zero provider calls and refuse when
+  captured inputs changed. Sessions that pass their check become approvable
+  workflow candidates. Two bundled engines, no API key. Python entry points
+  require a Python interpreter and standard library; verify_cmd and approved
+  commands run with the configured user's filesystem and network access.
 author: Giovanni Pezzulli
 requires_hermes: ">=0.23.0"
 provides_tools:
