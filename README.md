@@ -345,11 +345,9 @@ tests/               unit + integration
 ## Publishing
 
 The plugin is published at https://github.com/ilPez00/hermes-physis
-(release v1.6.0). On 2026-11-10, GitHub attestation verification for the
-binaries committed at ee8483c returned 404. A separate build from ee8483c
-produced successfully attested artifacts, but their hashes differed from the
-committed binaries; it does not attest the committed files. Catalog review
-remains changes requested.
+(release v1.6.0). The bundled engines are built by GitHub Actions and carry
+SLSA build provenance attestations. Catalog submission is in progress; the
+pinned commit must be one whose binaries verify with `gh attestation verify`.
 
 To ship a new version:
 
