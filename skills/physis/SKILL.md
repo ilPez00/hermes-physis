@@ -33,6 +33,8 @@ codebase, or when the same verified workflow will run again.
 - A replay that answers `blocked: true` is the correct outcome: the inputs
   changed since verification or evidence is missing. Repeat the task and request
   operator approval; do not force it.
+  Freshness only covers captured edited files up to 1 MiB and can be empty;
+  untracked dependencies are not checked.
   A candidate that fails at approval is the same signal: the world moved.
 - Never approve a candidate you have not read: its steps are shell commands
   that will run again unattended.
