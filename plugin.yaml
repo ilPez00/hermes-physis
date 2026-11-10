@@ -1,5 +1,5 @@
 name: physis
-version: 1.6.0
+version: 1.7.0
 description: >
   Evidence-backed execution memory: per-repo graph context, a verify hook, and
   verified tool recipes that replay with zero provider calls and refuse when
