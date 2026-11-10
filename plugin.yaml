@@ -22,9 +22,6 @@ provides_tools:
   - physis_grid
   - physis_ingest
   - physis_observed
-  - physis_command
-  - replant_run
-  - replant_record
   - replant_stats
   - replant_demo
   - replant_show
@@ -65,7 +62,7 @@ config_schema:
   replant_tools:
     type: str
     default: ""
-    description: "Tools registry used by /physis replay; empty = <path>/.replant/tools.json, or the learned registry when present"
+    description: "Operator-owned tools registry for replay/record; empty = the plugin-generated learned registry (~/.physis/replant/learned/tools.json) after /physis approve. Never taken from a repository path or model argument."
   budget:
     type: int
     default: 800

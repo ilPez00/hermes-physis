@@ -269,7 +269,7 @@ def test_register_tools_uses_plugin_config(tmp_path, monkeypatch):
     assert "--no-expand" in captured["argv"]
 
     captured.clear()
-    ctx.handlers["physis_context"]({"query": "hello", "path": str(tmp_path)})
+    ctx.handlers["physis_context"]({"task": "hello", "path": str(tmp_path)})
     assert captured["budget"] == 123
     assert captured["timeout"] == 7
 
@@ -299,13 +299,14 @@ def test_missing_engine_is_actionable(tmp_path):
     assert result["hint"] == "run physis_engine_status"
 
 
-def test_replant_run_requires_existing_registry(tmp_path):
+def test_replant_run_requires_an_operator_registry(tmp_path):
     binary = make_binary(tmp_path, CORE_COMMANDS)
     result = HANDLERS["replant_run"](
-        {"engine_bin": binary, "path": str(tmp_path), "input": "x", "tools": str(tmp_path / "missing.json")}
+        {"engine_bin": binary, "path": str(tmp_path), "input": "x"}
     )
     assert result["ok"] is False
-    assert "tools registry not found" in result["error"]
+    assert "replant_tools" in result["error"]
+    assert "never taken from a repository path" in result["hint"]
 
 
 def test_unsupported_command_is_reported(tmp_path):
@@ -313,14 +314,6 @@ def test_unsupported_command_is_reported(tmp_path):
     result = HANDLERS["physis_observe"]({"engine_bin": binary, "path": str(tmp_path)})
     assert result["ok"] is False
     assert "no available engine advertises 'scan'" in result["error"]
-
-
-def test_command_passes_stdin(tmp_path):
-    binary = make_binary(tmp_path, CORE_COMMANDS)
-    result = HANDLERS["physis_command"](
-        {"engine_bin": binary, "command": "search", "args": ["x"], "stdin": "{}"}
-    )
-    assert result["ok"] is True
 
 
 # --- hook contract ---------------------------------------------------------- #
@@ -404,9 +397,10 @@ def test_pre_verify_nudges_on_failure_only(tmp_path):
 def test_artifacts_are_fingerprinted_and_detect_change(tmp_path):
     target = tmp_path / "input.txt"
     target.write_text("one")
-    args = {"input": "deploy", "path": str(tmp_path), "store": str(tmp_path / ".replant")}
+    args = {"input": "deploy", "path": str(tmp_path)}
 
-    assert tools._changed_artifacts(args) == []
+    with pytest.raises(ValueError, match="freshness evidence"):
+        tools._changed_artifacts(args)
 
     tools._write_artifacts(args, [str(target)])
     assert tools._changed_artifacts(args) == []
@@ -429,8 +423,7 @@ def test_replant_run_blocks_when_inputs_changed(tmp_path):
         "engine_bin": binary,
         "path": str(tmp_path),
         "input": "deploy",
-        "tools": str(registry),
-        "store": str(tmp_path / ".replant"),
+        "replant_tools": str(registry),  # operator config, not a model argument
     }
     tools._write_artifacts(args, [str(target)])
     target.write_text("two")
@@ -482,9 +475,8 @@ def test_candidate_without_check_or_intent_is_not_saved(tmp_path):
     assert tools.physis_candidates({"path": str(tmp_path)})["count"] == 0
 
 
-def test_approve_records_and_replays_then_blocks_on_change(tmp_path):
+def test_approve_records_and_replays_then_blocks_on_change(tmp_path, monkeypatch):
     tools.reset_learned()
-    store = tmp_path / ".replant"
     artifact = tmp_path / "input.txt"
     artifact.write_text("v1")
     config = {"auto_learn": True, "verify_cmd": "test -f input.txt", "timeout": 30}
@@ -501,16 +493,20 @@ def test_approve_records_and_replays_then_blocks_on_change(tmp_path):
     assert tools.make_pre_verify(config)(changed_paths=[str(artifact)], session_id="s2") is None
     candidate = tools.physis_candidates({"path": str(tmp_path)})["candidates"][0]
 
-    approved = HANDLERS["replant_record"](
-        {"path": str(tmp_path), "store": str(store), "candidate": candidate["id"]}
-    )
+    # Approving is operator-only: the model's replant_record refuses a candidate.
+    refused = tools.replant_record({"candidate": candidate["id"]})
+    assert refused["ok"] is False
+    assert "approve" in refused["error"]
+
+    monkeypatch.chdir(tmp_path)
+    command = tools.make_physis_command(config)
+    approved = json.loads(command("approve " + candidate["id"]))
     assert approved["ok"] is True, approved
     assert approved["status"] == "succeeded"
     assert approved["provider_calls"] == 0
     assert approved["candidate_id"] == candidate["id"]
 
-    registry = str(store / "learned" / "tools.json")
-    args = {"path": str(tmp_path), "store": str(store), "input": "append a step", "tools": registry}
+    args = {"input": "append a step"}  # registry resolves to the learned one
     assert HANDLERS["replant_run"](args)["operation"] == "replay"
 
     artifact.write_text("v2")  # the ground moves
@@ -519,10 +515,9 @@ def test_approve_records_and_replays_then_blocks_on_change(tmp_path):
     assert blocked["changed"] == [str(artifact)]
 
 
-def test_approve_unknown_candidate_is_actionable(tmp_path):
-    result = HANDLERS["replant_record"](
-        {"path": str(tmp_path), "store": str(tmp_path / ".replant"), "candidate": "deadbeef"}
-    )
+def test_approve_unknown_candidate_is_actionable(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = json.loads(tools.make_physis_command({})("approve deadbeef"))
     assert result["ok"] is False
     assert "candidate not found" in result["error"]
     assert result["hint"] == "run physis_candidates"

@@ -248,61 +248,37 @@ OBSERVED = {
     },
 }
 
-COMMAND = {
-    "name": "physis_command",
-    "description": (
-        "Escape hatch: run any command advertised by a bundled engine "
-        "(see physis_engine_status for the list). Use only when no dedicated "
-        "tool covers the operation."
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "command": {"type": "string", "description": "Engine command to run"},
-            "args": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Command arguments",
-            },
-            "path": {"type": "string", "description": "Working directory"},
-            "stdin": {"type": "string", "description": "Optional stdin payload"},
-        },
-        "required": ["command"],
-    },
-}
-
 REPLANT_RUN = {
     "name": "replant_run",
     "description": (
         "Replay a verified tool recipe for an exact request, or return miss. "
         "The recipe's real actions and checks run again - no cached success is "
         "returned. Refuses with blocked=true when the task inputs fingerprinted "
-        "at record time have changed. Requires an operator-owned tools registry."
+        "at record time have changed. The tools registry is operator-owned "
+        "(replant_tools setting) or the plugin-generated learned registry from "
+        "/physis approve; you cannot name one, and it is never taken from a "
+        "repository path."
     ),
     "parameters": {
         "type": "object",
         "properties": {
             "input": {"type": "string", "description": "Request prompt to match"},
             "path": {"type": "string", "description": "Working directory"},
-            "tools": {"type": "string", "description": "Path to replant tools registry JSON"},
-            "store": {
-                "type": "string",
-                "description": "Replant state directory (default: <path>/.replant)",
-            },
         },
-        "required": ["input", "tools"],
+        "required": ["input"],
     },
 }
 
 REPLANT_RECORD = {
     "name": "replant_record",
     "description": (
-        "Record a verified recipe once: execute its actions and independent "
-        "checks, then persist it for replay. Pass artifacts= (files the work "
-        "depends on) to fingerprint the inputs; a later replay whose inputs "
-        "changed is refused instead of repeated. Pass candidate=<id> to record "
-        "a workflow Physis learned from a verified session instead of a "
-        "hand-written recipe (see physis_candidates)."
+        "Record a verified recipe once against the operator's replant_tools "
+        "registry: execute its actions and independent checks, then persist it "
+        "for replay. You may compose steps out of the tools the operator "
+        "declared, but you cannot name a registry, a state directory or a "
+        "candidate. Pass artifacts= (files the work depends on) to fingerprint "
+        "the inputs; a later replay whose inputs changed is refused. Approving a "
+        "learned workflow is exclusively the operator's /physis approve."
     ),
     "parameters": {
         "type": "object",
@@ -318,18 +294,9 @@ REPLANT_RECORD = {
                 "items": {"type": "string"},
                 "description": "Input files this recipe depends on (hashed at record time)",
             },
-            "candidate": {
-                "type": "string",
-                "description": "Candidate id from physis_candidates: record that learned workflow",
-            },
             "path": {"type": "string", "description": "Working directory"},
-            "tools": {"type": "string", "description": "Path to replant tools registry JSON"},
-            "store": {
-                "type": "string",
-                "description": "Replant state directory (default: <path>/.replant)",
-            },
         },
-        "required": ["input", "recipe", "tools"],
+        "required": ["input", "recipe"],
     },
 }
 
@@ -340,10 +307,6 @@ REPLANT_STATS = {
         "type": "object",
         "properties": {
             "path": {"type": "string", "description": "Working directory"},
-            "store": {
-                "type": "string",
-                "description": "Replant state directory (default: <path>/.replant)",
-            },
         },
         "required": [],
     },
@@ -361,10 +324,6 @@ REPLANT_DEMO = {
         "type": "object",
         "properties": {
             "path": {"type": "string", "description": "Working directory"},
-            "store": {
-                "type": "string",
-                "description": "Replant state directory (default: <path>/.replant)",
-            },
         },
         "required": [],
     },
@@ -378,10 +337,6 @@ REPLANT_SHOW = {
         "properties": {
             "input": {"type": "string", "description": "Request prompt to look up"},
             "path": {"type": "string", "description": "Working directory"},
-            "store": {
-                "type": "string",
-                "description": "Replant state directory (default: <path>/.replant)",
-            },
         },
         "required": ["input"],
     },
@@ -392,21 +347,13 @@ CANDIDATES = {
     "description": (
         "List workflow candidates Physis learned from sessions that passed their "
         "verification command (auto_learn). Each candidate carries the request it "
-        "answered, the exact shell steps, the edited files and the check. Nothing "
-        "replays until an operator records it: replant_record(candidate=<id>) or "
-        "/physis approve <id>."
+        "answered, the exact shell steps, the edited files and the check. "
+        "Candidates are stored in the plugin's own profile directory "
+        "(~/.physis/replant/candidates), never in a repository. Nothing replays "
+        "until the operator records it with /physis approve <id> - approval is "
+        "not possible through this or any other registered tool."
     ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "path": {"type": "string", "description": "Working directory"},
-            "store": {
-                "type": "string",
-                "description": "Replant state directory (default: <path>/.replant)",
-            },
-        },
-        "required": [],
-    },
+    "parameters": {"type": "object", "properties": {}, "required": []},
 }
 
 
@@ -441,9 +388,6 @@ ALL_SCHEMAS = [
     GRID,
     INGEST,
     OBSERVED,
-    COMMAND,
-    REPLANT_RUN,
-    REPLANT_RECORD,
     REPLANT_STATS,
     REPLANT_DEMO,
     REPLANT_SHOW,

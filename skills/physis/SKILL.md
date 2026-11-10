@@ -20,21 +20,19 @@ codebase, or when the same verified workflow will run again.
    `physis_snapshot` for graph health; `physis_chain` for a gap/drift overview.
 4. `physis_classify` / `physis_diff` when the question is about the character
    of a file or whether a change altered it.
-5. `replant_run` before re-planning a recurring task; `replant_record` only
-   after a recipe's actions AND independent checks succeeded. Pass
-   `artifacts=[...]` so a later replay is refused when those inputs changed.
-   `/physis replay <prompt>` repeats a recorded recipe without a model turn.
+5. Ask the operator to use `/physis replay <prompt>` for an approved workflow.
+   Model-triggered replay and ad-hoc recipe recording are disabled.
 6. With `auto_learn` on, a session that passed `verify_cmd` becomes a candidate.
-   Read it with `physis_candidates` and record only the ones worth keeping:
-   `replant_record(candidate=<id>)` or `/physis approve <id>`. Approving is the
-   only thing that makes a learned workflow replayable.
+   Read it with `physis_candidates`. Only the operator can approve a candidate,
+   using `/physis approve <id>`; approval makes the workflow replayable.
 
 ## Rules
 
 - Never invent evidence Physis did not return. If the index is empty or the
   object is absent, say so and run `physis_observe` or widen the query.
 - A replay that answers `blocked: true` is the correct outcome: the inputs
-  changed since verification. Re-verify with `replant_record`; do not force it.
+  changed since verification or evidence is missing. Repeat the task and request
+  operator approval; do not force it.
   A candidate that fails at approval is the same signal: the world moved.
 - Never approve a candidate you have not read: its steps are shell commands
   that will run again unattended.
@@ -46,7 +44,7 @@ codebase, or when the same verified workflow will run again.
   placeholder, not a certified category.
 - `replant_demo` is the fastest proof the engine works; use it before wiring a
   custom registry.
-- replant tools require an operator-owned registry (`tools=...`); a model may
-  name a tool, never choose an executable.
+- replant uses the operator-configured `replant_tools` registry or the
+  plugin-generated learned registry. A model cannot supply a registry path.
 - If a command is unsupported, report the limitation plainly instead of
   substituting a different tool that looks similar.

@@ -33,6 +33,35 @@ BUNDLED_CACHE_DIR = PLUGIN_DIR / "models" / "cache"
 # Names looked up on PATH when no bundled binary is present.
 CANDIDATES = ("physis-core", "replant", "physis-replant", "physis", "physis-next")
 
+# Every subprocess gets this fixed minimal environment. Nothing else is
+# inherited: no blanket os.environ pass-through, so a stray PHYSIS_* variable
+# or a secret from the parent process cannot reach an engine, a verify command
+# or a replay step. PHYSIS_* variables pass through only when the operator set
+# them in the plugin's own process environment; callers may add more through
+# ``child_env(extra)`` (the plugin's own per-repo and model settings).
+ENV_PASSTHROUGH = ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TZ")
+ENV_PHYSIS_PASSTHROUGH = (
+    "PHYSIS_CORE_DIR",
+    "PHYSIS_SEMANTIC",
+    "PHYSIS_MODEL_DIR",
+    "PHYSIS_MODEL_DIM",
+    "PHYSIS_CACHE_DIR",
+    "PHYSIS_ONTOLOGY_DIR",
+    "PHYSIS_ONTOLOGY_FILES",
+    "PHYSIS_AUTO_EXPAND",
+)
+
+
+def child_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    """The fixed minimal child environment, plus explicitly chosen extras."""
+    env = {name: os.environ[name] for name in ENV_PASSTHROUGH if name in os.environ}
+    env.update(
+        {name: os.environ[name] for name in ENV_PHYSIS_PASSTHROUGH if name in os.environ}
+    )
+    if extra:
+        env.update({str(key): str(value) for key, value in extra.items()})
+    return env
+
 _REPLANT_COMMANDS = re.compile(
     r"\b(run|record|show|history|stats|approve|reject|undo|serve|mcp)\b"
 )
@@ -87,6 +116,7 @@ class PhysisEngine:
                 text=True,
                 timeout=min(self.timeout, 10),
                 check=False,
+                env=child_env(),
             )
             text = (proc.stdout or "") + "\n" + (proc.stderr or "")
         except (subprocess.TimeoutExpired, OSError):
@@ -116,6 +146,7 @@ class PhysisEngine:
             proc = subprocess.run(
                 [self.binary, "--version"],
                 capture_output=True, text=True, timeout=5, check=False,
+                env=child_env(),
             )
         except (subprocess.TimeoutExpired, OSError):
             return ""
@@ -156,7 +187,7 @@ class PhysisEngine:
             and BUNDLED_CACHE_DIR.is_dir()
         ):
             extra_env["PHYSIS_CACHE_DIR"] = str(BUNDLED_CACHE_DIR)
-        run_env = {**os.environ, **extra_env} if extra_env else None
+        run_env = child_env(extra_env)
         try:
             proc = subprocess.run(
                 argv,

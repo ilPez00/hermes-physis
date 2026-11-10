@@ -77,12 +77,9 @@ physis_diff(before="auth.py@before", after="auth.py@after", ask="shorter, safer"
 # Repeat the verified deploy with no model call.
 replant_demo()   # record once, replay twice, provider_calls = 0
 
-# Bind the recipe to its inputs, then let the ground move.
-replant_record(input="deploy api", artifacts=["requirements.txt"], ...)
-replant_run(input="deploy api")      # replay, provider_calls = 0
-#   -> edit requirements.txt
-replant_run(input="deploy api")
-# -> blocked: "task inputs changed since verification", changed: ["requirements.txt"]
+# Operator replays an approved candidate, with no provider call:
+# /physis replay deploy api
+# After a fingerprinted input changes, the same command refuses replay.
 ```
 
 The plugin is not a collection of tools: it is the path from "what is in this
@@ -107,14 +104,12 @@ run that again, the world changed".
 | `physis_observed` | `observed` | read the observation log with sources and timestamps |
 | `physis_diff` | `direction` | did the change move as asked, versus the null |
 | `physis_chain` | `chain` | one pass: structure, gaps, drift, control |
-| `physis_command` | any advertised | escape hatch for advanced commands |
 
 ### replant
 
 | Tool | Engine command | Use it for |
 |---|---|---|
-| `replant_run` | `run` | replay an exact request, or return miss/blocked |
-| `replant_record` | `record` | execute + check a recipe, then persist it (with optional `artifacts=` fingerprints) |
+| `/physis replay <prompt>` | `run` | operator-triggered replay of an exact request, or return blocked |
 | `replant_stats` | `stats` | records, replays, misses, blocks, replay share |
 | `replant_show` | `show` | inspect a learned record |
 | `replant_demo` | `record` + `run` + `stats` | zero-config proof, bundled counter fixture |
@@ -125,14 +120,16 @@ run that again, the world changed".
 With `auto_learn: true` and `verify_cmd` set, a session that passes its check is
 turned into a **candidate**: the request it answered (`pre_llm_call`), the exact
 foreground `terminal` commands, the files it edited, and the check that passed.
-Candidates are stored under `.replant/candidates/` and nothing replays until an
-operator approves one by id. Approval executes the steps and the check through
-replant (`provider_calls: 0`), which is what makes them replayable later.
+Candidates are stored in the plugin's own profile directory
+(`~/.physis/replant/candidates/`, or `$PHYSIS_REPLANT_STORE/candidates` when the
+operator relocates it) and nothing replays until an operator approves one by id.
+Approval executes the steps and the check through replant (`provider_calls: 0`),
+which is what makes them replayable later.
 
 ```bash
-/physis candidates          # id, request, steps, files, check
-/physis approve 32d149d9    # record it: replay is now allowed
-/physis replay say hi       # operation: replay, provider_calls: 0
+/physis candidates                # full content-bound id, request, steps, files, check
+/physis approve <full-candidate-id> # re-run checks and record it
+/physis replay say hi             # operation: replay, provider_calls: 0
 ```
 
 The generated registry names only `stepN` / `verify` and always runs them
@@ -144,9 +141,17 @@ choose its own executable.
 `/physis status` (engines + graph), `/physis recipes` (receipt stats),
 `/physis candidates` (learned, unapproved work), `/physis replay <prompt>`
 (repeat a recorded recipe with no model call), `/physis approve <id>` (record a
-candidate). Set `replant_tools` when the registry is not
-`<path>/.replant/tools.json`; an approved candidate resolves to
-`<path>/.replant/learned/tools.json` automatically.
+candidate).
+
+Replant state is never taken from a repository path or a model argument. The
+registry is the operator's `replant_tools` setting, or
+`~/.physis/replant/learned/tools.json` after `/physis approve`. `approve` is not
+a registered tool. Both approval and replay require the operator's slash
+command; neither is model-callable. The model may have write access as the same
+OS user, so private file permissions alone do not establish an approval boundary.
+This is not a sandbox against a compromised local user or tampered plugin files.
+Only recorded edited files are fingerprinted; other dependencies must be
+independently reviewed. Missing or invalid freshness evidence blocks replay.
 
 ### Hooks
 
@@ -171,7 +176,7 @@ candidate). Set `replant_tools` when the registry is not
 | `auto_observe` | `false` | after write/patch, re-index (`scan`) the edited folder |
 | `verify_cmd` | `""` | command run by the `pre_verify` hook after edits; non-zero keeps the turn going |
 | `auto_learn` | `false` | after `verify_cmd` passes, save the session as an approvable workflow candidate |
-| `replant_tools` | `""` | tools registry for `/physis replay`; empty = `<path>/.replant/tools.json`, or the learned one if present |
+| `replant_tools` | `""` | operator-owned tools registry for replay/record; empty = `~/.physis/replant/learned/tools.json` after `/physis approve` |
 | `budget` | `800` | default `physis_context` token budget (100-4000) |
 | `timeout` | `20` | per-subprocess timeout (seconds) |
 
@@ -190,6 +195,7 @@ variables. These are read by the engine directly and work without Hermes config.
 | `PHYSIS_CORE_DIR` | per-repo hash | graph store location; set explicitly for one shared store |
 | `PHYSIS_AUTO_EXPAND` | `1` | `0` disables learning a new ontology entry on uncertain classifications |
 | `PHYSIS_ONTOLOGY_DIR` / `PHYSIS_ONTOLOGY_FILES` | (bundled) | add axes or entries at runtime |
+| `PHYSIS_REPLANT_STORE` | `~/.physis/replant` | operator relocation of replant state (recipes, candidates, registries); never settable through a tool argument |
 | `PHYSIS_NO_...` | - | see `--no-expand` flag on `physis_classify` |
 
 ### Turning semantics off
@@ -239,9 +245,9 @@ Verified loop, measured on the bundled fixtures (real binaries, temp store):
 
 | Step | Command | Result |
 |---|---|---|
-| record with `artifacts=["input.txt"]` | `replant_record` | `status: succeeded`, `provider_calls: 0` |
-| replay unchanged inputs | `replant_run` | `operation: replay`, `provider_calls: 0` |
-| replay after editing `input.txt` | `replant_run` | `blocked: true`, `changed: ["input.txt"]`, engine never invoked |
+| approve learned candidate with fingerprinted input | `/physis approve <id>` | `status: succeeded`, `provider_calls: 0` |
+| replay unchanged inputs | `/physis replay <prompt>` | `operation: replay`, `provider_calls: 0` |
+| replay after editing `input.txt` | `/physis replay <prompt>` | `blocked: true`, `changed: ["input.txt"]`, engine never invoked |
 | per-repo isolation | `physis_observe` on A, then `physis_snapshot` on B | A `nodes: 1`, B `nodes: 0` |
 | learn a verified session | `pre_verify` passing with `auto_learn: true` | 1 candidate, 0 replays |
 | approve it | `/physis approve <id>` | `status: succeeded`, `provider_calls: 0` |

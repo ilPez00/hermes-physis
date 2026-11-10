@@ -13,17 +13,24 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
 try:  # imported as hermes_plugins.<slug>.tools
-    from .engine import EngineError, EnginePool, discover_engines
+    from .engine import EngineError, EnginePool, child_env, discover_engines
 except ImportError:  # pragma: no cover - direct import from the plugin directory
-    from engine import EngineError, EnginePool, discover_engines
+    from engine import EngineError, EnginePool, child_env, discover_engines
 
 TOOLSET = "physis"
-DEFAULT_STORE = ".replant"
+
+# Fixed plugin-owned profile directory for all replant state (recipes,
+# candidates, learned registries, artifact sidecars). It is deliberately
+# independent of any repository path a model names: a repo-controlled location
+# would let whoever controls the repo plant an executable registry or recipe.
+PROFILE_DIR = Path.home() / ".physis"
+OPERATOR_STORE_ENV = "PHYSIS_REPLANT_STORE"
 
 DEFAULTS: dict[str, Any] = {
     "engine_bin": "",
@@ -95,7 +102,7 @@ def plugin_config(ctx: Any) -> dict[str, Any]:
 
 def _pool_from_args(args: dict[str, Any]) -> EnginePool:
     global _POOL, _POOL_KEY
-    binary = str(args.get("engine_bin") or args.get("engine_bins") or "")
+    binary = str(args.get("engine_bin") or "")
     try:
         timeout = int(args.get("timeout") or DEFAULTS["timeout"])
     except (TypeError, ValueError):
@@ -119,11 +126,16 @@ def _path(args: dict[str, Any]) -> str:
     return str(Path(raw).expanduser().resolve())
 
 
-def _store(args: dict[str, Any]) -> str:
-    raw = str(args.get("store") or "").strip()
-    if raw:
-        return str(Path(raw).expanduser().resolve())
-    return str(Path(_path(args)) / DEFAULT_STORE)
+def _replant_store() -> str:
+    """The fixed replant state directory, independent of any model-supplied path.
+
+    Operators (and the test suite) may relocate it with
+    ``PHYSIS_REPLANT_STORE``; tool arguments never choose it.
+    """
+    override = os.environ.get(OPERATOR_STORE_ENV, "").strip()
+    if override:
+        return str(Path(override).expanduser())
+    return str(PROFILE_DIR / "replant")
 
 
 def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
@@ -589,7 +601,7 @@ def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     except EngineError as exc:
         return _engine_error(exc)
 
-    task = str(merged.get("task") or merged.get("query") or "").strip()
+    task = str(merged.get("task") or "").strip()
     if not task:
         return {"ok": False, "error": "task is required (the question the packet must support)"}
     path = _path(merged)
@@ -701,7 +713,7 @@ def physis_query(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if not pool.supports("search"):
         return _unsupported(pool, "search")
 
-    question = str(merged.get("question") or merged.get("query") or "").strip()
+    question = str(merged.get("question") or "").strip()
     if not question:
         return {"ok": False, "error": "question is required"}
     try:
@@ -723,7 +735,7 @@ def physis_why(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if not pool.supports("node-search"):
         return _unsupported(pool, "node-search")
 
-    obj = str(merged.get("object") or merged.get("label") or "").strip()
+    obj = str(merged.get("object") or "").strip()
     if not obj:
         return {"ok": False, "error": "object is required"}
     try:
@@ -1009,27 +1021,6 @@ def physis_observed(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     return result
 
 
-def physis_command(args: Any = None, **kwargs: Any) -> dict[str, Any]:
-    merged = _with_defaults(_merge(args, kwargs))
-    try:
-        pool = _pool_from_args(merged)
-    except EngineError as exc:
-        return _engine_error(exc)
-
-    command = str(merged.get("command") or "").strip()
-    if not command:
-        return {"ok": False, "error": "command is required"}
-    if not pool.supports(command):
-        return _unsupported(pool, command)
-    extra = merged.get("args") or []
-    if isinstance(extra, str):
-        extra = extra.split()
-    stdin = merged.get("stdin")
-    if stdin is not None and not isinstance(stdin, str):
-        stdin = json.dumps(stdin)
-    return _run(pool, [command, *[str(item) for item in extra]], merged, stdin=stdin)
-
-
 # --------------------------------------------------------------------------- #
 # replant tools
 # --------------------------------------------------------------------------- #
@@ -1058,7 +1049,7 @@ MAX_ARTIFACT_BYTES = 1 << 20
 def _request_digest(args: dict[str, Any]) -> str:
     """Key the sidecar by the same request the engine is sent."""
     request = {
-        "prompt": str(args.get("input") or args.get("value") or "").strip(),
+        "prompt": str(args.get("input") or "").strip(),
         "input": {},
         "context": {},
     }
@@ -1070,22 +1061,24 @@ def _artifact_hashes(paths: list[Any]) -> dict[str, str]:
     for raw in paths:
         path = Path(str(raw)).expanduser()
         try:
-            if path.is_file() and path.stat().st_size <= MAX_ARTIFACT_BYTES:
-                hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
-            else:
-                hashes[str(path)] = ""
-        except OSError:
-            hashes[str(path)] = ""
+            if not path.is_file() or path.stat().st_size > MAX_ARTIFACT_BYTES:
+                raise ValueError(f"artifact unavailable or too large: {path}")
+            data = path.read_bytes()
+            if len(data) > MAX_ARTIFACT_BYTES:
+                raise ValueError(f"artifact too large: {path}")
+            hashes[str(path)] = hashlib.sha256(data).hexdigest()
+        except OSError as exc:
+            raise ValueError(f"artifact unavailable: {path}") from exc
     return hashes
 
 
 def _artifacts_file(args: dict[str, Any]) -> Path:
-    return Path(_store(args)) / "artifacts" / f"{_request_digest(args)}.json"
+    return Path(_replant_store()) / "artifacts" / f"{_request_digest(args)}.json"
 
 
-def _private_store(args: dict[str, Any]) -> Path:
+def _private_store() -> Path:
     """replant refuses a state dir other users can read; create it the same way."""
-    store = Path(_store(args))
+    store = Path(_replant_store())
     store.mkdir(parents=True, exist_ok=True, mode=0o700)
     try:
         os.chmod(store, 0o700)
@@ -1096,11 +1089,7 @@ def _private_store(args: dict[str, Any]) -> Path:
 
 def _write_artifacts(args: dict[str, Any], artifacts: list[Any]) -> None:
     target = _artifacts_file(args)
-    if not artifacts:
-        if target.is_file():
-            target.unlink()  # a re-record without artifacts invalidates the old set
-        return
-    _private_store(args)
+    _private_store()
     target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     target.write_text(json.dumps({"artifacts": _artifact_hashes(artifacts)}, indent=2))
 
@@ -1108,16 +1097,27 @@ def _write_artifacts(args: dict[str, Any], artifacts: list[Any]) -> None:
 def _changed_artifacts(args: dict[str, Any]) -> list[str]:
     """Inputs recorded at verification time whose content changed since."""
     target = _artifacts_file(args)
-    if not target.is_file():
-        return []
     try:
-        recorded = json.loads(target.read_text()).get("artifacts") or {}
-    except (OSError, ValueError, TypeError):
-        return []
-    if not isinstance(recorded, dict) or not recorded:
-        return []
-    current = _artifact_hashes(list(recorded))
-    return sorted(path for path, digest in recorded.items() if current.get(path) != digest)
+        payload = json.loads(target.read_text())
+        recorded = payload["artifacts"]
+        if not isinstance(recorded, dict) or any(
+            not isinstance(path, str) or not isinstance(digest, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", digest)
+            for path, digest in recorded.items()
+        ):
+            raise ValueError("invalid fingerprints")
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        raise ValueError("freshness evidence missing or invalid") from exc
+    changed = []
+    for path, digest in recorded.items():
+        try:
+            current = _artifact_hashes([path])[path]
+        except ValueError:
+            changed.append(path)
+            continue
+        if current != digest:
+            changed.append(path)
+    return sorted(changed)
 
 
 # --------------------------------------------------------------------------- #
@@ -1133,13 +1133,17 @@ _LEARN: dict[str, dict[str, Any]] = {}
 
 STEP_WRAPPER = '''#!/usr/bin/env python3
 """Replay-step wrapper: run one recorded command, report one JSON object."""
-import json, subprocess, sys
+import json, os, subprocess, sys
 
 command = sys.argv[1]
 cwd = sys.argv[2] or None
+# Fixed minimal child environment: only what a recorded shell step plausibly
+# needs. Nothing else is inherited, so no stray PHYSIS_* or secrets reach it.
+env = {k: os.environ[k] for k in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TZ")
+       if k in os.environ}
 proc = subprocess.run(
     command, shell=True, cwd=cwd, capture_output=True, text=True,
-    stdin=subprocess.DEVNULL,
+    stdin=subprocess.DEVNULL, env=env,
 )
 stdout = ((proc.stdout or "").strip())[-2000:]
 stderr = ((proc.stderr or "").strip())[-2000:]
@@ -1183,68 +1187,74 @@ def _learn_observe(session: str, tool_name: str, call_args: dict[str, Any]) -> N
                 state["files"].append(str(path.resolve()))
 
 
-def _candidates_dir(args: dict[str, Any]) -> Path:
-    return Path(_store(args)) / "candidates"
+def _candidates_dir() -> Path:
+    return Path(_replant_store()) / "candidates"
 
 
-def _write_candidate(args: dict[str, Any], state: dict[str, Any], check: str) -> dict[str, Any] | None:
-    """Persist a candidate for operator approval; never replay it automatically."""
+def _write_candidate(state: dict[str, Any], check: str) -> dict[str, Any] | None:
+    """Persist a candidate for operator approval; never replay it automatically.
+
+    Candidates live in the fixed profile directory, never in the repository:
+    a repo-controlled location would let a model plant a candidate whose steps
+    are shell commands and then social-engineer (or script) its approval.
+    """
     steps = list(state.get("steps") or [])
     if not steps or not check.strip():
         return None
     prompt = str(state.get("user") or "").strip()[:MAX_LEARN_COMMAND]
     if not prompt:
         return None  # no intent recorded: a recipe without a request cannot be matched
-    identity = hashlib.sha256(
-        json.dumps({"prompt": prompt, "steps": steps}, sort_keys=True).encode("utf-8")
-    ).hexdigest()[:16]
-    candidate = {
-        "id": identity,
+    content = {
         "prompt": prompt,
         "steps": steps,
         "files": list(state.get("files") or []),
         "check": check,
+    }
+    identity = hashlib.sha256(
+        json.dumps(content, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    candidate = {
+        "id": identity,
+        **content,
         "created": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
-    target = _candidates_dir(args) / f"{identity}.json"
-    _private_store(args)
+    target = _candidates_dir() / f"{identity}.json"
+    _private_store()
     target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     target.write_text(json.dumps(candidate, indent=2))
     return candidate
 
 
-def _load_candidate(args: dict[str, Any], candidate_id: str) -> dict[str, Any] | None:
+def _load_candidate(candidate_id: str) -> dict[str, Any] | None:
+    """Load a candidate from the profile directory only.
+
+    Never search the working tree: a repo-planted candidate must not be
+    approvable, whatever id it claims.
+    """
     identity = str(candidate_id).strip().lower().lstrip("#")
-    if not identity or not re.fullmatch(r"[0-9a-f]{4,64}", identity):
+    if not re.fullmatch(r"[0-9a-f]{64}", identity):
         return None
-    # The candidate is stored next to the edited file; approve may run from the
-    # repo root, so look through the tree before giving up.
-    directories = [_candidates_dir(args)]
+    path = _candidates_dir() / f"{identity}.json"
     try:
-        for found in Path.cwd().glob("**/candidates/*.json"):
-            if found.parent not in directories:
-                directories.append(found.parent)
-    except OSError:
-        pass
-    for directory in directories:
-        for path in sorted(directory.glob(f"{identity}*.json")):
-            try:
-                candidate = json.loads(path.read_text())
-            except (OSError, ValueError, TypeError):
-                continue
-            if isinstance(candidate, dict) and candidate.get("steps"):
-                return candidate
+        if path.is_symlink() or not path.is_file():
+            return None
+        candidate = json.loads(path.read_text())
+        content = {key: candidate[key] for key in ("prompt", "steps", "files", "check")}
+        digest = hashlib.sha256(json.dumps(content, sort_keys=True).encode("utf-8")).hexdigest()
+        if candidate.get("id") == identity == digest and content["steps"]:
+            return candidate
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return None
     return None
 
 
-def _learned_registry(args: dict[str, Any], candidate: dict[str, Any]) -> Path:
+def _learned_registry(candidate: dict[str, Any]) -> Path:
     """Generate the operator-reviewed registry that replant needs.
 
     Every step is the bundled Python running a fixed wrapper, so the model never
     names an executable: it can only name ``stepN`` / ``verify``.
     """
-    store = _private_store(args)
-    learned = store / "learned"
+    learned = _private_store() / "learned"
     learned.mkdir(parents=True, exist_ok=True, mode=0o700)
     wrapper = learned / "step.py"
     wrapper.write_text(STEP_WRAPPER)
@@ -1276,9 +1286,52 @@ def _learned_registry(args: dict[str, Any], candidate: dict[str, Any]) -> Path:
     return registry
 
 
+def _file_digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _approval_file() -> Path:
+    return _private_store() / "learned" / "approval.json"
+
+
+def _write_approval(candidate: dict[str, Any], registry: Path) -> None:
+    """Bind replay to the exact registry produced during operator approval."""
+    payload = {
+        "candidate_id": candidate["id"],
+        "registry": str(registry),
+        "registry_digest": _file_digest(registry),
+        "candidate": {
+            key: candidate[key] for key in ("prompt", "steps", "files", "check")
+        },
+    }
+    target = _approval_file()
+    target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    target.write_text(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _verify_learned_approval(registry: Path) -> str | None:
+    """Return refusal reason; mutable registry/state is never trusted silently."""
+    target = _approval_file()
+    try:
+        approval = json.loads(target.read_text())
+        if approval.get("registry") != str(registry):
+            raise ValueError("registry path differs from operator approval")
+        if approval.get("registry_digest") != _file_digest(registry):
+            raise ValueError("registry content differs from operator approval")
+        candidate = approval["candidate"]
+        expected = hashlib.sha256(json.dumps(candidate, sort_keys=True).encode("utf-8")).hexdigest()
+        if approval.get("candidate_id") != expected:
+            raise ValueError("approved candidate binding is invalid")
+        if not candidate.get("steps") or not candidate.get("check"):
+            raise ValueError("approved executable steps are missing")
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return "replay refused: registry or executable steps lack valid operator approval"
+    return None
+
+
 def physis_candidates(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _with_defaults(_merge(args, kwargs))
-    directory = _candidates_dir(merged)
+    directory = _candidates_dir()
     if not directory.is_dir():
         return {
             "ok": True,
@@ -1304,22 +1357,79 @@ def physis_candidates(args: Any = None, **kwargs: Any) -> dict[str, Any]:
 
 
 
+def _reject_model_supplied(merged: dict[str, Any]) -> dict[str, Any] | None:
+    """Registry, store and candidates are never model-supplied.
+
+    Even on direct handler calls (hooks, tests): the executable surface comes
+    from operator config (``replant_tools``) or the plugin-generated learned
+    registry in the fixed profile directory, and approval is exclusively
+    ``/physis approve <id>``.
+    """
+    forbidden = sorted({"tools", "store", "candidate"} & set(merged))
+    if forbidden:
+        return {
+            "ok": False,
+            "error": (
+                f"model-supplied {', '.join(forbidden)} rejected: the tools registry "
+                "and replant state come from operator config (replant_tools) or the "
+                "plugin profile directory, not from tool arguments; approving a learned "
+                "workflow is exclusively '/physis approve <id>'"
+            ),
+        }
+    return None
+
+
+def _replay_registry(merged: dict[str, Any]) -> str:
+    """Operator-configured registry, else the plugin-generated learned one."""
+    registry = str(merged.get("replant_tools") or "").strip()
+    if registry:
+        return registry
+    learned = Path(_replant_store()) / "learned" / "tools.json"
+    return str(learned) if learned.is_file() else ""
+
+
 def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _with_defaults(_merge(args, kwargs))
+    rejected = _reject_model_supplied(merged)
+    if rejected:
+        return rejected
     try:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
-    value = str(merged.get("input") or merged.get("value") or "").strip()
+    value = str(merged.get("input") or "").strip()
     if not value:
         return {"ok": False, "error": "input is required"}
-    tools = str(merged.get("tools") or "").strip()
+    configured_registry = str(merged.get("replant_tools") or "").strip()
+    tools = _replay_registry(merged)
     if not tools:
-        return {"ok": False, "error": "tools registry path is required (tools=...)"}
+        return {
+            "ok": False,
+            "error": (
+                "no tools registry: set the operator config replant_tools, or approve "
+                "a learned workflow first (/physis approve <id>)"
+            ),
+            "hint": "the registry is operator-owned; it is never taken from a repository path",
+        }
     if not Path(tools).expanduser().is_file():
         return {"ok": False, "error": f"tools registry not found: {tools}"}
+    if not configured_registry:
+        approval_error = _verify_learned_approval(Path(tools).expanduser())
+        if approval_error:
+            return {
+                "ok": False,
+                "blocked": True,
+                "operation": "lookup",
+                "status": "blocked",
+                "provider_calls": 0,
+                "reason": approval_error,
+            }
 
-    changed = _changed_artifacts(merged)
+    try:
+        changed = _changed_artifacts(merged)
+    except ValueError as exc:
+        return {"ok": False, "blocked": True, "operation": "lookup", "status": "blocked",
+                "provider_calls": 0, "reason": str(exc)}
     if changed:
         # Refuse rather than replay under preconditions the checks never saw.
         return {
@@ -1328,7 +1438,7 @@ def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
             "operation": "lookup",
             "status": "blocked",
             "provider_calls": 0,
-            "reason": "task inputs changed since verification; re-verify with replant_record",
+            "reason": "task inputs changed since verification; repeat and request operator approval",
             "changed": changed,
         }
     if not pool.supports("run"):
@@ -1337,7 +1447,7 @@ def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     stdin = json.dumps({"prompt": value, "input": {}, "context": {}})
     result = _run(
         pool,
-        ["run", "--tools", str(Path(tools).expanduser()), "--store", _store(merged)],
+        ["run", "--tools", str(Path(tools).expanduser()), "--store", _replant_store()],
         merged,
         stdin=stdin,
         engine="replant",
@@ -1346,63 +1456,22 @@ def replant_run(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     return result
 
 
-def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
-    merged = _with_defaults(_merge(args, kwargs))
-    try:
-        pool = _pool_from_args(merged)
-    except EngineError as exc:
-        return _engine_error(exc)
-
-    candidate_id = str(merged.get("candidate") or "").strip()
-    if candidate_id:
-        # Approval path: the candidate carries the intent, the steps, the files
-        # and the check; the operator still names it explicitly.
-        candidate = _load_candidate(merged, candidate_id)
-        if candidate is None:
-            return {
-                "ok": False,
-                "error": f"candidate not found: {candidate_id}",
-                "hint": "run physis_candidates",
-            }
-        merged["input"] = candidate["prompt"]
-        merged["tools"] = str(_learned_registry(merged, candidate))
-        merged["artifacts"] = list(candidate.get("files") or [])
-        merged["recipe"] = json.dumps(
-            {
-                "steps": [
-                    {"tool": f"step{index}", "input": {}}
-                    for index in range(1, len(candidate["steps"]) + 1)
-                ],
-                "checks": [{"tool": "verify", "input": {}}],
-            }
-        )
-        merged["candidate_id"] = candidate["id"]
-
-    value = str(merged.get("input") or merged.get("value") or "").strip()
-    if not value:
-        return {"ok": False, "error": "input is required"}
-    recipe = merged.get("recipe")
-    if not recipe:
-        return {"ok": False, "error": "recipe is required"}
-    if isinstance(recipe, str):
-        try:
-            recipe = json.loads(recipe)
-        except (ValueError, TypeError):
-            return {"ok": False, "error": "recipe must be valid JSON"}
-    tools = str(merged.get("tools") or "").strip()
-    if not tools:
-        return {"ok": False, "error": "tools registry path is required (tools=...)"}
-    if not Path(tools).expanduser().is_file():
-        return {"ok": False, "error": f"tools registry not found: {tools}"}
-
-    trace = merged.get("trace") or {"provider": "hermes-physis-plugin"}
-    if isinstance(trace, str):
-        try:
-            trace = json.loads(trace)
-        except (ValueError, TypeError):
-            return {"ok": False, "error": "trace must be valid JSON"}
+def _record_recipe(
+    pool: EnginePool,
+    merged: dict[str, Any],
+    value: str,
+    recipe: Any,
+    tools: str,
+    trace: Any,
+    candidate_id: str | None,
+) -> dict[str, Any]:
     if not pool.supports("record"):
         return _unsupported(pool, "record")
+    # Invalidate old evidence before attempting a replacement, including on failure.
+    try:
+        _artifacts_file(merged).unlink(missing_ok=True)
+    except OSError as exc:
+        return {"ok": False, "error": f"cannot invalidate old freshness evidence: {exc}"}
     stdin = json.dumps(
         {
             "request": {"prompt": value, "input": {}, "context": {}},
@@ -1412,7 +1481,7 @@ def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     )
     result = _run(
         pool,
-        ["record", "--tools", str(Path(tools).expanduser()), "--store", _store(merged)],
+        ["record", "--tools", str(Path(tools).expanduser()), "--store", _replant_store()],
         merged,
         stdin=stdin,
         engine="replant",
@@ -1426,10 +1495,103 @@ def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
             artifacts = [item.strip() for item in artifacts.split(",") if item.strip()]
         try:
             _write_artifacts(merged, list(artifacts))
-        except OSError as exc:
-            result["artifacts_warning"] = f"could not persist artifact fingerprints: {exc}"
-    if merged.get("candidate_id"):
-        result["candidate_id"] = merged["candidate_id"]
+        except (OSError, ValueError) as exc:
+            result.update(ok=False, blocked=True, reason=f"could not persist artifact fingerprints: {exc}")
+    if candidate_id:
+        result["candidate_id"] = candidate_id
+    return result
+
+
+def replant_record(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """Record an ad-hoc recipe against the operator's registry.
+
+    A model may compose steps out of the tools the operator declared in
+    ``replant_tools``; it can never name a registry, a store or a candidate.
+    Learned-workflow approval is exclusively ``/physis approve <id>``.
+    """
+    merged = _with_defaults(_merge(args, kwargs))
+    rejected = _reject_model_supplied(merged)
+    if rejected:
+        return rejected
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+
+    value = str(merged.get("input") or "").strip()
+    if not value:
+        return {"ok": False, "error": "input is required"}
+    recipe = merged.get("recipe")
+    if not recipe:
+        return {"ok": False, "error": "recipe is required"}
+    if isinstance(recipe, str):
+        try:
+            recipe = json.loads(recipe)
+        except (ValueError, TypeError):
+            return {"ok": False, "error": "recipe must be valid JSON"}
+    tools = str(merged.get("replant_tools") or "").strip()
+    if not tools:
+        return {
+            "ok": False,
+            "error": (
+                "recording requires the operator's replant_tools registry; approving a "
+                "learned workflow is exclusively '/physis approve <id>'"
+            ),
+        }
+    if not Path(tools).expanduser().is_file():
+        return {"ok": False, "error": f"tools registry not found: {tools}"}
+
+    trace = merged.get("trace") or {"provider": "hermes-physis-plugin"}
+    if isinstance(trace, str):
+        try:
+            trace = json.loads(trace)
+        except (ValueError, TypeError):
+            return {"ok": False, "error": "trace must be valid JSON"}
+    return _record_recipe(pool, merged, value, recipe, tools, trace, None)
+
+
+def _approve_candidate(config: dict[str, Any], candidate_id: str) -> dict[str, Any]:
+    """Operator-only path behind ``/physis approve <id>``.
+
+    Not reachable through any registered model tool: the candidate carries
+    shell steps that will run again unattended, so the decision to record it
+    must be the operator's, made from the candidate listing.
+    """
+    merged = _with_defaults(dict(config))
+    candidate = _load_candidate(str(candidate_id).strip())
+    if candidate is None:
+        return {
+            "ok": False,
+            "error": f"candidate not found: {candidate_id}",
+            "hint": "run physis_candidates",
+        }
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    merged["input"] = candidate["prompt"]
+    merged["artifacts"] = list(candidate.get("files") or [])
+    recipe = {
+        "steps": [
+            {"tool": f"step{index}", "input": {}}
+            for index in range(1, len(candidate["steps"]) + 1)
+        ],
+        "checks": [{"tool": "verify", "input": {}}],
+    }
+    result = _record_recipe(
+        pool,
+        merged,
+        candidate["prompt"],
+        recipe,
+        str(_learned_registry(candidate)),
+        {"provider": "hermes-physis-plugin", "approved_by": "operator"},
+        candidate["id"],
+    )
+    if result.get("ok") and result.get("status") == "succeeded":
+        try:
+            _write_approval(candidate, _learned_registry(candidate))
+        except (OSError, ValueError) as exc:
+            return {"ok": False, "blocked": True, "reason": f"could not persist replay approval: {exc}"}
     return result
 
 
@@ -1441,7 +1603,7 @@ def replant_stats(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return _engine_error(exc)
     if not pool.supports("stats"):
         return _unsupported(pool, "stats")
-    result = _run(pool, ["stats", "--store", _store(merged)], merged, stdin="{}", engine="replant")
+    result = _run(pool, ["stats", "--store", _replant_store()], merged, stdin="{}", engine="replant")
     payload = _json_payload(result)
     if payload:
         result.update(payload)
@@ -1491,11 +1653,17 @@ def replant_demo(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if blocked:
         return blocked
 
-    store = Path(_store(merged))
+    # Hermetic demo: a throwaway store and a registry the plugin itself writes
+    # from the bundled fixture. Nothing is read from a repository path.
     try:
-        registry, fixture_root = _write_demo_registry(store)
+        with tempfile.TemporaryDirectory(prefix="physis-replant-demo-") as tmp:
+            return _demo_pass(pool, merged, Path(tmp))
     except OSError as exc:
         return {"ok": False, "error": str(exc)}
+
+
+def _demo_pass(pool: EnginePool, merged: dict[str, Any], store: Path) -> dict[str, Any]:
+    registry, fixture_root = _write_demo_registry(store)
 
     request = {
         "prompt": "physis replant demo",
@@ -1545,11 +1713,11 @@ def replant_show(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return _engine_error(exc)
     if not pool.supports("show"):
         return _unsupported(pool, "show")
-    value = str(merged.get("input") or merged.get("value") or "").strip()
+    value = str(merged.get("input") or "").strip()
     if not value:
         return {"ok": False, "error": "input is required"}
     stdin = json.dumps({"prompt": value, "input": {}, "context": {}})
-    result = _run(pool, ["show", "--store", _store(merged)], merged, stdin=stdin, engine="replant")
+    result = _run(pool, ["show", "--store", _replant_store()], merged, stdin=stdin, engine="replant")
     payload = _json_payload(result)
     if payload:
         result.update(payload)
@@ -1570,9 +1738,7 @@ HANDLERS = {
     "physis_grid": physis_grid,
     "physis_ingest": physis_ingest,
     "physis_observed": physis_observed,
-    "physis_command": physis_command,
     "replant_run": replant_run,
-    "replant_record": replant_record,
     "replant_stats": replant_stats,
     "replant_demo": replant_demo,
     "replant_show": replant_show,
@@ -1600,12 +1766,28 @@ def register_tools(ctx: Any) -> list[str]:
     for schema in ALL_SCHEMAS:
         name = schema["name"]
         handler = HANDLERS[name]
+        declared = set((schema.get("parameters") or {}).get("properties") or {})
 
-        def wrapped(args=None, _handler=handler, _ctx=ctx, **kwargs):
+        def wrapped(args=None, _handler=handler, _ctx=ctx, _name=name, _declared=declared, **kwargs):
             # Read the live plugin config on every call so a config edit applies
-            # without reloading the plugin; user-supplied args override it.
-            config = plugin_config(_ctx)
+            # without reloading the plugin. The model only ever gets to pass
+            # arguments the schema declares: executable settings (engine_bin,
+            # replant_tools, verify_cmd, ...) come from operator config alone,
+            # so naming them as tool arguments is rejected here.
             user = _merge(args, kwargs)
+            undeclared = sorted(set(user) - _declared)
+            if undeclared:
+                return json.dumps(
+                    {
+                        "ok": False,
+                        "error": (
+                            f"undeclared argument(s) rejected: {', '.join(undeclared)}"
+                        ),
+                        "tool": _name,
+                        "hint": "only the arguments declared in the tool schema are accepted",
+                    }
+                )
+            config = plugin_config(_ctx)
             merged = dict(config)
             for key, value in user.items():
                 if value not in (None, ""):
@@ -1750,6 +1932,7 @@ def make_pre_verify(config: Any):
                 text=True,
                 timeout=min(int(live.get("timeout") or 20), 300),
                 check=False,
+                env=child_env(),
             )
             if proc.returncode != 0:
                 tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-15:]
@@ -1763,9 +1946,7 @@ def make_pre_verify(config: Any):
             if live.get("auto_learn"):
                 state = _learn_state(str(session_id or "default"))
                 try:
-                    _write_candidate(
-                        {"path": cwd, "store": live.get("store") or ""}, state, command
-                    )
+                    _write_candidate(state, command)
                 except Exception:
                     pass  # learning is best-effort, never a turn failure
             return None
@@ -1780,47 +1961,48 @@ _COMMAND_TOOLS: dict[str, str] = {
     "recipes": "replant_stats",
     "replay": "replant_run",
     "candidates": "physis_candidates",
-    "approve": "replant_record",
 }
 
 
 def make_physis_command(config: Any):
-    """``/physis [status|recipes|candidates|replay|approve]`` - no model call to repeat work."""
+    """``/physis [status|recipes|candidates|replay|approve]`` - no model call to repeat work.
+
+    ``approve`` is deliberately not a registered model tool: it turns shell
+    steps a session recorded into a replayable recipe, so it must stay an
+    operator action.
+    """
 
     def _handler(raw_args: str = "", **kwargs):
         live = _live_config(config)
         parts = (raw_args or "").split(maxsplit=1)
         verb = (parts[0] if parts else "status").lower()
         rest = parts[1].strip() if len(parts) > 1 else ""
-        if verb not in _COMMAND_TOOLS:
-            return f"Usage: /physis {'|'.join(_COMMAND_TOOLS)} [prompt|id]"
+        if verb not in _COMMAND_TOOLS and verb != "approve":
+            return f"Usage: /physis {'|'.join([*_COMMAND_TOOLS, 'approve'])} [prompt|id]"
         payload: dict[str, Any] = dict(live)
         payload["path"] = str(Path.cwd())
         if verb == "replay":
             if not rest:
                 return "Usage: /physis replay <prompt>"
-            registry = str(live.get("replant_tools") or "").strip()
-            if not registry:
-                store = _store(payload)
-                learned = Path(store) / "learned" / "tools.json"
-                # An approved candidate writes its registry under learned/.
-                registry = str(learned) if learned.is_file() else str(Path(store) / "tools.json")
-            payload.update({"input": rest, "tools": registry})
+            # The registry comes from operator config or the plugin-generated
+            # learned registry in the profile dir - never from a repo path.
+            payload["input"] = rest
         if verb == "approve":
             if not rest:
                 return "Usage: /physis approve <candidate-id>"
-            payload["candidate"] = rest
-        result = HANDLERS[_COMMAND_TOOLS[verb]](payload)
+            result = _approve_candidate(live, rest)
+        else:
+            result = HANDLERS[_COMMAND_TOOLS[verb]](payload)
         if verb == "replay":
             result = {
                 key: result.get(key)
-                for key in ("ok", "operation", "status", "provider_calls", "reason", "blocked", "changed")
+                for key in ("ok", "operation", "status", "provider_calls", "reason", "blocked", "changed", "error", "hint")
                 if key in result
             }
         if verb == "approve":
             result = {
                 key: result.get(key)
-                for key in ("ok", "operation", "status", "provider_calls", "reason", "candidate_id", "error")
+                for key in ("ok", "operation", "status", "provider_calls", "reason", "candidate_id", "error", "hint")
                 if key in result
             }
         return json.dumps(result, default=str)

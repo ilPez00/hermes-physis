@@ -65,9 +65,6 @@ def test_register_registers_all_manifest_tools():
 
 def test_registered_handler_runs(tmp_path):
     plugin = load_package()
-    ctx = FakeContext()
-    plugin.register(ctx)
-
     binary = tmp_path / "fake"
     binary.write_text(
         "#!/usr/bin/env python3\n"
@@ -78,9 +75,11 @@ def test_registered_handler_runs(tmp_path):
         "print('Coherence snapshot:\\n  nodes:            7')\n"
     )
     binary.chmod(0o755)
+    ctx = FakeContext(settings={"engine_bin": str(binary)})
+    plugin.register(ctx)
 
     import json as _json
-    result = ctx.tools["physis_snapshot"]["handler"]({"engine_bin": str(binary)})
+    result = ctx.tools["physis_snapshot"]["handler"]({})
     if isinstance(result, str):
         result = _json.loads(result)
     assert result["ok"] is True
