@@ -8,3 +8,6 @@ vendor/*/target/
 .venv/
 dist/
 build/
+
+# Generated model/cache artifacts
+models/cache/
