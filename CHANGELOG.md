@@ -46,6 +46,11 @@ agent may consult.
   whether an approved recipe exists, which fingerprint files its steps depend
   on, whether they still exist, and whether the recorded inputs still match.
   It maps to replant's `show`, never `run`, and cannot approve anything.
+- **Agent-in-the-loop benchmark.** `benchmarks/agent_loop/` runs 20 tasks
+  (fresh / grep-negative-control / reuse-probe) under three `HERMES_HOME`
+  configurations (plain, skill, auto) and reports verified outcomes per token,
+  cost, latency and tool mentions. It is a harness, not a result: the full
+  60-run comparison has not been executed here.
 
 ## 1.7.1 — 2026-11-11
 

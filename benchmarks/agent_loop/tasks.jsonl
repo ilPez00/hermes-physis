@@ -1,0 +1,38 @@
+# Agent-in-the-loop benchmark: plain Hermes vs skill vs auto-context
+#
+# Measures whether Physis's evidence substrate changes verified outcomes per
+# unit of model cost. It does NOT measure how often Physis is called.
+#
+# Run:
+#   python3 benchmarks/agent_loop/run_benchmark.py --help
+#   python3 benchmarks/agent_loop/run_benchmark.py --dry-run
+#   python3 benchmarks/agent_loop/run_benchmark.py --configs plain,skill,auto
+#
+# The harness creates three Hermes profiles (bench-plain / bench-skill /
+# bench-auto) from the current profile's config.yaml, runs every task in a
+# fresh git repository, then runs the task's own check command. It writes
+# JSONL results and prints the aggregate table.
+#
+# Spend: every task x config is a real model run. 20 tasks x 3 configs = 60
+# runs. Check `--usage-file` totals before trusting a large run.
+
+{"id": "fresh-01", "category": "fresh", "prompt": "Add a function clamp_price(value) to pricing.py: clamp between 0 and 100 inclusive and return an int. Do not change total().", "setup": [{"path": "pricing.py", "content": "def total(items):\n    return sum(items)\n"}], "check": "python3 -c \"from pricing import clamp_price; assert clamp_price(150)==100; assert clamp_price(-5)==0; assert clamp_price(50)==50; assert isinstance(clamp_price(50), int)\""}
+{"id": "fresh-02", "category": "fresh", "prompt": "In auth.py add rotate_token(token) which returns the token reversed, and make verify_token(token) return True when the token is non-empty. Keep both functions.", "setup": [{"path": "auth.py", "content": "def verify_token(token):\n    return False\n"}], "check": "python3 -c \"from auth import rotate_token, verify_token; assert rotate_token('abc')=='cba'; assert verify_token('x') is True\""}
+{"id": "fresh-03", "category": "fresh", "prompt": "Create cache.py with a function cached_add(a, b) that memoises results in a module-level dict and returns the sum.", "setup": [{"path": "app.py", "content": "print('app')\n"}], "check": "python3 -c \"from cache import cached_add; assert cached_add(2,3)==5; assert cached_add(2,3)==5\""}
+{"id": "fresh-04", "category": "fresh", "prompt": "In string_util.py add slugify(text): lowercase, replace runs of non-alphanumerics with a single dash, strip leading/trailing dashes.", "setup": [{"path": "string_util.py", "content": "def shout(text):\n    return text.upper()\n"}], "check": "python3 -c \"from string_util import slugify; assert slugify('Hello, World!')=='hello-world'; assert slugify('--a--b--')=='a-b'\""}
+{"id": "fresh-05", "category": "fresh", "prompt": "Add parse_port(text, default=8080) to net.py: return an int in 1..65535, or the default when the text is not a valid port.", "setup": [{"path": "net.py", "content": "HOST = '127.0.0.1'\n"}], "check": "python3 -c \"from net import parse_port; assert parse_port('80')==80; assert parse_port('70000')==8080; assert parse_port('abc')==8080\""}
+{"id": "fresh-06", "category": "fresh", "prompt": "In report.py add summarise(numbers) returning a dict with keys count, total, mean (rounded to 2 decimals). Handle an empty list with mean 0.", "setup": [{"path": "report.py", "content": "def render(rows):\n    return ''\n"}], "check": "python3 -c \"from report import summarise; s=summarise([1,2,3]); assert s['count']==3 and s['total']==6 and s['mean']==2.0; assert summarise([])['mean']==0\""}
+{"id": "fresh-07", "category": "fresh", "prompt": "Create retry.py with retry(fn, attempts=3) that calls fn until it returns without raising, re-raising the last error after the attempts are exhausted.", "setup": [{"path": "main.py", "content": "print('main')\n"}], "check": "python3 -c \"from retry import retry; n=0\\ndef f():\\n global n\\n n+=1\\n if n<3: raise ValueError('x')\\n return 'ok'\\nassert retry(f)=='ok'\""}
+{"id": "fresh-08", "category": "fresh", "prompt": "In dates.py add days_between(a, b) taking ISO date strings (YYYY-MM-DD) and returning the absolute number of days between them.", "setup": [{"path": "dates.py", "content": "TODAY = '2026-01-01'\n"}], "check": "python3 -c \"from dates import days_between; assert days_between('2026-01-01','2026-01-02')==1; assert days_between('2026-01-02','2026-01-01')==1\""}
+{"id": "fresh-09", "category": "fresh", "prompt": "In queue.py add drain(queue) that pops and returns every item from a list, leaving it empty.", "setup": [{"path": "queue.py", "content": "def push(queue, item):\n    queue.append(item)\n"}], "check": "python3 -c \"from queue import drain; q=[1,2,3]; assert drain(q)==[1,2,3] and q==[]\""}
+{"id": "fresh-10", "category": "fresh", "prompt": "In formatters.py add commify(n) returning the integer with thousands separators, e.g. 1234567 -> '1,234,567'.", "setup": [{"path": "formatters.py", "content": "def percent(x):\n    return f'{x}%'\n"}], "check": "python3 -c \"from formatters import commify; assert commify(1234567)=='1,234,567'; assert commify(0)=='0'\""}
+{"id": "grep-01", "category": "grep", "prompt": "In config.py change DEFAULT_TIMEOUT from 30 to 45.", "setup": [{"path": "config.py", "content": "DEFAULT_TIMEOUT = 30\n"}], "check": "grep -q 'DEFAULT_TIMEOUT = 45' config.py"}
+{"id": "grep-02", "category": "grep", "prompt": "Rename the function get_user to fetch_user in users.py.", "setup": [{"path": "users.py", "content": "def get_user(uid):\n    return uid\n"}], "check": "grep -q 'def fetch_user(uid)' users.py && ! grep -q 'def get_user' users.py"}
+{"id": "grep-03", "category": "grep", "prompt": "In app.py add a constant MAX_RETRIES = 5 next to the other constants.", "setup": [{"path": "app.py", "content": "DEBUG = False\nNAME = 'app'\n"}], "check": "grep -q 'MAX_RETRIES = 5' app.py"}
+{"id": "grep-04", "category": "grep", "prompt": "In logging_setup.py change the log level from INFO to DEBUG.", "setup": [{"path": "logging_setup.py", "content": "LEVEL = 'INFO'\n"}], "check": "grep -q \"LEVEL = 'DEBUG'\" logging_setup.py"}
+{"id": "grep-05", "category": "grep", "prompt": "In helpers.py change the return of double() from value * 3 to value * 2.", "setup": [{"path": "helpers.py", "content": "def double(value):\n    return value * 3\n"}], "check": "grep -q 'return value \\* 2' helpers.py"}
+{"id": "grep-06", "category": "grep", "prompt": "In constants.py change the value of PI to 3.14159.", "setup": [{"path": "constants.py", "content": "PI = 3.14\n"}], "check": "grep -q 'PI = 3.14159' constants.py"}
+{"id": "reuse-01", "category": "reuse-probe", "prompt": "Rotate the authentication token in auth.py (this is a repeat of earlier verified work).", "setup": [{"path": "auth.py", "content": "def rotate_token(token):\n    return token[::-1]\n"}], "check": "test -f auth.py"}
+{"id": "reuse-02", "category": "reuse-probe", "prompt": "Clamp the price in pricing.py again - we verified this procedure before.", "setup": [{"path": "pricing.py", "content": "def clamp_price(value):\n    return max(0, min(100, int(value)))\n"}], "check": "test -f pricing.py"}
+{"id": "reuse-03", "category": "reuse-probe", "prompt": "Slugify the title in string_util.py like we did last time.", "setup": [{"path": "string_util.py", "content": "def slugify(text):\n    import re\n    return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')\n"}], "check": "test -f string_util.py"}
+{"id": "reuse-04", "category": "reuse-probe", "prompt": "Parse the port in net.py the same way as the verified run.", "setup": [{"path": "net.py", "content": "def parse_port(text, default=8080):\n    try:\n        port = int(text)\n    except ValueError:\n        return default\n    return port if 1 <= port <= 65535 else default\n"}], "check": "test -f net.py"}
