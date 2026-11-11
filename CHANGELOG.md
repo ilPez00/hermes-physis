@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+Skill: the operating manual now teaches selectivity and the reuse boundary.
+
+- **Decision policy.** Use Physis when it offers better evidence, less context,
+  or reusable verified execution; otherwise use ordinary tools. The skill lists
+  what earns a call (unread code, a bounded packet, an existing verified
+  procedure) and what does not (a one-lookup answer, an empty or stale index, a
+  one-off with no reuse), and states plainly that a call returning nothing
+  useful is a cost, not a ritual.
+- **Retrieval discipline.** Compare the graph's answer against the ordinary
+  search you would have run anyway; inspect scores and sources before editing;
+  measure the packet (`tokens`/`budget_reported` in code mode,
+  `baseline_tokens`/`physis_tokens`/`compression_ratio` in docs mode) and fall
+  back when it is not smaller than reading the files.
+- **Reuse boundary.** Fresh reasoning (no verified recipe, or changed inputs)
+  must not be replayed; a verified procedure with matching captured inputs must
+  not be re-derived. `replant_show` and the replay verdict are the test, and
+  `blocked: true` is the signal to switch from reuse to reasoning, not a
+  failure to work around.
+
 ## 1.7.1 — 2026-11-11
 
 Catalog admission fix: sensitive ingestion is opt-in.

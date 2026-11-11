@@ -8,6 +8,29 @@ description: Use Physis for evidence-backed code context, structural search, tok
 Use these tools when a task involves understanding, changing or explaining a
 codebase, or when the same verified workflow will run again.
 
+## Decision policy
+
+Use Physis when it offers better evidence, less context, or reusable verified
+execution. Otherwise use ordinary tools.
+
+Physis earns its call when one of these holds:
+
+- You have not already read the code: the graph finds call sites, owners and
+  neighbours that grep misses.
+- You need a bounded packet under a token budget (`physis_context`), not a
+  pile of files.
+- A verified procedure already covers the task, so reasoning again is waste.
+
+Use ordinary tools when:
+
+- You already know where to look and one `search_files` or `read_file` answers.
+- The repo was never observed, or the index is empty or stale — observe first,
+  or just grep.
+- The task is a one-off with no evidence gap and no reuse.
+
+Never call Physis because it is installed. A call that returns nothing useful
+is a cost, not a ritual.
+
 ## Order of operations
 
 1. `physis_engine_status` if anything looks off (missing engine, zero nodes).
@@ -27,6 +50,39 @@ codebase, or when the same verified workflow will run again.
 6. With `auto_learn` on, a session that passed `verify_cmd` becomes a candidate.
    Read it with `physis_candidates`. Only the operator can approve a candidate,
    using `/physis approve <id>`; approval makes the workflow replayable.
+
+## Retrieval discipline
+
+- Compare before trusting. For a "where is X" question, run the ordinary search
+  you would have run anyway and check the graph's answer against it. When they
+  disagree, say which you trust and why.
+- Inspect uncertainty before editing. Query results carry scores and sources; a
+  weak best hit, or a packet assembled from unrelated files, means stop, widen
+  the query, or read the file directly.
+- Measure the packet. Code mode reports `tokens` against `budget_reported`;
+  docs mode adds `baseline_tokens`, `physis_tokens` and `compression_ratio`.
+  If the packet is not smaller than reading the files, you bought latency for
+  nothing — say so and fall back.
+- An empty or zero-node result is a fact about the index, not about the code.
+  Report it and re-observe; never narrate a guess as a finding.
+
+## Reuse boundary: when not to think again
+
+Two kinds of work, and telling them apart is the point of this skill:
+
+- Fresh reasoning — no verified recipe exists, or its inputs changed. Observe,
+  retrieve, edit, verify. Do not replay.
+- Verified procedure — an approved workflow exists and its captured inputs
+  still match. Do not reason again; replay it. Re-deriving a verified procedure
+  costs tokens and drifts from the verified path.
+
+The test is `replant_show` and the replay answer. `blocked: true` is not a
+failure to work around: it is the signal that this is now fresh reasoning.
+Repeat the task, then ask the operator to approve a new candidate.
+
+Corollary: never replay to save time on a task whose inputs fall outside the
+captured fingerprint. Freshness covers captured edited files up to 1 MiB and
+nothing else; a blocked answer is the engine saying the world moved.
 
 ## Rules
 
