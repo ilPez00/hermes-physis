@@ -5,12 +5,14 @@ unit tests passed while the real engine advertised scan/search/node-search,
 not observe/context/ground. Skipped only when a binary is missing.
 """
 
+import json
 import os
 import shutil
 from pathlib import Path
 
 import pytest
 
+import tools
 from tools import HANDLERS, reset_pool
 
 PLUGIN_DIR = Path(__file__).resolve().parents[1]
@@ -185,3 +187,71 @@ def test_no_recalled_nodes_hint(isolated_store, repo):
     result = HANDLERS["physis_query"]({"path": str(repo), "question": "anything", "timeout": 60})
     assert result["ok"] is True
     assert "hint" in result
+
+
+def test_subdirectory_and_root_share_one_store(tmp_path, monkeypatch):
+    """A scan of a subdirectory must land in the repository's graph, not a new one."""
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    reset_pool()
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "src").mkdir()
+    (repo / "src" / "auth.py").write_text("def rotate_token(token):\n    return token[::-1]\n")
+
+    scanned = HANDLERS["physis_observe"]({"path": str(repo / "src"), "timeout": 60})
+    assert scanned["ok"] is True
+    assert scanned["repo_root"] == str(repo)
+
+    # Querying from the repository root sees nodes scanned under src/.
+    query = HANDLERS["physis_query"](
+        {"path": str(repo), "question": "rotate token", "limit": 3, "timeout": 60}
+    )
+    assert query["ok"] is True
+    assert "auth.py" in query["stdout"]
+
+    other = tmp_path / "other"
+    (other / ".git").mkdir(parents=True)
+    (other / "b.py").write_text("x = 1\n")
+    assert tools._index_env({"path": str(other)}) != tools._index_env({"path": str(repo)})
+
+
+def test_pre_context_end_to_end(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    reset_pool()
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "auth.py").write_text("def rotate_token(token):\n    return token[::-1]\n")
+    assert HANDLERS["physis_observe"]({"path": str(repo), "timeout": 60})["ok"] is True
+
+    hook = tools.make_pre_llm_call({"pre_context": True, "timeout": 60})
+    tools._remember_root("e2e-context", str(repo))
+    result = hook(session_id="e2e-context", user_message="rotate an expired token")
+    assert result and "context" in result, result
+    assert "auth.py" in result["context"]
+    assert "Uncertainty" in result["context"]
+
+
+def test_recipe_lookup_after_approval(tmp_path, monkeypatch):
+    from test_security import _learned_candidate
+
+    candidate = _learned_candidate(tmp_path, "echo hi")
+    monkeypatch.chdir(tmp_path)
+    command = tools.make_physis_command({"timeout": 30})
+    assert json.loads(command("approve " + candidate["id"]))["ok"] is True
+
+    result = HANDLERS["physis_recipe_lookup"](
+        {"input": "greet the world", "path": str(tmp_path), "timeout": 30}
+    )
+    assert result["ok"] is True, result
+    assert result["found"] is True
+    assert result["read_only"] is True
+    assert result["record"]["steps"] == 1
+    assert result["prerequisites"]
+    assert result["replayable"] is True, result
+
+    # A different request does not match the verified recipe.
+    other = HANDLERS["physis_recipe_lookup"](
+        {"input": "something else entirely", "path": str(tmp_path), "timeout": 30}
+    )
+    assert other["found"] is False
+    assert other["replayable"] is False

@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -57,9 +58,21 @@ DEFAULTS: dict[str, Any] = {
     "auto_observe": False,
     "auto_expand": True,
     "verify_cmd": "",
+    # Verification has its own budget: a hung or slow verify_cmd must never be
+    # mistaken for a pass. Hermes also bounds the pre_verify callback itself
+    # (plugins.hook_callback_timeout, default 30s) and silently skips a callback
+    # that exceeds it, so keep this at or below that bound.
+    "verify_timeout": 25,
     "replant_tools": "",
     "auto_learn": False,
     "ingest_sources": ["fs", "git"],
+    # Opt-in pre-reasoning evidence: a small retrieval packet injected into the
+    # user message before the model starts. Off by default; it reads an existing
+    # index and never ingests anything.
+    "pre_context": False,
+    "pre_context_budget": 300,
+    "pre_context_min_score": 0.4,
+    "pre_context_max_results": 5,
 }
 
 # Observation sources that read data the user did not explicitly hand to the
@@ -83,6 +96,87 @@ _GRID_LINE_RE = re.compile(r"Grid:\s*(\d+)×(\d+)")
 _EMBEDDER_LINE_RE = re.compile(r"Embedder:\s*([^\s(]+)")
 _EXPANDED_RE = re.compile(r"Ontology expanded:\s*(.+?)\s*\(([^)]+)\)")
 _APPENDED_RE = re.compile(r"appended\s+(\d+)\s+observation")
+# One node-search hit: rank, cosine score, path, snippet, token cost. The
+# snippet may span lines, so the match runs to the trailing "(N tokens)".
+_NODE_RESULT_RE = re.compile(
+    r"^\s*(\d+)\.\s+([0-9.]+)\s+(?P<path>.+?):\s?(?P<content>.*?)\s*"
+    r"\((?P<tokens>\d+)\s+tokens\)\s*$",
+    re.MULTILINE | re.DOTALL,
+)
+_REPO_MARKERS = (".git", ".hg", ".svn")
+_CONTEXT_LOCK = threading.Lock()
+# session -> (repo root, packet key, packet text). Bounded so a long-lived
+# process cannot grow without limit.
+_SESSION_ROOTS: dict[str, str] = {}
+_LAST_CONTEXT: dict[str, tuple[str, str]] = {}
+_MAX_SESSIONS = 64
+
+
+def _parse_node_results(text: str) -> list[dict[str, Any]]:
+    """Parse node-search output into ranked evidence items."""
+    results: list[dict[str, Any]] = []
+    for match in _NODE_RESULT_RE.finditer(text):
+        results.append(
+            {
+                "rank": int(match.group(1)),
+                "score": float(match.group(2)),
+                "path": match.group("path").strip(),
+                "content": match.group("content").strip(),
+                "tokens": int(match.group("tokens")),
+            }
+        )
+    return results
+
+
+def _remember_root(session: str, path: str) -> None:
+    """Track the repository a session is working in, for pre-reasoning context."""
+    if not session or not path:
+        return
+    root = _repo_root(path)
+    with _CONTEXT_LOCK:
+        if len(_SESSION_ROOTS) >= _MAX_SESSIONS and session not in _SESSION_ROOTS:
+            _SESSION_ROOTS.pop(next(iter(_SESSION_ROOTS)))
+        _SESSION_ROOTS[session] = root
+
+
+def _session_root(session: str) -> str:
+    with _CONTEXT_LOCK:
+        return _SESSION_ROOTS.get(session, "")
+
+
+def _store_mtime(store: Path) -> float:
+    """Newest mtime inside the graph store; 0.0 when it does not exist."""
+    newest = 0.0
+    try:
+        for path in store.iterdir():
+            try:
+                newest = max(newest, path.stat().st_mtime)
+            except OSError:
+                continue
+    except OSError:
+        return 0.0
+    return newest
+
+
+def _newest_source_mtime(root: str, file_limit: int = 4000, dir_limit: int = 400) -> float:
+    """Newest source mtime under *root*, bounded so a huge repo stays cheap."""
+    newest = 0.0
+    seen_files = 0
+    seen_dirs = 0
+    for dirpath, dirnames, filenames in os.walk(root):
+        seen_dirs += 1
+        if seen_dirs > dir_limit:
+            break
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+        for name in filenames:
+            seen_files += 1
+            if seen_files > file_limit:
+                return newest
+            try:
+                newest = max(newest, (Path(dirpath) / name).stat().st_mtime)
+            except OSError:
+                continue
+    return newest
 
 
 # --------------------------------------------------------------------------- #
@@ -237,16 +331,35 @@ def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
     return env or None
 
 
-def _index_env(args: dict[str, Any]) -> dict[str, str]:
-    """One graph store per repository, derived from the resolved path.
+def _repo_root(path: str) -> str:
+    """Canonical repository root for *path*: the nearest enclosing VCS marker.
 
-    A single global graph mixes nodes from every scanned repo, so a query for
-    this task can return evidence from an unrelated project.
+    A single global graph mixes nodes from every scanned repo, so the store key
+    must be stable for the whole repository. Deriving it from the directory the
+    model happened to name fragments one repository into several stores: a scan
+    of ``src/`` and a scan of the repository root would not see each other's
+    nodes. Without a VCS marker the path itself is the root.
+    """
+    try:
+        start = Path(path).expanduser().resolve()
+    except OSError:  # pragma: no cover - unresolvable path
+        start = Path(path).expanduser().absolute()
+    if start.is_file():
+        start = start.parent
+    for candidate in (start, *start.parents):
+        if any((candidate / marker).exists() for marker in _REPO_MARKERS):
+            return str(candidate)
+    return str(start)
+
+
+def _index_env(args: dict[str, Any]) -> dict[str, str]:
+    """One graph store per repository, keyed by its canonical root.
+
     ``PHYSIS_CORE_DIR`` still wins when an operator sets it explicitly.
     """
     if os.environ.get("PHYSIS_CORE_DIR"):
         return {}
-    root = _path(args)
+    root = _repo_root(_path(args))
     digest = hashlib.sha256(root.encode("utf-8")).hexdigest()[:12]
     return {"PHYSIS_CORE_DIR": str(_profile_dir() / "repos" / digest)}
 
@@ -255,6 +368,13 @@ def _index_dir(args: dict[str, Any]) -> str:
     return _index_env(args).get("PHYSIS_CORE_DIR") or os.environ.get(
         "PHYSIS_CORE_DIR", str(_profile_dir())
     )
+
+
+def _int_or(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _run(
@@ -639,6 +759,8 @@ def physis_observe(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if coherence:
         result["coherence_index"] = float(coherence.group(1))
     result["scanned_path"] = path
+    result["repo_root"] = _repo_root(path)
+    result["store"] = _index_dir(merged)
     return result
 
 
@@ -1832,6 +1954,144 @@ def replant_show(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     return result
 
 
+def _artifact_tracking(merged: dict[str, Any]) -> dict[str, Any]:
+    """Whether the inputs recorded at verification still match the disk."""
+    target = _artifacts_file(merged)
+    if not target.is_file():
+        return {
+            "recorded": False,
+            "valid": False,
+            "changed": [],
+            "note": "no artifact sidecar: this request was recorded without fingerprints",
+        }
+    try:
+        changed = _changed_artifacts(merged)
+    except ValueError as exc:
+        return {"recorded": True, "valid": False, "changed": [], "error": str(exc)}
+    return {"recorded": True, "valid": True, "changed": changed}
+
+
+def _recipe_prerequisites(registry: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
+    """Fingerprint files each recipe step depends on, and whether they survive."""
+    try:
+        specs = json.loads(Path(registry).expanduser().read_text())
+    except (OSError, ValueError, TypeError):
+        return []
+    if not isinstance(specs, dict):
+        return []
+    prerequisites: list[dict[str, Any]] = []
+    for phase in ("preconditions", "steps", "checks"):
+        for call in recipe.get(phase) or []:
+            if not isinstance(call, dict):
+                continue
+            spec = specs.get(str(call.get("tool") or "")) or {}
+            files = [str(item) for item in (spec.get("fingerprint_files") or [])]
+            missing = [item for item in files if not Path(item).expanduser().is_file()]
+            prerequisites.append(
+                {
+                    "phase": phase,
+                    "tool": call.get("tool"),
+                    "fingerprint_files": files,
+                    "missing": missing,
+                }
+            )
+    return prerequisites
+
+
+def physis_recipe_lookup(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """Read-only: is there an approved recipe for this request, and is it tracked?
+
+    Answers the reuse question before the model reasons: does a verified recipe
+    exist, what does it depend on, and are those dependencies still present and
+    unchanged. It never executes anything - approval stays with the operator's
+    ``/physis approve <id>`` and execution with ``/physis replay <prompt>``.
+    """
+    merged = _with_defaults(_merge(args, kwargs))
+    rejected = _reject_model_supplied(merged)
+    if rejected:
+        return rejected
+    value = str(merged.get("input") or "").strip()
+    if not value:
+        return {"ok": False, "error": "input is required"}
+    registry = _replay_registry(merged)
+    if not registry or not Path(registry).expanduser().is_file():
+        return {
+            "ok": True,
+            "found": False,
+            "replayable": False,
+            "reason": "no approved tools registry",
+            "hint": (
+                "the operator configures replant_tools, or approves a learned "
+                "workflow with /physis approve <id>"
+            ),
+        }
+    approval_error = None
+    if not str(merged.get("replant_tools") or "").strip():
+        approval_error = _verify_learned_approval(Path(registry).expanduser())
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    if not pool.supports("show"):
+        return _unsupported(pool, "show")
+    result = _run(
+        pool,
+        ["show", "--store", _replant_store()],
+        merged,
+        stdin=json.dumps({"prompt": value, "input": {}, "context": {}}),
+        engine="replant",
+    )
+    if not result.get("ok") and not (result.get("stdout") or "").strip():
+        return {
+            "ok": False,
+            "found": False,
+            "error": result.get("error") or "replant show failed",
+        }
+    payload = _json_payload(result)
+    record = payload if isinstance(payload, dict) else None
+    if not record:
+        return {
+            "ok": True,
+            "found": False,
+            "replayable": False,
+            "reason": "no verified recipe matches this request",
+        }
+    recipe = record.get("recipe") or {}
+    prerequisites = _recipe_prerequisites(registry, recipe)
+    tracked = bool(prerequisites) and all(not item["missing"] for item in prerequisites)
+    artifacts = _artifact_tracking(merged)
+    artifacts_ok = bool(artifacts.get("valid")) and not artifacts.get("changed")
+    replayable = bool(tracked and artifacts_ok and not approval_error)
+    return {
+        "ok": True,
+        "found": True,
+        "replayable": replayable,
+        "read_only": True,
+        "record": {
+            "id": record.get("id"),
+            "recipe_hash": record.get("recipe_hash"),
+            "engine_version": record.get("engine_version"),
+            "strategy": record.get("strategy"),
+            "preconditions": len(recipe.get("preconditions") or []),
+            "steps": len(recipe.get("steps") or []),
+            "checks": len(recipe.get("checks") or []),
+        },
+        "prerequisites": prerequisites,
+        "tracked": tracked,
+        "artifacts": artifacts,
+        "approval": approval_error or "valid",
+        "replayable_reason": (
+            "approved, dependencies tracked, inputs unchanged"
+            if replayable
+            else "not replayable: see tracked, artifacts and approval"
+        ),
+        "note": (
+            "Lookup only. Execution is the operator's /physis replay <prompt>; "
+            "this tool cannot approve or run a recipe."
+        ),
+    }
+
+
 HANDLERS = {
     "physis_engine_status": physis_engine_status,
     "physis_trace": physis_trace,
@@ -1850,6 +2110,7 @@ HANDLERS = {
     "replant_stats": replant_stats,
     "replant_demo": replant_demo,
     "replant_show": replant_show,
+    "physis_recipe_lookup": physis_recipe_lookup,
     "physis_candidates": physis_candidates,
 }
 
@@ -1933,6 +2194,94 @@ def _live_config(config: Any) -> dict[str, Any]:
     return dict(config or DEFAULTS)
 
 
+def _verify_cwd(paths: list[str]) -> str:
+    """Directory to run the operator's verify command from.
+
+    The first changed file's parent is wrong for anything but a one-file
+    project: ``cargo test``/``npm test``/``pytest`` expect the project root.
+    Use the repository root shared by the changed files; when a change spans
+    several repositories, fall back to their deepest common ancestor.
+    """
+    roots = sorted({_repo_root(item) for item in paths if str(item).strip()})
+    if not roots:
+        return str(Path.cwd())
+    if len(roots) == 1:
+        return roots[0]
+    try:
+        return str(Path(os.path.commonpath([str(Path(root).resolve()) for root in roots])))
+    except ValueError:  # pragma: no cover - different drives on Windows
+        return roots[0]
+
+
+def _pre_context_packet(live: dict[str, Any], session: str, task: str) -> str | None:
+    """A small, fresh evidence packet for the model, or None to stay silent.
+
+    Fail-open by construction: a missing store, a stale graph, no engine, weak
+    retrieval or any error returns None and the turn proceeds unchanged. This
+    reads an existing index only; it never ingests a source.
+    """
+    live = {**DEFAULTS, **live}
+    root = _session_root(session) or _repo_root(str(Path.cwd()))
+    if not root or not Path(root).is_dir():
+        return None
+    store = Path(_index_dir({"path": root}))
+    if not store.is_dir():
+        return None
+    store_time = _store_mtime(store)
+    if store_time <= 0:
+        return None
+    # A graph the repository has outgrown would inject stale evidence as if it
+    # were current; skipping is cheaper and honest.
+    if store_time < _newest_source_mtime(root) - 1.0:
+        return None
+    budget = max(100, min(4000, _int_or(live.get("pre_context_budget"), 300)))
+    max_results = max(1, min(12, _int_or(live.get("pre_context_max_results"), 5)))
+    min_score = float(live.get("pre_context_min_score") or 0.0)
+    timeout = max(1, min(_int_or(live.get("timeout"), 20), 15))
+    try:
+        pool = _pool_from_args({"engine_bin": live.get("engine_bin", ""), "timeout": timeout})
+    except EngineError:
+        return None
+    if not pool.supports("node-search"):
+        return None
+    result = pool.run(
+        ["node-search", task, "--budget", str(budget), "--max", str(max_results)],
+        cwd=root,
+        timeout=timeout,
+        env=_index_env({"path": root}),
+    )
+    if not result.get("ok"):
+        return None
+    results = _parse_node_results(result.get("stdout") or "")
+    if not results:
+        return None
+    best = results[0]["score"]
+    if best < min_score:
+        return None
+    lines = [f"[Physis context] repository {root}; index fresh; best match {best:.2f}."]
+    for item in results:
+        snippet = " ".join(item["content"].split())
+        if len(snippet) > 80:
+            snippet = snippet[:77] + "..."
+        lines.append(
+            f"  {item['rank']}. {item['score']:.2f} ({item['tokens']} tok) "
+            f"{item['path']}: {snippet}"
+        )
+    lines.append(
+        "Uncertainty: scores are embedder cosine similarity, not correctness. "
+        "Treat these as retrieval hints and verify against the files."
+    )
+    packet = "\n".join(lines)
+    key = f"{root}|{store_time:.0f}|{best:.3f}"
+    with _CONTEXT_LOCK:
+        if _LAST_CONTEXT.get(session) == (key, packet):
+            return None  # already injected this exact packet this session
+        if len(_LAST_CONTEXT) >= _MAX_SESSIONS and session not in _LAST_CONTEXT:
+            _LAST_CONTEXT.pop(next(iter(_LAST_CONTEXT)))
+        _LAST_CONTEXT[session] = (key, packet)
+    return packet
+
+
 def make_post_tool_call(config: Any):
     """Observe real work: bounded re-index, and (opt-in) learn replayable steps."""
     def _hook(
@@ -1977,7 +2326,9 @@ def make_post_tool_call(config: Any):
                 return None
             # `scan` is idempotent and registers searchable nodes; `watch`
             # only appends to the observation log, so it would not make the
-            # edited file queryable.
+            # edited file queryable. The store is the repository's: the edited
+            # file's own directory is scanned, but into the same graph the
+            # repository root uses.
             pool.run(
                 ["scan", folder],
                 cwd=folder,
@@ -1986,25 +2337,38 @@ def make_post_tool_call(config: Any):
             )
         except Exception:
             return None
+        try:
+            if isinstance(call_args, dict):
+                target = call_args.get("path") or call_args.get("file_path")
+                if target:
+                    _remember_root(str(session_id or "default"), str(target))
+        except Exception:
+            pass
         return None
 
     return _hook
 
 
 def make_pre_llm_call(config: Any):
-    """Remember the request, so a verified session knows what it was asked for."""
+    """Remember the request, and (opt-in) inject a fresh evidence packet."""
 
     def _hook(session_id="", user_message="", **kwargs):
+        session = str(session_id or "default")
         try:
-            if not _live_config(config).get("auto_learn"):
+            live = _live_config(config)
+            if live.get("auto_learn") and isinstance(user_message, str) and user_message.strip():
+                _learn_state(session)["user"] = user_message.strip()[:MAX_LEARN_COMMAND]
+            if not live.get("pre_context"):
                 return None
-            if isinstance(user_message, str) and user_message.strip():
-                _learn_state(str(session_id or "default"))["user"] = user_message.strip()[
-                    :MAX_LEARN_COMMAND
-                ]
+            if not isinstance(user_message, str) or not user_message.strip():
+                return None
+            packet = _pre_context_packet(live, session, user_message.strip())
+            if not packet:
+                return None
+            # Hermes appends this to the user message (never the system prompt).
+            return {"context": packet}
         except Exception:
-            pass
-        return None
+            return None
 
     return _hook
 
@@ -2017,6 +2381,9 @@ def make_pre_verify(config: Any):
     real output, so the deterministic check - not another model - decides
     whether the work is done. A passing one is also the moment a session earns
     the right to become a reusable recipe candidate.
+
+    The command runs from the changed files' repository root, not from the first
+    file's directory, and a timeout is a failure to report - never a silent pass.
     """
     def _hook(changed_paths=None, attempt=0, coding=False, session_id="", **kwargs):
         try:
@@ -2031,17 +2398,36 @@ def make_pre_verify(config: Any):
             paths = [str(item) for item in (changed_paths or []) if str(item).strip()]
             if not paths:
                 return None
-            cwd = str(Path(paths[0]).expanduser().resolve().parent)
-            proc = subprocess.run(
-                command,
-                shell=True,
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                timeout=min(int(live.get("timeout") or 20), 300),
-                check=False,
-                env=child_env(),
+            cwd = _verify_cwd(paths)
+            timeout = _int_or(live.get("verify_timeout"), 0) or min(
+                _int_or(live.get("timeout"), 20), 300
             )
+            try:
+                proc = subprocess.run(
+                    command,
+                    shell=True,
+                    cwd=cwd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                    check=False,
+                    env=child_env(),
+                )
+            except subprocess.TimeoutExpired:
+                return {
+                    "action": "continue",
+                    "message": (
+                        f"Physis verify timed out after {timeout}s: {command}\n"
+                        "A timeout is not a pass. Raise verify_timeout (and "
+                        "plugins.hook_callback_timeout, which bounds this hook) "
+                        "or make the check faster."
+                    ),
+                }
+            except OSError as exc:
+                return {
+                    "action": "continue",
+                    "message": f"Physis verify could not run: {exc}: {command}",
+                }
             if proc.returncode != 0:
                 tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-15:]
                 return {
@@ -2057,6 +2443,11 @@ def make_pre_verify(config: Any):
                     _write_candidate(state, command)
                 except Exception:
                     pass  # learning is best-effort, never a turn failure
+            try:
+                for item in paths:
+                    _remember_root(str(session_id or "default"), item)
+            except Exception:
+                pass
             return None
         except Exception:
             return None

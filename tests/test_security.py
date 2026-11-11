@@ -117,6 +117,62 @@ def test_physis_command_is_removed():
     assert "physis_command" not in manifest["provides_tools"]
 
 
+def test_recipe_lookup_is_read_only_and_registered():
+    """The model may discover a verified recipe; it may never approve or run one."""
+    assert "physis_recipe_lookup" in ALL_NAMES
+    assert "replant_run" not in ALL_NAMES
+    assert "replant_record" not in ALL_NAMES
+    manifest = yaml.safe_load((PLUGIN_DIR / "plugin.yaml").read_text())
+    assert "physis_recipe_lookup" in manifest["provides_tools"]
+    props = next(s for s in (REPLANT_RUN, REPLANT_RECORD) if s["name"] == "replant_run")
+    assert props  # the unregistered replay schema still exists for the operator command
+
+
+def test_recipe_lookup_rejects_undeclared_arguments(tmp_path):
+    ctx = _registered({"engine_bin": make_binary(tmp_path, CORE_COMMANDS)})
+    for banned in ("tools", "store", "candidate", "engine_bin", "verify_cmd", "replant_tools"):
+        result = _call(ctx.handlers["physis_recipe_lookup"], {"input": "x", banned: "/tmp/evil"})
+        assert result["ok"] is False, (banned, result)
+        assert "undeclared" in result["error"], (banned, result)
+
+
+def test_recipe_lookup_never_executes_a_step(tmp_path, monkeypatch):
+    """The lookup may read the store; it must not run the recipe's shell steps."""
+    marker = tmp_path / "pwned"
+    candidate = _learned_candidate(tmp_path, f"touch {marker}")
+    monkeypatch.chdir(tmp_path)
+    command = tools.make_physis_command({"timeout": 30})
+    assert json.loads(command("approve " + candidate["id"]))["ok"] is True
+    # Approval legitimately ran the recipe once; clear the side effect so the
+    # lookup below is the only thing that could recreate it.
+    if marker.exists():
+        marker.unlink()
+
+    log = tmp_path / "argv.log"
+    engine = tmp_path / "argv-engine"
+    engine.write_text(textwrap.dedent(f"""\
+        #!/usr/bin/env python3
+        import sys
+        if sys.argv[1:] == ["--help"]:
+            print("Commands:\\n  show  Show\\n  run  Run\\n  record  Record")
+            raise SystemExit(0)
+        with open({str(log)!r}, "a") as handle:
+            handle.write(" ".join(sys.argv[1:]) + "\\n")
+        print("null")
+        raise SystemExit(0)
+    """))
+    engine.chmod(engine.stat().st_mode | stat.S_IEXEC)
+
+    result = _call(
+        _registered({"engine_bin": str(engine)}).handlers["physis_recipe_lookup"],
+        {"input": "greet the world"},
+    )
+    assert result["ok"] is True, result
+    assert "show" in log.read_text()
+    assert "run" not in log.read_text()
+    assert not marker.exists()
+
+
 # --------------------------------------------------------------------------- #
 # 2. Registered handlers reject undeclared arguments
 # --------------------------------------------------------------------------- #

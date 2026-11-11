@@ -1,6 +1,10 @@
 import json
+import os
+import re
 import stat
+import sys
 import textwrap
+import time
 from pathlib import Path
 
 import pytest
@@ -555,3 +559,299 @@ def test_physis_command_usage_and_unknown_verb():
     assert "Usage: /physis" in handler("nope")
     assert handler("replay") == "Usage: /physis replay <prompt>"
     assert handler("approve") == "Usage: /physis approve <candidate-id>"
+
+
+# --- canonical repository root ---------------------------------------------- #
+
+
+def _make_repo(tmp_path: Path, name: str = "repo") -> Path:
+    repo = tmp_path / name
+    (repo / ".git").mkdir(parents=True)
+    return repo
+
+
+def test_repo_root_is_the_nearest_vcs_marker(tmp_path):
+    repo = _make_repo(tmp_path)
+    nested = repo / "src" / "auth"
+    nested.mkdir(parents=True)
+    target = nested / "mod.py"
+    target.write_text("x = 1\n")
+    assert tools._repo_root(str(target)) == str(repo)
+    assert tools._repo_root(str(nested)) == str(repo)
+    assert tools._repo_root(str(repo)) == str(repo)
+
+
+def test_repo_root_falls_back_to_the_path(tmp_path):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert tools._repo_root(str(plain)) == str(plain)
+
+
+def test_index_env_is_one_store_per_repository(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    nested = repo / "src"
+    nested.mkdir()
+    root_env = tools._index_env({"path": str(repo)})
+    sub_env = tools._index_env({"path": str(nested)})
+    assert root_env == sub_env
+    store = root_env["PHYSIS_CORE_DIR"]
+    assert store.startswith(str(tools._profile_dir()))
+    assert Path(store).parent.name == "repos"
+    assert re.fullmatch(r"[0-9a-f]{12}", Path(store).name)
+
+
+def test_index_env_separates_repositories(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    first = _make_repo(tmp_path, "first")
+    second = _make_repo(tmp_path, "second")
+    assert tools._index_env({"path": str(first)}) != tools._index_env({"path": str(second)})
+
+
+def test_observe_reports_the_repository_root(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    repo = _make_repo(tmp_path)
+    (repo / "src").mkdir()
+    result = HANDLERS["physis_observe"]({"engine_bin": binary, "path": str(repo / "src")})
+    assert result["ok"] is True
+    # No .git under src, so the nearest marker is still the repository root.
+    assert result["repo_root"] == str(repo)
+    assert result["store"]
+
+
+def test_post_tool_call_indexes_into_the_repository_store(tmp_path):
+    repo = _make_repo(tmp_path)
+    target = repo / "src" / "mod.py"
+    target.parent.mkdir()
+    target.write_text("x = 1\n")
+    log = tmp_path / "store.log"
+    binary = tmp_path / "store-engine"
+    binary.write_text(
+        textwrap.dedent(f"""\
+        #!/usr/bin/env python3
+        import os, sys
+        if sys.argv[1:] == ["--help"]:
+            print("Commands:\\n  scan  Scan")
+            raise SystemExit(0)
+        with open({str(log)!r}, "a") as handle:
+            handle.write(os.environ.get("PHYSIS_CORE_DIR", "") + "\\n")
+        raise SystemExit(0)
+        """)
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+
+    hook = tools.make_post_tool_call({"auto_observe": True, "engine_bin": str(binary), "timeout": 5})
+    assert hook(tool_name="write_file", args={"path": str(target)}, session_id="s1") is None
+    assert log.read_text().strip() == tools._index_dir({"path": str(repo)})
+
+
+# --- pre_verify directory and timeout --------------------------------------- #
+
+
+def test_pre_verify_runs_from_the_repository_root(tmp_path):
+    repo = _make_repo(tmp_path)
+    target = repo / "src" / "mod.py"
+    target.parent.mkdir()
+    target.write_text("x = 1\n")
+    probe = f'{sys.executable} -c "import os; print(os.getcwd()); raise SystemExit(3)"'
+    result = tools.make_pre_verify({"verify_cmd": probe, "timeout": 15})(
+        changed_paths=[str(target)], attempt=0
+    )
+    assert result["action"] == "continue"
+    assert str(repo) in result["message"]
+
+
+def test_pre_verify_timeout_is_reported_not_ignored(tmp_path):
+    target = tmp_path / "mod.py"
+    target.write_text("x = 1\n")
+    hook = tools.make_pre_verify({"verify_cmd": "sleep 5", "verify_timeout": 1, "timeout": 15})
+    result = hook(changed_paths=[str(target)], attempt=0)
+    assert result["action"] == "continue"
+    assert "timed out" in result["message"]
+
+
+def test_pre_verify_timeout_is_separate_from_the_engine_timeout(tmp_path):
+    from tools import DEFAULTS
+
+    assert 0 < DEFAULTS["verify_timeout"] <= 30  # the host bounds this hook at 30s
+    target = tmp_path / "mod.py"
+    target.write_text("x = 1\n")
+    # ``timeout`` is large but ``verify_timeout`` is small: the small one wins.
+    hook = tools.make_pre_verify({"verify_cmd": "sleep 5", "verify_timeout": 1, "timeout": 300})
+    assert "timed out after 1s" in hook(changed_paths=[str(target)])["message"]
+
+
+# --- pre-reasoning context --------------------------------------------------- #
+
+
+def _node_search_engine(tmp_path: Path, body: str) -> str:
+    binary = tmp_path / "ns-engine"
+    binary.write_text(
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "if sys.argv[1:] == ['--help']:\n"
+        "    print('Commands:\\n  node-search  Search')\n"
+        "    raise SystemExit(0)\n" + body
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    return str(binary)
+
+
+def _fresh_store(tmp_path: Path, repo: Path, *, stale: bool = False) -> Path:
+    store = Path(tools._index_dir({"path": str(repo)}))
+    store.mkdir(parents=True, exist_ok=True)
+    marker = store / "graph.json"
+    marker.write_text("{}")
+    when = time.time() - 3600 if stale else time.time() + 3600
+    os.utime(marker, (when, when))
+    return store
+
+
+def _bind_session(repo: Path, session: str) -> None:
+    """Stand in for the post_tool_call hook recording the session's repository."""
+    tools._remember_root(session, str(repo))
+
+
+def test_pre_context_injects_from_a_fresh_index(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    (repo / "auth.py").write_text("def rotate_token():\n    pass\n")
+    _fresh_store(tmp_path, repo)
+    _bind_session(repo, "ctx1")
+
+    binary = _node_search_engine(
+        tmp_path,
+        f'print("Fixed-token search: 1 results (30 tokens, budget 300)")\n'
+        f'print("  1. 0.91  {repo}/auth.py: def rotate_token() (30 tokens)")\n',
+    )
+    hook = tools.make_pre_llm_call({"pre_context": True, "engine_bin": binary, "timeout": 10})
+    result = hook(session_id="ctx1", user_message="rotate the auth token")
+    assert result and "context" in result
+    assert "auth.py" in result["context"]
+    assert "0.91" in result["context"]
+    assert "Uncertainty" in result["context"]
+
+    # The identical packet is not injected twice in one session.
+    assert hook(session_id="ctx1", user_message="rotate the auth token") is None
+
+
+def test_pre_context_falls_back_to_the_process_directory(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    (repo / "auth.py").write_text("def rotate_token():\n    pass\n")
+    _fresh_store(tmp_path, repo)
+    monkeypatch.chdir(repo)
+    binary = _node_search_engine(
+        tmp_path,
+        'print("Fixed-token search: 1 results (30 tokens, budget 300)")\n'
+        'print("  1. 0.91  auth.py: def rotate_token() (30 tokens)")\n',
+    )
+    hook = tools.make_pre_llm_call({"pre_context": True, "engine_bin": binary, "timeout": 10})
+    result = hook(session_id="ctx-cwd", user_message="rotate the auth token")
+    assert result and "auth.py" in result["context"]
+
+
+def test_pre_context_skips_a_stale_index(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    (repo / "auth.py").write_text("def rotate_token():\n    pass\n")
+    _fresh_store(tmp_path, repo, stale=True)
+    _bind_session(repo, "ctx2")
+    binary = _node_search_engine(
+        tmp_path,
+        f'print("Fixed-token search: 1 results (30 tokens, budget 300)")\n'
+        f'print("  1. 0.91  {repo}/auth.py: def rotate_token() (30 tokens)")\n',
+    )
+    hook = tools.make_pre_llm_call({"pre_context": True, "engine_bin": binary, "timeout": 10})
+    assert hook(session_id="ctx2", user_message="rotate the auth token") is None
+
+
+def test_pre_context_skips_weak_evidence(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    (repo / "auth.py").write_text("def rotate_token():\n    pass\n")
+    _fresh_store(tmp_path, repo)
+    _bind_session(repo, "ctx3")
+    binary = _node_search_engine(
+        tmp_path,
+        f'print("Fixed-token search: 1 results (30 tokens, budget 300)")\n'
+        f'print("  1. 0.21  {repo}/auth.py: def rotate_token() (30 tokens)")\n',
+    )
+    hook = tools.make_pre_llm_call({"pre_context": True, "engine_bin": binary, "timeout": 10})
+    assert hook(session_id="ctx3", user_message="rotate the auth token") is None
+
+
+def test_pre_context_off_by_default(tmp_path):
+    hook = tools.make_pre_llm_call({})
+    assert hook(session_id="ctx4", user_message="rotate the auth token") is None
+
+
+def test_pre_context_reads_the_index_and_never_ingests(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    (repo / "auth.py").write_text("def rotate_token():\n    pass\n")
+    _fresh_store(tmp_path, repo)
+    _bind_session(repo, "ctx5")
+    log = tmp_path / "calls.log"
+    binary = tmp_path / "logging-engine"
+    binary.write_text(
+        textwrap.dedent(f"""\
+        #!/usr/bin/env python3
+        import sys
+        if sys.argv[1:] == ["--help"]:
+            print("Commands:\\n  node-search  Search\\n  watch  Watch")
+            raise SystemExit(0)
+        with open({str(log)!r}, "a") as handle:
+            handle.write(" ".join(sys.argv[1:]) + "\\n")
+        print("Fixed-token search: 1 results (30 tokens, budget 300)")
+        print("  1. 0.91  auth.py: def rotate_token() (30 tokens)")
+        raise SystemExit(0)
+        """)
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    hook = tools.make_pre_llm_call({"pre_context": True, "engine_bin": binary, "timeout": 10})
+    assert hook(session_id="ctx5", user_message="rotate the auth token")
+    calls = log.read_text().splitlines()
+    assert calls == ["node-search rotate the auth token --budget 300 --max 5"]
+
+
+def test_pre_context_fails_open_without_a_store(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    binary = _node_search_engine(tmp_path, 'print("Fixed-token search: 0 results")\n')
+    hook = tools.make_pre_llm_call({"pre_context": True, "engine_bin": binary, "timeout": 10})
+    assert hook(session_id="ctx6", user_message="rotate the auth token") is None
+
+
+def test_session_root_is_remembered_from_edits(tmp_path):
+    repo = _make_repo(tmp_path)
+    target = repo / "src" / "mod.py"
+    target.parent.mkdir()
+    target.write_text("x = 1\n")
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    hook = tools.make_post_tool_call({"auto_observe": True, "engine_bin": binary, "timeout": 5})
+    hook(tool_name="write_file", args={"path": str(target)}, session_id="sess")
+    assert tools._session_root("sess") == str(repo)
+
+
+# --- read-only recipe lookup ------------------------------------------------- #
+
+
+def test_recipe_lookup_requires_an_input(tmp_path):
+    result = tools.physis_recipe_lookup({"path": str(tmp_path)})
+    assert result["ok"] is False
+    assert "input is required" in result["error"]
+
+
+def test_recipe_lookup_without_a_registry_is_not_found(tmp_path):
+    result = tools.physis_recipe_lookup({"input": "deploy the api", "path": str(tmp_path)})
+    assert result["ok"] is True
+    assert result["found"] is False
+    assert result["replayable"] is False
+    assert "registry" in result["reason"]
+
+
+def test_recipe_lookup_rejects_a_model_supplied_registry(tmp_path):
+    result = tools.physis_recipe_lookup({"input": "x", "tools": "/tmp/evil.json", "path": str(tmp_path)})
+    assert result["ok"] is False
+    assert "operator" in result["error"] or "approve" in result["error"]

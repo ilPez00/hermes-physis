@@ -111,6 +111,7 @@ run that again, the world changed".
 | `/physis replay <prompt>` | `run` | operator-triggered replay of an exact request, or return blocked |
 | `replant_stats` | `stats` | records, replays, misses, blocks, replay share |
 | `replant_show` | `show` | inspect a learned record |
+| `physis_recipe_lookup` | `show` | read-only: is there an approved recipe for a request, and are its dependencies still tracked? |
 | `replant_demo` | `record` + `run` + `stats` | zero-config proof, bundled counter fixture |
 | `physis_candidates` | - | workflows learned from verified sessions, awaiting approval |
 
@@ -158,14 +159,48 @@ independently reviewed. Missing or invalid freshness evidence blocks replay.
 
 ### Hooks
 
-- `post_tool_call` - with `auto_observe: true`, re-indexes the edited folder;
-  with `auto_learn: true`, records replayable steps (errors are skipped).
-- `pre_verify` - with `verify_cmd` set, runs that command after code edits; a
-  non-zero exit keeps the turn going with the real failure tail, so a
-  deterministic check decides whether the work is done. A passing run is what
-  creates a candidate.
+- `post_tool_call` - with `auto_observe: true`, re-indexes the edited folder
+  into the repository's graph; with `auto_learn: true`, records replayable
+  steps (errors are skipped).
+- `pre_verify` - with `verify_cmd` set, runs that command after code edits,
+  from the changed files' **repository root**; a non-zero exit *or a timeout*
+  keeps the turn going with the real output, so a deterministic check decides
+  whether the work is done. A passing run is what creates a candidate.
 - `pre_llm_call` - with `auto_learn: true`, remembers the user request so a
-  candidate knows which prompt it answers.
+  candidate knows which prompt it answers; with `pre_context: true`, injects a
+  small fresh evidence packet into the user message before the model reasons.
+
+### One graph per repository
+
+Every scan, query and incremental update is keyed by the **canonical repository
+root** - the nearest enclosing `.git`, `.hg` or `.svn`, else the path itself.
+Scanning `src/` and scanning the repository root therefore share one store, so
+a subdirectory scan no longer fragments the graph into a second store that the
+repository-wide queries cannot see. `physis_observe` reports the `repo_root`
+and `store` it used. `PHYSIS_CORE_DIR` still overrides the whole scheme with one
+explicit store.
+
+### Pre-reasoning context (opt-in)
+
+`pre_context: true` lets `pre_llm_call` inject a ~300-token evidence packet
+(paths, cosine scores, token costs) into the user message before the model
+starts. It is deliberately fail-open and never invents evidence:
+
+- it reads an **existing, fresh** index only - a store older than the newest
+  source file is skipped, and so is a missing one;
+- it skips when the best match is below `pre_context_min_score`;
+- it never ingests a source: the only engine call is `node-search`;
+- it injects nothing when the session has no repository (no index, no engine);
+- the identical packet is not injected twice in one session.
+
+The repository is the one the session edited (remembered by `post_tool_call` /
+`pre_verify`), falling back to the process directory on the first turn.
+
+`physis_recipe_lookup` answers the reuse question before the model re-derives
+work: whether an approved recipe exists for a request, which fingerprint files
+its steps depend on, whether those files still exist, and whether the recorded
+inputs still match. It is read-only - the engine command is `show`, never `run`
+- and it cannot approve anything.
 
 ## Configuration
 
@@ -176,9 +211,14 @@ independently reviewed. Missing or invalid freshness evidence blocks replay.
 | `engine_bin` | `""` | override engine path(s); empty = bundled |
 | `model_dir` | `""` | ONNX embedding model directory; empty = bundled BGE-small |
 | `semantic` | `true` | use the semantic embedder; `false` = deterministic hashing (reproducible, not semantic) |
-| `auto_observe` | `false` | after write/patch, re-index (`scan`) the edited folder |
+| `auto_observe` | `false` | after write/patch, re-index (`scan`) the edited folder into the repository's graph |
 | `verify_cmd` | `""` | command run by the `pre_verify` hook after edits; non-zero keeps the turn going |
+| `verify_timeout` | `25` | seconds allowed for `verify_cmd`; a timeout is reported as a failure, never a pass. Keep at or below `plugins.hook_callback_timeout` (default 30s), which bounds the hook itself and silently skips it when exceeded |
 | `auto_learn` | `false` | after `verify_cmd` passes, save the session as an approvable workflow candidate |
+| `pre_context` | `false` | inject a fresh retrieval packet into the user message before the model reasons (see above) |
+| `pre_context_budget` | `300` | token budget for that packet (100-4000) |
+| `pre_context_min_score` | `0.4` | minimum best-match cosine score; below it the packet is withheld as weak evidence |
+| `pre_context_max_results` | `5` | maximum evidence items in the packet (1-12) |
 | `ingest_sources` | `["fs", "git"]` | observation sources `physis_ingest` may read; `terminal` (shell history), `agent` (`~/.claude/projects` transcripts), `process` (`/proc/<pid>/cmdline`) and `browser` (history database) are sensitive and refused unless listed |
 | `replant_tools` | `""` | operator-owned tools registry for replay/record; empty = `~/.hermes/plugin-data/physis/replant/learned/tools.json` after `/physis approve` |
 | `budget` | `800` | default `physis_context` token budget (100-4000) |
@@ -305,18 +345,30 @@ Verified loop, measured on the bundled fixtures (real binaries, temp store):
   runs the compiler, which now ingests **any text file** (source included),
   skips binaries and build dirs, and chunks documents so a file larger than
   the budget can still contribute.
-- The index is **per repository**: the graph store is derived from the resolved
-  `path`, so scanning two repos keeps their nodes apart. `PHYSIS_CORE_DIR` still
-  overrides it with one explicit store (the pre-1.5 behaviour). Queries can no
-  longer surface nodes from an unrelated project.
+- The index is **per repository**: the graph store is keyed by the canonical
+  repository root (nearest `.git`/`.hg`/`.svn`, else the path), so scanning two
+  repos keeps their nodes apart and scanning a subdirectory enriches the same
+  graph the root uses. `PHYSIS_CORE_DIR` still overrides it with one explicit
+  store (the pre-1.5 behaviour). Queries can no longer surface nodes from an
+  unrelated project.
 - Auto-indexing is bounded: `physis_context` refuses to scan a corpus over
   ~1500 files and the docs compiler refuses over ~5000; pass a narrower path.
 - Replay freshness covers only captured edited files up to 1 MiB each. The
   capture can be empty, and it is not a check of all inputs or a whole tree.
   A changed or missing captured file blocks replay; this does not replace
   replant's own fingerprint of the tool implementation.
-- `pre_verify` runs one command, once per turn (`attempt` > 0 is a no-op), with
-  the working directory of the first changed file.
+- `pre_verify` runs one command, once per turn (`attempt` > 0 is a no-op), from
+  the changed files' repository root. A non-zero exit **or a timeout** keeps the
+  turn going. Hermes also bounds the hook itself
+  (`plugins.hook_callback_timeout`, default 30s) and silently skips a callback
+  that exceeds it, so a slow `verify_cmd` needs both settings raised.
+- `pre_context` reads the newest source mtime under the repository root
+  (bounded at 4000 files / 400 directories) on every turn where it is enabled,
+  and injects at most `pre_context_max_results` items. It is a retrieval hint,
+  not a correctness check, and it never ingests.
+- `physis_recipe_lookup` reports presence and freshness of the fingerprint
+  files a recipe depends on; it does not hash their contents, and it cannot
+  approve or run anything.
 - Learning is opt-in and **advisory**: only foreground `terminal` commands
   (≤2000 chars) and the edited files are kept, up to 12 steps and 16 files per
   session, 32 sessions in memory. A candidate is written only when both an

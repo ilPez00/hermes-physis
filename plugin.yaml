@@ -32,6 +32,7 @@ provides_tools:
   - replant_stats
   - replant_demo
   - replant_show
+  - physis_recipe_lookup
   - physis_candidates
 provides_hooks:
   - post_tool_call
@@ -61,11 +62,31 @@ config_schema:
   verify_cmd:
     type: str
     default: ""
-    description: "Command run after code edits; a non-zero exit keeps the turn going with the real failure output"
+    description: "Command run after code edits; a non-zero exit keeps the turn going with the real failure output. Runs from the changed files' repository root, not the first file's directory."
+  verify_timeout:
+    type: int
+    default: 25
+    description: "Seconds allowed for verify_cmd. A timeout is reported as a failure, never counted as a pass. Hermes also bounds this hook (plugins.hook_callback_timeout, default 30s) and silently skips a callback that exceeds it, so keep this at or below that bound."
   auto_learn:
     type: bool
     default: false
     description: "After verify_cmd passes, save the session's shell steps as a workflow candidate (never replayed until approved)"
+  pre_context:
+    type: bool
+    default: false
+    description: "Inject a small retrieval packet into the user message before the model reasons. Reads an existing, fresh index only; skips when the graph is stale, retrieval is weak, or no engine/index exists. Never ingests a source."
+  pre_context_budget:
+    type: int
+    default: 300
+    description: "Token budget for the pre-reasoning retrieval packet (100-4000)"
+  pre_context_min_score:
+    type: number
+    default: 0.4
+    description: "Minimum best-match cosine score for injection; below this the packet is withheld as weak evidence"
+  pre_context_max_results:
+    type: int
+    default: 5
+    description: "Maximum evidence items in the pre-reasoning packet (1-12)"
   ingest_sources:
     type: list
     default: ["fs", "git"]

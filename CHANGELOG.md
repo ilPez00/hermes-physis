@@ -21,6 +21,32 @@ Skill: the operating manual now teaches selectivity and the reuse boundary.
   `blocked: true` is the signal to switch from reuse to reasoning, not a
   failure to work around.
 
+Integration: the plugin now acts as an evidence substrate, not only a tool the
+agent may consult.
+
+- **One graph per repository.** The store key is the canonical repository root
+  (nearest `.git`/`.hg`/`.svn`, else the path), so a `post_tool_call` re-index
+  of `src/` lands in the same graph the repository root queries. Previously the
+  hook keyed the store on the edited file's parent, so an edit silently created
+  a second store the repository-wide queries could not see. `physis_observe`
+  now reports `repo_root` and `store`.
+- **Verification runs from the right directory, and a timeout is not a pass.**
+  `pre_verify` used the first changed file's parent as the working directory and
+  let `subprocess.TimeoutExpired` fall into the bare `except`, so a hung check
+  finished the turn as if it had passed. It now runs from the changed files'
+  repository root, uses a separate `verify_timeout` setting (default 25s), and
+  reports a timeout as a failure. `OSError` is reported too.
+- **Opt-in pre-reasoning context.** `pre_context: true` makes `pre_llm_call`
+  inject a small retrieval packet into the user message before the model
+  reasons. It reads an existing, fresh index only; it skips a stale or missing
+  store, weak retrieval (`pre_context_min_score`), a missing engine, or a
+  session with no repository; it never ingests a source; and it does not repeat
+  an identical packet within a session.
+- **Read-only recipe lookup.** `physis_recipe_lookup(prompt)` tells the model
+  whether an approved recipe exists, which fingerprint files its steps depend
+  on, whether they still exist, and whether the recorded inputs still match.
+  It maps to replant's `show`, never `run`, and cannot approve anything.
+
 ## 1.7.1 — 2026-11-11
 
 Catalog admission fix: sensitive ingestion is opt-in.

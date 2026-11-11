@@ -20,8 +20,10 @@ OBSERVE = {
     "description": (
         "Index a repository into the local coherence graph. Run this before "
         "physis_query/physis_context/physis_why on a repo that may have "
-        "changed. The store is per repository (derived from path); the path "
-        "argument selects what gets scanned."
+        "changed. The store is one per repository, keyed by the repository "
+        "root (nearest .git/.hg/.svn), so scanning a subdirectory and scanning "
+        "the root share one graph; the path argument selects what gets scanned. "
+        "The reply carries repo_root and store."
     ),
     "parameters": {
         "type": "object",
@@ -358,6 +360,27 @@ REPLANT_SHOW = {
     },
 }
 
+RECIPE_LOOKUP = {
+    "name": "physis_recipe_lookup",
+    "description": (
+        "Read-only reuse check: is there an approved recipe for this request, "
+        "what does it depend on, and are those dependencies still present and "
+        "unchanged? Use it to decide whether the work is a verified procedure "
+        "you should not re-derive. It never executes anything and cannot "
+        "approve one: execution stays with the operator's '/physis replay "
+        "<prompt>' and approval with '/physis approve <id>'. When replayable is "
+        "false, the reason is in tracked/artifacts/approval."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "input": {"type": "string", "description": "Request prompt to look up"},
+            "path": {"type": "string", "description": "Working directory"},
+        },
+        "required": ["input"],
+    },
+}
+
 CANDIDATES = {
     "name": "physis_candidates",
     "description": (
@@ -407,6 +430,7 @@ ALL_SCHEMAS = [
     REPLANT_STATS,
     REPLANT_DEMO,
     REPLANT_SHOW,
+    RECIPE_LOOKUP,
     CANDIDATES,
 ]
 ALL_NAMES = [s["name"] for s in ALL_SCHEMAS]

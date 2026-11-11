@@ -45,8 +45,11 @@ is a cost, not a ritual.
    `physis_snapshot` for graph health; `physis_chain` for a gap/drift overview.
 4. `physis_classify` / `physis_diff` when the question is about the character
    of a file or whether a change altered it.
-5. Ask the operator to use `/physis replay <prompt>` for an approved workflow.
-   The model no longer calls replay or record; both are operator-only.
+5. Check reuse before reasoning: `physis_recipe_lookup` is read-only and says
+   whether an approved recipe exists for the request, what it depends on, and
+   whether those dependencies are still tracked. If it says replayable, ask the
+   operator to use `/physis replay <prompt>`; the model never calls replay or
+   record, both are operator-only.
 6. With `auto_learn` on, a session that passed `verify_cmd` becomes a candidate.
    Read it with `physis_candidates`. Only the operator can approve a candidate,
    using `/physis approve <id>`; approval makes the workflow replayable.
@@ -76,8 +79,8 @@ Two kinds of work, and telling them apart is the point of this skill:
   still match. Do not reason again; replay it. Re-deriving a verified procedure
   costs tokens and drifts from the verified path.
 
-The test is `replant_show` and the replay answer. `blocked: true` is not a
-failure to work around: it is the signal that this is now fresh reasoning.
+The test is `physis_recipe_lookup` and the replay answer. `blocked: true` is not
+a failure to work around: it is the signal that this is now fresh reasoning.
 Repeat the task, then ask the operator to approve a new candidate.
 
 Corollary: never replay to save time on a task whose inputs fall outside the
