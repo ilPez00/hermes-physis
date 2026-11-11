@@ -1,5 +1,5 @@
 name: physis
-version: 1.7.0
+version: 1.7.1
 description: >
   Evidence-backed execution memory: per-repo graph context, a verify hook, and
   verified tool recipes that replay with zero provider calls and refuse when
@@ -7,6 +7,12 @@ description: >
   workflow candidates. Two bundled engines, no API key. Python entry points
   require a Python interpreter and standard library; verify_cmd and approved
   commands run with the configured user's filesystem and network access.
+  physis_ingest can read sensitive sources — shell history (terminal), other
+  coding agents' transcripts under ~/.claude/projects (agent), every process's
+  /proc/<pid>/cmdline (process) and the browser history database (browser) —
+  only when the operator lists them in
+  plugins.entries.physis.settings.ingest_sources; they are disabled by default
+  (fs and git only), and physis_observed never returns a disabled bucket.
 author: Giovanni Pezzulli
 requires_hermes: ">=0.23.0"
 provides_tools:
@@ -60,6 +66,10 @@ config_schema:
     type: bool
     default: false
     description: "After verify_cmd passes, save the session's shell steps as a workflow candidate (never replayed until approved)"
+  ingest_sources:
+    type: list
+    default: ["fs", "git"]
+    description: "Observation sources physis_ingest may read. fs and git are enabled by default; terminal (shell history), agent (~/.claude/projects transcripts), process (/proc/<pid>/cmdline) and browser (history database) are sensitive and refused unless listed here. physis_observed filters out buckets not listed."
   replant_tools:
     type: str
     default: ""

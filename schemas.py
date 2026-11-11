@@ -208,8 +208,12 @@ INGEST = {
     "name": "physis_ingest",
     "description": (
         "Append observations to the engine log from a real source: fs (file "
-        "changes), git (commits), terminal (shell history), agent (session "
-        "turns), process (long-lived processes), browser (history) or all. "
+        "changes), git (commits), terminal (shell history), agent (another "
+        "coding agent's session transcripts under ~/.claude/projects), process "
+        "(every process's /proc/<pid>/cmdline), browser (history database) or "
+        "all. terminal/agent/process/browser are sensitive and refused unless "
+        "the operator enables them in "
+        "plugins.entries.physis.settings.ingest_sources (default: fs, git). "
         "Append-only and idempotent per source; dry_run shows without writing."
     ),
     "parameters": {
@@ -218,7 +222,10 @@ INGEST = {
             "source": {
                 "type": "string",
                 "enum": ["fs", "git", "terminal", "agent", "process", "browser", "all"],
-                "description": "Observation source (default: fs)",
+                "description": (
+                    "Observation source (default: fs). terminal/agent/process/"
+                    "browser are opt-in sensitive sources."
+                ),
             },
             "path": {"type": "string", "description": "Path for fs/git sources"},
             "max": {"type": "integer", "description": "Maximum observations (default 500)"},
@@ -232,12 +239,21 @@ OBSERVED = {
     "name": "physis_observed",
     "description": (
         "Read the observation log: what was seen, by which source, and when. "
-        "Use it after physis_ingest to verify what actually entered the world."
+        "Use it after physis_ingest to verify what actually entered the world. "
+        "A disabled sensitive source is refused by name and filtered out of an "
+        "unfiltered read."
     ),
     "parameters": {
         "type": "object",
         "properties": {
-            "source": {"type": "string", "description": "Only this source bucket"},
+            "source": {
+                "type": "string",
+                "description": (
+                    "Only this source bucket. terminal/agent/process/browser "
+                    "require the operator to enable them in "
+                    "plugins.entries.physis.settings.ingest_sources."
+                ),
+            },
             "limit": {"type": "integer", "description": "Maximum observations (default 20)"},
             "concurrent": {
                 "type": "string",

@@ -376,3 +376,149 @@ def test_tampered_learned_registry_is_refused(tmp_path, monkeypatch):
     result = json.loads(handler("replay greet the world"))
     assert result.get("operation") != "replay", result
     assert not marker.exists()
+
+
+# --------------------------------------------------------------------------- #
+# 7. Sensitive ingestion sources are opt-in (catalog admission blocker)
+# --------------------------------------------------------------------------- #
+
+
+def test_sensitive_sources_are_disabled_by_default(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    for source in ("terminal", "agent", "process", "browser", "all"):
+        result = HANDLERS["physis_ingest"]({"engine_bin": binary, "source": source})
+        assert result["ok"] is False, (source, result)
+        assert "disabled" in result["error"], (source, result)
+        assert "argv" not in result, (source, result)  # the engine never ran
+
+
+def test_default_sources_still_work(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    for source in ("fs", "git"):
+        result = HANDLERS["physis_ingest"](
+            {"engine_bin": binary, "source": source, "path": str(tmp_path)}
+        )
+        assert result["ok"] is True, (source, result)
+        assert result["enabled_sources"] == ["fs", "git"]
+
+
+def test_operator_can_enable_a_sensitive_source(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_ingest"](
+        {
+            "engine_bin": binary,
+            "source": "terminal",
+            "ingest_sources": ["fs", "git", "terminal"],
+        }
+    )
+    assert result["ok"] is True, result
+    assert result["enabled_sources"] == ["fs", "git", "terminal"]
+
+    blocked = HANDLERS["physis_ingest"](
+        {
+            "engine_bin": binary,
+            "source": "process",
+            "ingest_sources": ["fs", "git", "terminal"],
+        }
+    )
+    assert blocked["ok"] is False
+    assert "process" in blocked["error"]
+
+
+def test_comma_separated_ingest_sources(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_ingest"](
+        {"engine_bin": binary, "source": "browser", "ingest_sources": "fs, git, browser"}
+    )
+    assert result["ok"] is True, result
+
+
+def test_registered_handler_enforces_the_gate(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    ctx = _registered({"engine_bin": binary})
+    result = _call(ctx.handlers["physis_ingest"], {"source": "terminal"})
+    assert result["ok"] is False
+    assert "disabled" in result["error"]
+
+
+def test_observed_refuses_a_disabled_sensitive_source(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_observed"]({"engine_bin": binary, "source": "terminal"})
+    assert result["ok"] is False
+    assert "disabled" in result["error"]
+
+
+def test_observed_filters_disabled_buckets_from_an_unfiltered_read(tmp_path, monkeypatch):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    payload = [
+        {"seq": 1, "source": "fs", "subject": "a.py"},
+        {"seq": 2, "source": "terminal", "subject": "curl -H 'Authorization: Bearer secret'"},
+        {"seq": 3, "source": "browser", "subject": "https://bank.example/"},
+    ]
+
+    def fake_run(pool, argv, merged, **kwargs):
+        return {
+            "ok": True,
+            "binary": binary,
+            "argv": list(argv),
+            "stdout": json.dumps(payload),
+            "stderr": "",
+        }
+
+    monkeypatch.setattr(tools, "_run", fake_run)
+    result = HANDLERS["physis_observed"]({"engine_bin": binary, "limit": 10})
+    assert result["ok"] is True, result
+    assert [obs["source"] for obs in result["observations"]] == ["fs"]
+    assert "secret" not in result["stdout"]
+    assert "bank.example" not in result["stdout"]
+
+
+def test_observed_keeps_enabled_sensitive_buckets(tmp_path, monkeypatch):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    payload = [
+        {"seq": 1, "source": "fs", "subject": "a.py"},
+        {"seq": 2, "source": "terminal", "subject": "ls"},
+    ]
+
+    def fake_run(pool, argv, merged, **kwargs):
+        return {
+            "ok": True,
+            "binary": binary,
+            "argv": list(argv),
+            "stdout": json.dumps(payload),
+            "stderr": "",
+        }
+
+    monkeypatch.setattr(tools, "_run", fake_run)
+    result = HANDLERS["physis_observed"](
+        {
+            "engine_bin": binary,
+            "limit": 10,
+            "ingest_sources": ["fs", "git", "terminal"],
+        }
+    )
+    assert [obs["source"] for obs in result["observations"]] == ["fs", "terminal"]
+
+
+def test_state_lives_under_the_hermes_profile(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes-home"))
+    monkeypatch.delenv("PHYSIS_REPLANT_STORE", raising=False)
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    profile = tmp_path / "hermes-home" / "plugin-data" / "physis"
+    assert tools._profile_dir() == profile
+    assert tools._replant_store() == str(profile / "replant")
+    env = tools._index_env({"path": str(tmp_path)})
+    assert env["PHYSIS_CORE_DIR"].startswith(str(profile))
+
+
+def test_sha256sums_matches_the_shipped_binaries():
+    import hashlib
+
+    sums = {}
+    for line in (PLUGIN_DIR / "bin" / "SHA256SUMS").read_text().splitlines():
+        digest, name = line.split()
+        sums[name] = digest
+    assert set(sums) == {"physis-core", "replant"}
+    for name, digest in sums.items():
+        actual = hashlib.sha256((PLUGIN_DIR / "bin" / name).read_bytes()).hexdigest()
+        assert actual == digest, name

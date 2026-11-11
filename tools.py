@@ -29,8 +29,24 @@ TOOLSET = "physis"
 # candidates, learned registries, artifact sidecars). It is deliberately
 # independent of any repository path a model names: a repo-controlled location
 # would let whoever controls the repo plant an executable registry or recipe.
-PROFILE_DIR = Path.home() / ".physis"
+# It lives under Hermes' profile data dir so separate profiles keep separate
+# state; ``get_hermes_home`` is the public resolver (HERMES_HOME -> default).
 OPERATOR_STORE_ENV = "PHYSIS_REPLANT_STORE"
+
+
+def _hermes_home() -> Path:
+    """Hermes' profile home, so plugin state never leaks across profiles."""
+    try:
+        from hermes_constants import get_hermes_home
+
+        return Path(get_hermes_home())
+    except Exception:
+        env = os.environ.get("HERMES_HOME", "").strip()
+        return Path(env) if env else Path.home() / ".hermes"
+
+
+def _profile_dir() -> Path:
+    return _hermes_home() / "plugin-data" / "physis"
 
 DEFAULTS: dict[str, Any] = {
     "engine_bin": "",
@@ -43,7 +59,15 @@ DEFAULTS: dict[str, Any] = {
     "verify_cmd": "",
     "replant_tools": "",
     "auto_learn": False,
+    "ingest_sources": ["fs", "git"],
 }
+
+# Observation sources that read data the user did not explicitly hand to the
+# tool: shell history, another coding agent's transcripts, process command
+# lines and the browser history database. They are refused unless the operator
+# lists them in plugins.entries.physis.settings.ingest_sources.
+SENSITIVE_SOURCES = ("terminal", "agent", "process", "browser")
+INGEST_SOURCES = ("fs", "git", *SENSITIVE_SOURCES)
 
 _POOL: EnginePool | None = None
 _POOL_KEY: tuple[str, int] | None = None
@@ -126,6 +150,67 @@ def _path(args: dict[str, Any]) -> str:
     return str(Path(raw).expanduser().resolve())
 
 
+def _enabled_sources(args: dict[str, Any]) -> set[str]:
+    """The observation sources the operator enabled (default: fs, git)."""
+    raw = args.get("ingest_sources", DEFAULTS["ingest_sources"])
+    if isinstance(raw, str):
+        items: list[Any] = raw.replace(";", ",").split(",")
+    elif isinstance(raw, (list, tuple, set)):
+        items = list(raw)
+    else:
+        items = []
+    return {str(item).strip().lower() for item in items if str(item).strip()}
+
+
+def _source_disabled(source: str, missing: list[str], enabled: set[str]) -> dict[str, Any]:
+    return {
+        "ok": False,
+        "error": (
+            f"source {source!r} is disabled: {', '.join(missing)} reads sensitive "
+            "data and is not enabled in "
+            "plugins.entries.physis.settings.ingest_sources"
+        ),
+        "enabled_sources": sorted(enabled),
+        "sensitive_sources": list(SENSITIVE_SOURCES),
+        "hint": "add the source to plugins.entries.physis.settings.ingest_sources to allow it",
+    }
+
+
+def _source_gate(source: str, enabled: set[str]) -> dict[str, Any] | None:
+    """Refuse a sensitive ingestion source the operator has not enabled.
+
+    ``all`` stands for every source, so it needs every sensitive one enabled.
+    """
+    if source == "all":
+        missing = [name for name in SENSITIVE_SOURCES if name not in enabled]
+        return _source_disabled(source, missing, enabled) if missing else None
+    if source in SENSITIVE_SOURCES and source not in enabled:
+        return _source_disabled(source, [source], enabled)
+    return None
+
+
+def _filter_observations(
+    observations: list[Any], source: str, enabled: set[str]
+) -> list[Any]:
+    """Drop sensitive buckets the operator has not enabled.
+
+    ``observed`` without a source returns the whole log, so a sensitive
+    observation recorded before the gate (or by another tool) must not reach
+    the model through it.
+    """
+    if source and source != "all":
+        return observations
+    return [
+        observation
+        for observation in observations
+        if not (
+            isinstance(observation, dict)
+            and observation.get("source") in SENSITIVE_SOURCES
+            and observation.get("source") not in enabled
+        )
+    ]
+
+
 def _replant_store() -> str:
     """The fixed replant state directory, independent of any model-supplied path.
 
@@ -135,7 +220,7 @@ def _replant_store() -> str:
     override = os.environ.get(OPERATOR_STORE_ENV, "").strip()
     if override:
         return str(Path(override).expanduser())
-    return str(PROFILE_DIR / "replant")
+    return str(_profile_dir() / "replant")
 
 
 def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
@@ -155,20 +240,20 @@ def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
 def _index_env(args: dict[str, Any]) -> dict[str, str]:
     """One graph store per repository, derived from the resolved path.
 
-    A single global ``~/.physis`` graph mixes nodes from every scanned repo, so
-    a query for this task can return evidence from an unrelated project.
+    A single global graph mixes nodes from every scanned repo, so a query for
+    this task can return evidence from an unrelated project.
     ``PHYSIS_CORE_DIR`` still wins when an operator sets it explicitly.
     """
     if os.environ.get("PHYSIS_CORE_DIR"):
         return {}
     root = _path(args)
     digest = hashlib.sha256(root.encode("utf-8")).hexdigest()[:12]
-    return {"PHYSIS_CORE_DIR": str(Path.home() / ".physis" / "repos" / digest)}
+    return {"PHYSIS_CORE_DIR": str(_profile_dir() / "repos" / digest)}
 
 
 def _index_dir(args: dict[str, Any]) -> str:
     return _index_env(args).get("PHYSIS_CORE_DIR") or os.environ.get(
-        "PHYSIS_CORE_DIR", str(Path.home() / ".physis")
+        "PHYSIS_CORE_DIR", str(_profile_dir())
     )
 
 
@@ -962,15 +1047,23 @@ def physis_grid(args: Any = None, **kwargs: Any) -> dict[str, Any]:
 
 def physis_ingest(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _with_defaults(_merge(args, kwargs))
+    source = str(merged.get("source") or "fs").strip().lower()
+    if source not in {"fs", "git", "terminal", "agent", "process", "browser", "all"}:
+        return {"ok": False, "error": "source must be fs, git, terminal, agent, process, browser or all"}
+    # Enforced here, before any engine runs: a sensitive source the operator has
+    # not enabled is refused even if the model names it, so a prompt-injected
+    # call cannot pull shell history, agent transcripts, process command lines
+    # or browser history into the provider context.
+    enabled = _enabled_sources(merged)
+    gate = _source_gate(source, enabled)
+    if gate is not None:
+        return gate
     try:
         pool = _pool_from_args(merged)
     except EngineError as exc:
         return _engine_error(exc)
     if not pool.supports("watch"):
         return _unsupported(pool, "watch")
-    source = str(merged.get("source") or "fs").strip().lower()
-    if source not in {"fs", "git", "terminal", "agent", "process", "browser", "all"}:
-        return {"ok": False, "error": "source must be fs, git, terminal, agent, process, browser or all"}
     try:
         limit = max(1, int(merged.get("max") or 500))
     except (TypeError, ValueError):
@@ -988,11 +1081,20 @@ def physis_ingest(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if match:
         result["appended"] = int(match.group(1))
     result["source"] = source
+    result["enabled_sources"] = sorted(enabled)
     return result
 
 
 def physis_observed(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     merged = _with_defaults(_merge(args, kwargs))
+    source = str(merged.get("source") or "").strip().lower()
+    enabled = _enabled_sources(merged)
+    # Reading a disabled sensitive bucket is refused; reading the whole log
+    # (no source) is allowed but filtered below, so a sensitive observation
+    # recorded before the gate cannot come back through this tool either.
+    gate = _source_gate(source, enabled) if source else None
+    if gate is not None:
+        return gate
     try:
         pool = _pool_from_args(merged)
     except EngineError as exc:
@@ -1004,7 +1106,6 @@ def physis_observed(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     except (TypeError, ValueError):
         limit = 20
     argv = ["observed", "--json", "--limit", str(limit)]
-    source = str(merged.get("source") or "").strip()
     if source:
         argv += ["--source", source]
     concurrent = str(merged.get("concurrent") or "").strip()
@@ -1014,10 +1115,17 @@ def physis_observed(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     text = (result.get("stdout") or "").strip()
     if text.startswith("["):
         try:
-            result["observations"] = json.loads(text)
-            result["count"] = len(result["observations"])
+            observations = json.loads(text)
         except (ValueError, TypeError):
-            pass
+            observations = None
+        if isinstance(observations, list):
+            observations = _filter_observations(observations, source, enabled)
+            result["observations"] = observations
+            result["count"] = len(observations)
+            # The raw engine output is replaced by the filtered list, so the
+            # model cannot read a disabled bucket through stdout either.
+            result["stdout"] = json.dumps(observations)
+    result["enabled_sources"] = sorted(enabled)
     return result
 
 

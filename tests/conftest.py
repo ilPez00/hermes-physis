@@ -25,6 +25,13 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
+def _isolated_hermes_home(tmp_path, monkeypatch):
+    """Keep plugin state out of the real Hermes profile during tests."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes-home"))
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _isolated_replant_store(tmp_path, monkeypatch):
     """Keep every test's replant state out of the real profile directory.
 

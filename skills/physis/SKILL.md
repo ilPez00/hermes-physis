@@ -13,8 +13,10 @@ codebase, or when the same verified workflow will run again.
 1. `physis_engine_status` if anything looks off (missing engine, zero nodes).
 2. `physis_observe` on the repo before querying it. Re-run after large changes.
    `physis_grid` shows the current axes/shape and the active embedder.
-   `physis_ingest` feeds the engine from fs/git/terminal/agent/process/browser;
-   `physis_observed` reads back what was logged.
+   `physis_ingest` feeds the engine from fs/git (default) and, only when the
+   operator enables them, terminal/agent/process/browser;
+   `physis_observed` reads back what was logged, filtering out buckets the
+   operator has not enabled.
 3. `physis_query` for "where is X" questions; `physis_context` when you need a
    packet under a token budget (compiles straight from the corpus);
    `physis_snapshot` for graph health; `physis_chain` for a gap/drift overview.
@@ -38,6 +40,10 @@ codebase, or when the same verified workflow will run again.
   A candidate that fails at approval is the same signal: the world moved.
 - Never approve a candidate you have not read: its steps are shell commands
   that will run again unattended.
+- `terminal`, `agent`, `process` and `browser` ingestion sources are opt-in
+  and refused unless the operator enables them in
+  `plugins.entries.physis.settings.ingest_sources`. Never ask for them to be
+  enabled and never work around a refusal.
 - `physis_why` returns evidence around a label, not a causal story.
 - The bundled embedder is semantic (BGE-small, CLS pooling) and on by default;
   the ontology cache makes calls fast after the first build. This does not make

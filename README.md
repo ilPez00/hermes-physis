@@ -99,8 +99,8 @@ run that again, the world changed".
 | `physis_why` | `node-search` | evidence/coherence around a named object |
 | `physis_classify` | `classify` | adaptive-grid cells for text or a file |
 | `physis_grid` | `grid` | axes, shape, populated cells, active embedder |
-| `physis_ingest` | `watch` | append observations from fs/git/terminal/agent/process/browser |
-| `physis_observed` | `observed` | read the observation log with sources and timestamps |
+| `physis_ingest` | `watch` | append observations; fs/git by default, terminal/agent/process/browser opt-in |
+| `physis_observed` | `observed` | read the observation log with sources and timestamps; disabled sensitive buckets are filtered out |
 | `physis_diff` | `direction` | did the change move as asked, versus the null |
 | `physis_chain` | `chain` | one pass: structure, gaps, drift, control |
 
@@ -120,8 +120,9 @@ With `auto_learn: true` and `verify_cmd` set, a session that passes its check is
 turned into a **candidate**: the request it answered (`pre_llm_call`), the exact
 foreground `terminal` commands, the files it edited, and the check that passed.
 Candidates are stored in the plugin's own profile directory
-(`~/.physis/replant/candidates/`, or `$PHYSIS_REPLANT_STORE/candidates` when the
-operator relocates it) and nothing replays until an operator approves one by id.
+(`~/.hermes/plugin-data/physis/replant/candidates/`, or
+`$PHYSIS_REPLANT_STORE/candidates` when the operator relocates it) and nothing
+replays until an operator approves one by id.
 Approval executes the steps and the check through replant (`provider_calls: 0`),
 which is what makes them replayable later.
 
@@ -145,7 +146,7 @@ candidate).
 
 Replant state is never taken from a repository path or a model argument. The
 registry is the operator's `replant_tools` setting, or
-`~/.physis/replant/learned/tools.json` after `/physis approve`. `approve` is not
+`~/.hermes/plugin-data/physis/replant/learned/tools.json` after `/physis approve`. `approve` is not
 a registered tool. Both approval and replay require the operator's slash
 command; neither is model-callable. The model may have write access as the same
 OS user; that user can modify the registry and approval manifest together, so
@@ -178,9 +179,38 @@ independently reviewed. Missing or invalid freshness evidence blocks replay.
 | `auto_observe` | `false` | after write/patch, re-index (`scan`) the edited folder |
 | `verify_cmd` | `""` | command run by the `pre_verify` hook after edits; non-zero keeps the turn going |
 | `auto_learn` | `false` | after `verify_cmd` passes, save the session as an approvable workflow candidate |
-| `replant_tools` | `""` | operator-owned tools registry for replay/record; empty = `~/.physis/replant/learned/tools.json` after `/physis approve` |
+| `ingest_sources` | `["fs", "git"]` | observation sources `physis_ingest` may read; `terminal` (shell history), `agent` (`~/.claude/projects` transcripts), `process` (`/proc/<pid>/cmdline`) and `browser` (history database) are sensitive and refused unless listed |
+| `replant_tools` | `""` | operator-owned tools registry for replay/record; empty = `~/.hermes/plugin-data/physis/replant/learned/tools.json` after `/physis approve` |
 | `budget` | `800` | default `physis_context` token budget (100-4000) |
 | `timeout` | `20` | per-subprocess timeout (seconds) |
+
+### Sensitive ingestion sources
+
+`physis_ingest` can read four sources that carry data the user did not
+explicitly hand to the tool:
+
+| Source | What it reads |
+|---|---|
+| `terminal` | the user's shell history (`~/.zsh_history` or `~/.bash_history`) |
+| `agent` | another coding agent's session transcripts under `~/.claude/projects` |
+| `process` | every process's command line from `/proc/<pid>/cmdline` |
+| `browser` | the browser history database (Chromium/Chrome `History`, Firefox `places.sqlite`) |
+
+They are **disabled by default**. `physis_ingest` refuses them — before any
+engine runs — unless the operator lists them in
+`plugins.entries.physis.settings.ingest_sources`:
+
+```yaml
+plugins:
+  entries:
+    physis:
+      settings:
+        ingest_sources: [fs, git, terminal]
+```
+
+`physis_observed` refuses a disabled source by name and filters disabled
+buckets out of an unfiltered read, so a sensitive observation recorded before
+the gate cannot be read back through it either.
 
 ## Environment variables
 
@@ -197,7 +227,7 @@ variables. These are read by the engine directly and work without Hermes config.
 | `PHYSIS_CORE_DIR` | per-repo hash | graph store location; set explicitly for one shared store |
 | `PHYSIS_AUTO_EXPAND` | `1` | `0` disables learning a new ontology entry on uncertain classifications |
 | `PHYSIS_ONTOLOGY_DIR` / `PHYSIS_ONTOLOGY_FILES` | (bundled) | add axes or entries at runtime |
-| `PHYSIS_REPLANT_STORE` | `~/.physis/replant` | operator relocation of replant state (recipes, candidates, registries); never settable through a tool argument |
+| `PHYSIS_REPLANT_STORE` | `~/.hermes/plugin-data/physis/replant` | operator relocation of replant state (recipes, candidates, registries); never settable through a tool argument |
 | `PHYSIS_NO_...` | - | see `--no-expand` flag on `physis_classify` |
 
 ### Turning semantics off

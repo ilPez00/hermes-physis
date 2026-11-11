@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.7.1 — 2026-11-11
+
+Catalog admission fix: sensitive ingestion is opt-in.
+
+### Sensitive sources are opt-in
+
+- `physis_ingest` refuses `terminal`, `agent`, `process`, `browser` and `all`
+  unless the operator lists the source in
+  `plugins.entries.physis.settings.ingest_sources`. The default is
+  `["fs", "git"]`; the refusal happens in the tool before any engine runs, so
+  a prompt-injected call cannot pull shell history, another agent's
+  transcripts, process command lines or browser history into the provider
+  context.
+- `physis_observed` refuses a disabled source by name and filters disabled
+  buckets out of an unfiltered read, so a sensitive observation recorded
+  before the gate cannot be read back through it.
+- `plugin.yaml` discloses the four sources, what each reads, and the setting
+  that enables them.
+
+### Fixes
+
+- `bin/SHA256SUMS` now matches the shipped `replant` binary (the line was
+  stale).
+- Plugin state moved from `~/.physis` to Hermes' profile data dir
+  (`~/.hermes/plugin-data/physis`), so separate profiles keep separate state.
+
 ## 1.7.0 — 2026-11-10
 
 The release the catalog entry points at. Everything below was already in the
