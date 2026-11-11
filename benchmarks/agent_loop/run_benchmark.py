@@ -34,6 +34,7 @@ import copy
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -107,7 +108,7 @@ def prepare_home(
             enabled.append("physis")
         entries["physis"] = {"settings": dict(spec["settings"])}
     else:
-        plugins["enabled"] = [item for item in enabled if item != "physis"]
+        enabled = [item for item in enabled if item != "physis"]
         entries.pop("physis", None)
     plugins["enabled"] = enabled
 
@@ -119,6 +120,13 @@ def prepare_home(
         target = home / "auth.json"
         if not target.exists():
             target.symlink_to(auth)
+    # Hermes loads user plugins from <HERMES_HOME>/plugins. Without this the
+    # config names a plugin that is not there: every config silently degrades to
+    # plain Hermes, which is exactly how the first benchmark run was invalid.
+    plugins_src = hermes_home() / "plugins"
+    plugins_dst = home / "plugins"
+    if plugins_src.is_dir() and not plugins_dst.exists():
+        plugins_dst.symlink_to(plugins_src)
     return home
 
 
@@ -173,21 +181,60 @@ def make_repo(root: Path, setup: list[dict[str, str]]) -> None:
     )
 
 
-def count_physis_calls(home: Path, since: float, limit: int = 40) -> int:
-    """Proxy for tool usage: physis/replant tool names in freshly written transcripts."""
-    candidates: list[Path] = []
-    for pattern in ("*.json", "*.jsonl"):
-        candidates.extend(home.rglob(pattern))
-    candidates = [p for p in candidates if p.stat().st_mtime >= since]
-    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    total = 0
-    for path in candidates[:limit]:
+def count_marker(home: Path, marker: str) -> int:
+    """Occurrences of *marker* in this home's session messages (injection check)."""
+    db = home / "state.db"
+    if not db.is_file():
+        return 0
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        row = con.execute(
+            "select count(*) from messages where content like ?", (f"%{marker}%",)
+        ).fetchone()
+        con.close()
+    except sqlite3.Error:
+        return 0
+    return int(row[0]) if row else 0
+
+
+def count_physis_calls(home: Path) -> int:
+    """Physis/replant tool calls recorded in this home's session database.
+
+    Sessions live in state.db (SQLite), not in JSON files - scanning json/jsonl
+    reported zero for every run even when the plugin was absent, which is how the
+    first harness version hid its own invalidity.
+    """
+    db = home / "state.db"
+    if not db.is_file():
+        return 0
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        rows = con.execute(
+            "select tool_calls from messages where tool_calls is not null and tool_calls != ''"
+        ).fetchall()
+        con.close()
+    except sqlite3.Error:
+        return 0
+    count = 0
+    for (raw,) in rows:
         try:
-            text = path.read_text(errors="ignore")
-        except OSError:
+            data = json.loads(raw)
+        except ValueError:
             continue
-        total += text.count('"physis_') + text.count('"replant_')
-    return total
+        if isinstance(data, list):
+            items = data
+        elif isinstance(data, dict):
+            items = data.get("tool_calls") or []
+        else:
+            items = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            name = (item.get("name") or item.get("tool_name")
+                    or (item.get("function") or {}).get("name") or "")
+            if name.startswith(("physis_", "replant_")):
+                count += 1
+    return count
 
 
 def run_one(
@@ -198,6 +245,8 @@ def run_one(
     indexed = pre_index(home, repo) if CONFIGS[home.name.replace("home-", "")]["enabled"] else False
     usage = work / f"{task['id']}.usage.json"
     env = child_env(home)
+    physis_before = count_physis_calls(home)
+    injected_before = count_marker(home, "[Physis context]")
     started = time.time()
     try:
         proc = subprocess.run(
@@ -235,7 +284,8 @@ def run_one(
         "cost_usd": payload.get("estimated_cost_usd") or 0.0,
         "api_calls": payload.get("api_calls") or 0,
         "model": payload.get("model") or "",
-        "physis_tool_mentions": count_physis_calls(home, started - 5),
+        "physis_tool_calls": count_physis_calls(home) - physis_before,
+        "pre_context_injections": count_marker(home, "[Physis context]") - injected_before,
         "response_chars": len(output),
         "error": error[-400:],
     }
@@ -258,7 +308,7 @@ def aggregate(rows: list[dict[str, Any]]) -> None:
                 f"{sum(r['output_tokens'] for r in group):>8} "
                 f"{sum(float(r['cost_usd']) for r in group):>8.4f} "
                 f"{sum(r['seconds'] for r in group):>7.1f} "
-                f"{sum(r['physis_tool_mentions'] for r in group):>7}"
+                f"{sum(int(r.get('physis_tool_calls', 0)) for r in group):>7}"
             )
     print("-" * 92)
     for config in ("plain", "skill", "auto"):
@@ -268,7 +318,7 @@ def aggregate(rows: list[dict[str, Any]]) -> None:
         passed = sum(1 for r in group if r["check_ok"])
         print(f"{config:<8} {'TOTAL':<12} {passed:>4} {len(group):>5}")
     print("\ncheck_ok = the task's own verification command passed.")
-    print("physis = physis/replant tool names in the run's transcript (proxy, not a tool-call count).")
+    print("physis = physis/replant tool calls in the run's session database.")
 
 
 def main() -> int:
