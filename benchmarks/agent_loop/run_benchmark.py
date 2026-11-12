@@ -182,14 +182,20 @@ def make_repo(root: Path, setup: list[dict[str, str]]) -> None:
 
 
 def count_marker(home: Path, marker: str) -> int:
-    """Occurrences of *marker* in this home's session messages (injection check)."""
+    """Occurrences of *marker* in this home's session messages (injection check).
+
+    ``pre_llm_call`` context is stamped onto the user message's ``api_content``
+    sidecar, not its ``content`` - checking only ``content`` reported zero
+    injections even when the hook had fired.
+    """
     db = home / "state.db"
     if not db.is_file():
         return 0
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         row = con.execute(
-            "select count(*) from messages where content like ?", (f"%{marker}%",)
+            "select count(*) from messages where content like ? or api_content like ?",
+            (f"%{marker}%", f"%{marker}%"),
         ).fetchone()
         con.close()
     except sqlite3.Error:
@@ -200,9 +206,10 @@ def count_marker(home: Path, marker: str) -> int:
 def count_physis_calls(home: Path) -> int:
     """Physis/replant tool calls recorded in this home's session database.
 
-    Sessions live in state.db (SQLite), not in JSON files - scanning json/jsonl
-    reported zero for every run even when the plugin was absent, which is how the
-    first harness version hid its own invalidity.
+    Completed calls live in the ``tool_name`` column of ``tool``-role messages;
+    the ``tool_calls`` JSON on assistant rows only holds the pending batch. The
+    first version of this read only the JSON and reported zero for every run,
+    which hid the fact that the plugin had not loaded.
     """
     db = home / "state.db"
     if not db.is_file():
@@ -210,31 +217,12 @@ def count_physis_calls(home: Path) -> int:
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         rows = con.execute(
-            "select tool_calls from messages where tool_calls is not null and tool_calls != ''"
+            "select tool_name from messages where tool_name is not null and tool_name != ''"
         ).fetchall()
         con.close()
     except sqlite3.Error:
         return 0
-    count = 0
-    for (raw,) in rows:
-        try:
-            data = json.loads(raw)
-        except ValueError:
-            continue
-        if isinstance(data, list):
-            items = data
-        elif isinstance(data, dict):
-            items = data.get("tool_calls") or []
-        else:
-            items = []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            name = (item.get("name") or item.get("tool_name")
-                    or (item.get("function") or {}).get("name") or "")
-            if name.startswith(("physis_", "replant_")):
-                count += 1
-    return count
+    return sum(1 for (name,) in rows if str(name).startswith(("physis_", "replant_")))
 
 
 def run_one(
@@ -242,6 +230,10 @@ def run_one(
 ) -> dict[str, Any]:
     repo = work / task["id"]
     make_repo(repo, task.get("setup") or [])
+    plugins_dir = home / "plugins"
+    plugin_entries = len(list(plugins_dir.iterdir())) if plugins_dir.is_dir() else 0
+    print(f"    home={home.name} plugins_entries={plugin_entries} "
+          f"symlink={plugins_dir.is_symlink()}", flush=True)
     indexed = pre_index(home, repo) if CONFIGS[home.name.replace("home-", "")]["enabled"] else False
     usage = work / f"{task['id']}.usage.json"
     env = child_env(home)
@@ -328,7 +320,10 @@ def main() -> int:
     parser.add_argument("--configs", default="plain,skill,auto")
     parser.add_argument("--only", default="", help="comma-separated task ids")
     parser.add_argument("--out", default=str(HERE / "results.jsonl"))
-    parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument("--timeout", type=int, default=300,
+                        help="per-run agent timeout in seconds (default 300; the free "
+                             "model occasionally loops, and an unbounded run makes the "
+                             "benchmark unusable)")
     parser.add_argument("--no-pre-index", action="store_true",
                         help="do not build the graph before plugin-enabled runs")
     parser.add_argument("--no-link-auth", action="store_true",
