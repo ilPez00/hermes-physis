@@ -823,6 +823,89 @@ def test_pre_context_fails_open_without_a_store(tmp_path, monkeypatch):
     assert hook(session_id="ctx6", user_message="rotate the auth token") is None
 
 
+class _SessionCtx:
+    """Registration harness carrying the session cwd, like PluginContext does."""
+
+    def __init__(self, settings=None, cwd=""):
+        self.settings = settings or {}
+        self.cwd = cwd
+        self.handlers = {}
+
+    def get_config(self, key, default=None):
+        return self.settings.get(key, default)
+
+    def session_cwd(self):
+        return self.cwd
+
+    def register_tool(self, name, toolset, schema, handler, description=None):
+        self.handlers[name] = handler
+
+
+def test_repo_root_resolves_a_relative_path_against_the_session_cwd(tmp_path):
+    repo = _make_repo(tmp_path)
+    (repo / "src").mkdir()
+    assert tools._repo_root("src", str(repo)) == str(repo)
+    assert tools._repo_root(".", str(repo)) == str(repo)
+    # Without a base the process cwd still applies.
+    assert tools._repo_root(str(repo / "src")) == str(repo)
+
+
+def test_pre_context_uses_the_session_cwd_not_the_process_cwd(tmp_path, monkeypatch):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    (repo / "auth.py").write_text("def rotate_token():\n    pass\n")
+    _fresh_store(tmp_path, repo)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    binary = _node_search_engine(
+        tmp_path,
+        'print("Fixed-token search: 1 results (30 tokens, budget 300)")\n'
+        'print("  1. 0.91  auth.py: def rotate_token() (30 tokens)")\n',
+    )
+    ctx = _SessionCtx(
+        {"pre_context": True, "engine_bin": binary, "timeout": 10}, cwd=str(repo)
+    )
+    hook = tools.make_pre_llm_call(ctx)
+    result = hook(session_id="ctx-cwd", user_message="rotate the auth token")
+    assert result and "auth.py" in result["context"]
+
+
+def test_post_tool_call_resolves_a_relative_path_against_the_session_cwd(
+    tmp_path, monkeypatch
+):
+    monkeypatch.delenv("PHYSIS_CORE_DIR", raising=False)
+    repo = _make_repo(tmp_path)
+    target = repo / "src" / "mod.py"
+    target.parent.mkdir()
+    target.write_text("x = 1\n")
+    log = tmp_path / "store.log"
+    binary = tmp_path / "store-engine"
+    binary.write_text(
+        textwrap.dedent(f"""\
+        #!/usr/bin/env python3
+        import os, sys
+        if sys.argv[1:] == ["--help"]:
+            print("Commands:\\n  scan  Scan")
+            raise SystemExit(0)
+        with open({str(log)!r}, "a") as handle:
+            handle.write(os.environ.get("PHYSIS_CORE_DIR", "") + "\\n")
+        raise SystemExit(0)
+        """)
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.chdir(tmp_path)  # the process cwd is NOT the repository
+
+    ctx = _SessionCtx(
+        {"auto_observe": True, "engine_bin": str(binary), "timeout": 5}, cwd=str(repo)
+    )
+    hook = tools.make_post_tool_call(ctx)
+    hook(tool_name="write_file", args={"path": "src/mod.py"}, session_id="s1")
+    assert log.read_text().strip() == tools._index_dir({"path": str(repo)})
+    assert tools._session_root("s1") == str(repo)
+
+
 def test_session_root_is_remembered_from_edits(tmp_path):
     repo = _make_repo(tmp_path)
     target = repo / "src" / "mod.py"

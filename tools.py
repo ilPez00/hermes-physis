@@ -128,11 +128,11 @@ def _parse_node_results(text: str) -> list[dict[str, Any]]:
     return results
 
 
-def _remember_root(session: str, path: str) -> None:
+def _remember_root(session: str, path: str, base: str = "") -> None:
     """Track the repository a session is working in, for pre-reasoning context."""
     if not session or not path:
         return
-    root = _repo_root(path)
+    root = _repo_root(path, base)
     with _CONTEXT_LOCK:
         if len(_SESSION_ROOTS) >= _MAX_SESSIONS and session not in _SESSION_ROOTS:
             _SESSION_ROOTS.pop(next(iter(_SESSION_ROOTS)))
@@ -331,7 +331,37 @@ def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
     return env or None
 
 
-def _repo_root(path: str) -> str:
+def _plugin_cwd(config: Any) -> str:
+    """The session's working directory, never the gateway process's own cwd.
+
+    Hermes runs plugin hooks and tools in the gateway process, whose cwd is the
+    install root shared by every session and is never ``chdir``-ed
+    (``hermes_cli.plugin_session``). ``PluginContext.session_cwd`` is the public
+    resolver; ``Path.cwd()`` is the standalone fallback (tests, direct calls).
+    """
+    getter = getattr(config, "session_cwd", None)
+    if callable(getter):
+        try:
+            value = str(getter() or "").strip()
+            if value:
+                return value
+        except Exception:
+            pass
+    return str(Path.cwd())
+
+
+def _resolve_path(target: str, base: str = "") -> Path:
+    """Resolve *target* against *base* when relative, else against the process cwd."""
+    raw = Path(target).expanduser()
+    if not raw.is_absolute() and base:
+        raw = Path(base).expanduser() / raw
+    try:
+        return raw.resolve()
+    except OSError:  # pragma: no cover - unresolvable path
+        return raw.absolute()
+
+
+def _repo_root(path: str, base: str = "") -> str:
     """Canonical repository root for *path*: the nearest enclosing VCS marker.
 
     A single global graph mixes nodes from every scanned repo, so the store key
@@ -339,9 +369,12 @@ def _repo_root(path: str) -> str:
     model happened to name fragments one repository into several stores: a scan
     of ``src/`` and a scan of the repository root would not see each other's
     nodes. Without a VCS marker the path itself is the root.
+
+    *base* resolves a relative *path* the way the caller means it: the session
+    cwd for hooks and tool paths, not the gateway process's own directory.
     """
     try:
-        start = Path(path).expanduser().resolve()
+        start = _resolve_path(path, base)
     except OSError:  # pragma: no cover - unresolvable path
         start = Path(path).expanduser().absolute()
     if start.is_file():
@@ -2164,6 +2197,11 @@ def register_tools(ctx: Any) -> list[str]:
                 else:
                     merged.setdefault(key, config.get(key, DEFAULTS.get(key)))
             merged = _with_defaults(merged)
+            # A relative path is the session's, not the gateway process's: hooks
+            # and tools run in the gateway, whose cwd is the install root.
+            cwd = _plugin_cwd(_ctx)
+            raw_path = str(merged.get("path") or "").strip()
+            merged["path"] = str(_resolve_path(raw_path, cwd)) if raw_path else cwd
             result = _handler(merged)
             if isinstance(result, str):
                 return result
@@ -2194,7 +2232,7 @@ def _live_config(config: Any) -> dict[str, Any]:
     return dict(config or DEFAULTS)
 
 
-def _verify_cwd(paths: list[str]) -> str:
+def _verify_cwd(paths: list[str], base: str = "") -> str:
     """Directory to run the operator's verify command from.
 
     The first changed file's parent is wrong for anything but a one-file
@@ -2202,9 +2240,9 @@ def _verify_cwd(paths: list[str]) -> str:
     Use the repository root shared by the changed files; when a change spans
     several repositories, fall back to their deepest common ancestor.
     """
-    roots = sorted({_repo_root(item) for item in paths if str(item).strip()})
+    roots = sorted({_repo_root(item, base) for item in paths if str(item).strip()})
     if not roots:
-        return str(Path.cwd())
+        return str(_resolve_path(base) if base else Path.cwd())
     if len(roots) == 1:
         return roots[0]
     try:
@@ -2213,7 +2251,8 @@ def _verify_cwd(paths: list[str]) -> str:
         return roots[0]
 
 
-def _pre_context_packet(live: dict[str, Any], session: str, task: str) -> str | None:
+def _pre_context_packet(live: dict[str, Any], session: str, task: str,
+                        base: str = "") -> str | None:
     """A small, fresh evidence packet for the model, or None to stay silent.
 
     Fail-open by construction: a missing store, a stale graph, no engine, weak
@@ -2221,7 +2260,7 @@ def _pre_context_packet(live: dict[str, Any], session: str, task: str) -> str | 
     reads an existing index only; it never ingests a source.
     """
     live = {**DEFAULTS, **live}
-    root = _session_root(session) or _repo_root(str(Path.cwd()))
+    root = _session_root(session) or _repo_root(base)
     if not root or not Path(root).is_dir():
         return None
     store = Path(_index_dir({"path": root}))
@@ -2294,6 +2333,7 @@ def make_post_tool_call(config: Any):
         **kwargs,
     ):
         live = _live_config(config)
+        cwd = _plugin_cwd(config)
         # Hermes dispatches ``args``; ``tool_args`` is kept as an alias so a
         # caller using the older spelling still works.
         call_args = args if isinstance(args, dict) else tool_args
@@ -2317,7 +2357,8 @@ def make_post_tool_call(config: Any):
             target = call_args.get("path") or call_args.get("file_path")
             if not target:
                 return None
-            folder = str(Path(target).expanduser().resolve().parent)
+            # A relative path is the session's, not the gateway process's.
+            folder = str(_resolve_path(str(target), cwd).parent)
             timeout = min(int(live.get("timeout") or 20), 8)
             pool = _pool_from_args(
                 {"engine_bin": live.get("engine_bin", ""), "timeout": timeout}
@@ -2341,7 +2382,7 @@ def make_post_tool_call(config: Any):
             if isinstance(call_args, dict):
                 target = call_args.get("path") or call_args.get("file_path")
                 if target:
-                    _remember_root(str(session_id or "default"), str(target))
+                    _remember_root(str(session_id or "default"), str(target), cwd)
         except Exception:
             pass
         return None
@@ -2362,7 +2403,9 @@ def make_pre_llm_call(config: Any):
                 return None
             if not isinstance(user_message, str) or not user_message.strip():
                 return None
-            packet = _pre_context_packet(live, session, user_message.strip())
+            packet = _pre_context_packet(
+                live, session, user_message.strip(), _plugin_cwd(config)
+            )
             if not packet:
                 return None
             # Hermes appends this to the user message (never the system prompt).
@@ -2398,7 +2441,8 @@ def make_pre_verify(config: Any):
             paths = [str(item) for item in (changed_paths or []) if str(item).strip()]
             if not paths:
                 return None
-            cwd = _verify_cwd(paths)
+            cwd = _plugin_cwd(config)
+            verify_cwd = _verify_cwd(paths, cwd)
             timeout = _int_or(live.get("verify_timeout"), 0) or min(
                 _int_or(live.get("timeout"), 20), 300
             )
@@ -2406,7 +2450,7 @@ def make_pre_verify(config: Any):
                 proc = subprocess.run(
                     command,
                     shell=True,
-                    cwd=cwd,
+                    cwd=verify_cwd,
                     capture_output=True,
                     text=True,
                     timeout=timeout,
@@ -2445,7 +2489,7 @@ def make_pre_verify(config: Any):
                     pass  # learning is best-effort, never a turn failure
             try:
                 for item in paths:
-                    _remember_root(str(session_id or "default"), item)
+                    _remember_root(str(session_id or "default"), item, cwd)
             except Exception:
                 pass
             return None
@@ -2479,7 +2523,7 @@ def make_physis_command(config: Any):
         if verb not in _COMMAND_TOOLS and verb != "approve":
             return f"Usage: /physis {'|'.join([*_COMMAND_TOOLS, 'approve'])} [prompt|id]"
         payload: dict[str, Any] = dict(live)
-        payload["path"] = str(Path.cwd())
+        payload["path"] = _plugin_cwd(config)
         if verb == "replay":
             if not rest:
                 return "Usage: /physis replay <prompt>"

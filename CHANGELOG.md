@@ -24,6 +24,15 @@ Skill: the operating manual now teaches selectivity and the reuse boundary.
 Integration: the plugin now acts as an evidence substrate, not only a tool the
 agent may consult.
 
+- **Hooks resolve the session's directory, not the gateway's.** `pre_llm_call`
+  (`pre_context`), `post_tool_call` (`auto_observe`) and `pre_verify` derived
+  the repository from the process cwd. Hermes runs plugins in the gateway
+  process, whose cwd is the install root shared by every session and is never
+  `chdir`-ed, so whenever the session's workspace was anywhere else the hooks
+  targeted the wrong repository: `pre_context` never injected and `auto_observe`
+  scanned the install tree. They now read `PluginContext.session_cwd()` (with a
+  process-cwd fallback for standalone calls), and a relative tool `path`
+  resolves against it too.
 - **One graph per repository.** The store key is the canonical repository root
   (nearest `.git`/`.hg`/`.svn`, else the path), so a `post_tool_call` re-index
   of `src/` lands in the same graph the repository root queries. Previously the
