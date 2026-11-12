@@ -168,8 +168,12 @@ def test_recipe_lookup_never_executes_a_step(tmp_path, monkeypatch):
         {"input": "greet the world"},
     )
     assert result["ok"] is True, result
-    assert "show" in log.read_text()
-    assert "run" not in log.read_text()
+    argv = log.read_text().split()
+    assert argv[0] == "show"
+    # The temp path may itself contain "run" (CI's pytest tmp dir is
+    # /tmp/pytest-of-runner/...), so assert on the command token, not a
+    # substring of the whole invocation.
+    assert "run" not in argv
     assert not marker.exists()
 
 
