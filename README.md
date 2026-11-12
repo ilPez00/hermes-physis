@@ -427,9 +427,10 @@ tests/               unit + integration
 ## Publishing
 
 The plugin is published at https://github.com/ilPez00/hermes-physis
-(release v1.6.0). The bundled engines are built by GitHub Actions and carry
-SLSA build provenance attestations. Catalog submission is in progress; the
-pinned commit must be one whose binaries verify with `gh attestation verify`.
+(release v1.7.1). The bundled engines are built by GitHub Actions and carry
+SLSA build provenance attestations. It is admitted to the Hermes plugin
+catalog: `plugin-catalog/physis.yaml` in NousResearch/hermes-agent pins a commit
+whose binaries verify with `gh attestation verify`.
 
 To ship a new version:
 
