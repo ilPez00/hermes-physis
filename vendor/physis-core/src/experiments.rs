@@ -60,4 +60,4 @@
 //!   - Create hypotheses with 0, 1, 2, 3, 4, 5+ supporting evidence items
 //!   - Measure hypothesis.fitness for each
 //!   - Compute Spearman rank correlation rho between evidence_count and fitness
-//!   - Report: rho coefficient, p-value, bins [0,1], [2,3], [4,5+], N per bin
+//!   - Report: rho coefficient, p-value, bins [0,1], [2,3], [4,5+], N per bi
