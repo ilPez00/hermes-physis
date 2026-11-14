@@ -286,4 +286,5 @@ mod tests {
         assert_eq!(pairs[0].0, "Alpha → h1:Alpha");
         assert_eq!(pairs[0].1, "# Alpha\n\ncontent");
         assert_eq!(pairs[1].0, "Alpha");
-    
+        }
+}
