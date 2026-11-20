@@ -1205,12 +1205,6 @@ pub fn compile_context_with_observer(
                         }
                     })
                     .sum::<usize>()
-                    // The engine's chunk accounting and the assembled packet's
-                    // count can disagree by one token per join when a chunk
-                    // boundary splits a word (measured: +2 on the real
-                    // corpus). Reserve the measured bound so the block the
-                    // pre-gate priced is the block the append stage fits.
-                    + top_k.saturating_sub(1)
             }
         }
     };

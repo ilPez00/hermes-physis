@@ -86,14 +86,20 @@ auto` sizes the reserve from the gated-in claims themselves (pre-gate: the gate
 is pure and needs only embeddings, both available before retrieval; reserve =
 sum of accepted block tokens + the join-overhead bound).
 
-A measurement defect surfaced and was fixed first: the engine's chunk
-accounting and the assembled packet's token count can disagree by one token per
-join when a chunk boundary splits a word (measured +2 on this corpus — the
-pre-gate priced a 104-token block, the append stage found 1098 used against a
-1096 engine budget and deferred it as "over budget: 104 tokens, 1098 used").
-Auto now reserves the block plus `top_k - 1`, the measured bound on that seam.
-The seam itself is pre-existing (baseline packets can also exceed their nominal
-budget by up to top_k-1 tokens) and is recorded for a later unit.
+A measurement defect surfaced and was fixed first, then closed at the source:
+the retriever's budget accounting counted bare chunk tokens, but the assembled
+packet adds the "\n\n---\n\n" separator — 3 tokens per join (each '-' is a
+non-alphanumeric run). Measured on this corpus: the pre-gate priced a
+104-token block, the engine's chunk sum fit its 1096 budget, yet the assembled
+count reached 1098 and the append stage deferred the block as "over budget:
+104 tokens, 1098 used". First patch: auto reserved block + `top_k - 1`. Then
+the seam was closed properly: `TokenFixedRetriever::with_separator` checks the
+budget against the assembled string itself (opt-in — callers that never
+assemble keep legacy accounting), `retrieve_from_texts` opts in, and auto is
+back to the exact block sum. Red-first: `assembled_packet_respects_the_budget_
+not_just_the_chunk_sum` (two 40-token chunks, budget 80, assembled 83 — red
+before the fix). Baseline packets can no longer exceed their nominal budget
+either.
 
 Results with auto reserve, budget 1200, bge-small, floor 0.6 (default):
 

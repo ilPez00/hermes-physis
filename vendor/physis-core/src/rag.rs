@@ -147,6 +147,9 @@ pub struct TokenFixedRetriever {
     pub top_k: usize,
     /// MMR-like diversity (0 = pure score, 1 = max diversity).
     pub diversity: f32,
+    /// When set, the budget is checked against the ASSEMBLED packet (joins
+    /// included) rather than the bare chunk-token sum. See `with_separator`.
+    pub separator: Option<String>,
 }
 
 impl TokenFixedRetriever {
@@ -155,7 +158,19 @@ impl TokenFixedRetriever {
             budget,
             top_k,
             diversity: 0.0,
+            separator: None,
         }
+    }
+
+    /// Check the budget against the ASSEMBLED packet — the string a model is
+    /// actually handed, joins included — rather than the bare chunk-token
+    /// sum. The "\n\n---\n\n" separator costs 3 tokens per join (each '-'
+    /// is a non-alphanumeric run), so chunk-sum accounting can promise a
+    /// budget the packet then breaks. Callers that never assemble with a
+    /// separator keep the legacy chunk-sum accounting.
+    pub fn with_separator(mut self, separator: impl Into<String>) -> Self {
+        self.separator = Some(separator.into());
+        self
     }
 
     pub fn with_diversity(mut self, diversity: f32) -> Self {
@@ -183,6 +198,7 @@ impl TokenFixedRetriever {
 
         let mut selected: Vec<RetrievedChunk> = Vec::new();
         let mut used = 0usize;
+        let mut assembled = String::new();
         let mut truncated = false;
         let mut selected_embs: Vec<&[f32]> = Vec::new();
 
@@ -226,8 +242,31 @@ impl TokenFixedRetriever {
                 continue;
             }
 
-            if used + chunk.tokens <= self.budget {
-                used += chunk.tokens;
+            let fits = match &self.separator {
+                None => {
+                    let fits = used + chunk.tokens <= self.budget;
+                    if fits {
+                        used += chunk.tokens;
+                    }
+                    fits
+                }
+                Some(sep) => {
+                    let trial = if assembled.is_empty() {
+                        chunk.text.clone()
+                    } else {
+                        format!("{assembled}{sep}{}", chunk.text)
+                    };
+                    let n = count_tokens(&trial);
+                    if n <= self.budget {
+                        used = n;
+                        assembled = trial;
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+            if fits {
                 selected_embs.push(&chunk.embedding);
                 selected.push(RetrievedChunk {
                     id: chunk.id,
@@ -270,7 +309,7 @@ pub fn retrieve_from_texts(
 ) -> (RetrievalResult, String) {
     let corpus = RagCorpus::build(texts, embedder);
     let q_emb = embedder.embed(query);
-    let retriever = TokenFixedRetriever::new(budget, top_k);
+    let retriever = TokenFixedRetriever::new(budget, top_k).with_separator("\n\n---\n\n");
     let result = retriever.retrieve(&q_emb, &corpus);
     let ctx = assemble_context(&result, "\n\n---\n\n");
     (result, ctx)
@@ -521,6 +560,28 @@ mod tests {
         assert_eq!(count_tokens(""), 1);
         assert!(count_tokens("hello world") >= count_tokens("hello"));
         assert!(count_tokens("antidisestablishmentarianism") > count_tokens("cat"));
+    }
+
+    // The budget is a promise about the packet a model is actually handed,
+    // not about an internal chunk-token sum. The "\n\n---\n\n" separator
+    // costs 3 tokens per join (each '-' is a non-alphanumeric run), so two
+    // 40-token chunks at budget 80 assemble to 83 — over the promised
+    // budget. Measured on the real corpus: a 104-token observer block was
+    // deferred as "over budget" because the engine's assembled count had
+    // quietly eaten the reserve margin.
+    #[test]
+    fn assembled_packet_respects_the_budget_not_just_the_chunk_sum() {
+        let texts = vec![
+            "alpha beta gamma delta epsilon zeta eta theta iota kappa ".repeat(4),
+            "lambda mu nu xi omicron pi rho sigma tau upsilon ".repeat(4),
+        ];
+        let e = emb();
+        let (_res, ctx) = retrieve_from_texts(&texts, "alpha beta", &e, 80, 2);
+        let n = count_tokens(&ctx);
+        assert!(
+            n <= 80,
+            "assembled packet is {n} tokens against budget 80 — the chunk sum hid the separator joins"
+        );
     }
 
     #[test]
