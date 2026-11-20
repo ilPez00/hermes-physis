@@ -938,4 +938,212 @@ mod tests {
         assert_eq!(cmp.recall_proxy_baseline, cmp.recall_proxy_fused);
         assert_eq!(cmp.recall_proxy_delta, Some(0.0));
     }
+
+    /// Regime 1 of the realistic ablation: the engine's corpus does not cover
+    /// the query at all, and the observer supplies the only relevant knowledge.
+    /// This is the one case fusion can win, and it does — measured, not assumed.
+    #[test]
+    fn sparse_corpus_observer_supplies_the_only_relevant_knowledge() {
+        use crate::rag::{RagCorpus, TokenFixedRetriever};
+        use crate::RandomProjectionEmbedder;
+
+        let embedder = RandomProjectionEmbedder::new(64);
+        let docs = [
+            "spindle bearing lubrication schedule is monthly",
+            "coolant pump filter replacement every quarter",
+            "shift handover notes filed weekly",
+            "invoice reconciliation runs on the first business day",
+            "warehouse picking routes optimized each morning",
+            "fire extinguisher inspection tags renewed yearly",
+        ];
+        let texts: Vec<String> = docs.iter().map(|d| d.to_string()).collect();
+        let corpus = RagCorpus::build(&texts, &embedder);
+        let query_emb = embedder.embed("deploy rollback procedure smoke checks");
+        let retrieval = TokenFixedRetriever::new(400, 6).retrieve(&query_emb, &corpus);
+        assert!(!retrieval.chunks.is_empty());
+
+        let claims = vec![retrieval_claim(
+            "obj:rollback-runbook",
+            "deploy rollback: revert to last green build then rerun smoke checks",
+            0.9,
+        )];
+        let tokens_for = |c: &CandidateClaimPacket, h: &crate::ingest::RetrievalHit| {
+            let _ = c;
+            crate::rag::count_tokens(h.snippet.as_deref().unwrap_or(""))
+        };
+        let base = crate::compile::compile_from_retrieval(
+            "deploy rollback",
+            &retrieval,
+            &["engine"],
+            EmbedderInfo::default(),
+        );
+        let fused = crate::compile::compile_from_retrieval_with_observer_claims(
+            "deploy rollback",
+            &retrieval,
+            &["engine"],
+            &claims,
+            EmbedderInfo::default(),
+            tokens_for,
+        );
+
+        let relevant: HashSet<String> = ["obj:rollback-runbook".to_string()].into();
+        let cmp = compare_compiles(&base, &fused, Some(&relevant));
+        assert_eq!(cmp.recall_proxy_baseline, Some(0.0));
+        assert_eq!(cmp.recall_proxy_fused, Some(1.0));
+        assert_eq!(cmp.recall_proxy_delta, Some(1.0));
+        assert_eq!(observer_selected_count(&fused), 1);
+    }
+
+    /// Regime 2: the engine covers the query, the budget is ample, and the
+    /// observer adds one relevant object plus two noise hits. The recall win
+    /// is real but the noise rides along — measured here as the cost side of
+    /// the same number.
+    #[test]
+    fn ample_budget_dense_corpus_noise_rides_with_the_win() {
+        use crate::rag::{RagCorpus, TokenFixedRetriever};
+        use crate::RandomProjectionEmbedder;
+
+        let embedder = RandomProjectionEmbedder::new(64);
+        let docs = [
+            "relay calibration requires the bench harness and a reference meter",
+            "relay calibration two pass verification catches swapped contacts",
+            "spindle bearing lubrication schedule is monthly",
+            "coolant pump filter replacement every quarter",
+            "shift handover notes filed weekly",
+            "invoice reconciliation runs on the first business day",
+        ];
+        let texts: Vec<String> = docs.iter().map(|d| d.to_string()).collect();
+        let corpus = RagCorpus::build(&texts, &embedder);
+        let query_emb = embedder.embed("relay calibration bench harness");
+        let retrieval = TokenFixedRetriever::new(400, 6).retrieve(&query_emb, &corpus);
+        assert!(retrieval.chunks.len() >= 2, "both relay docs must retrieve");
+
+        let claims = vec![
+            retrieval_claim(
+                "obj:relay-procedure",
+                "relay calibration: bench harness, reference meter, two-pass verification",
+                0.9,
+            ),
+            retrieval_claim("obj:noise-menu", "cafeteria lunch menu rotates daily", 0.1),
+            retrieval_claim(
+                "obj:noise-weather",
+                "the courtyard fountain runs from nine to five",
+                0.1,
+            ),
+        ];
+        let tokens_for = |c: &CandidateClaimPacket, h: &crate::ingest::RetrievalHit| {
+            let _ = c;
+            crate::rag::count_tokens(h.snippet.as_deref().unwrap_or(""))
+        };
+        let base = crate::compile::compile_from_retrieval(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            EmbedderInfo::default(),
+        );
+        let fused = crate::compile::compile_from_retrieval_with_observer_claims(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            &claims,
+            EmbedderInfo::default(),
+            tokens_for,
+        );
+
+        let base_ids: HashSet<String> = base.selected.iter().map(|s| s.id.clone()).collect();
+        let mut relevant = base_ids.clone();
+        relevant.insert("obj:relay-procedure".to_string());
+        let cmp = compare_compiles(&base, &fused, Some(&relevant));
+
+        // The win: the additive object is selected and the recall gap closes.
+        assert_eq!(cmp.fused_observer_selected, 3);
+        assert_eq!(cmp.recall_proxy_fused, Some(1.0));
+        let n = base_ids.len() as f32;
+        let delta = cmp.recall_proxy_delta.unwrap();
+        assert!((delta - 1.0 / (n + 1.0)).abs() < 1e-6, "delta was {delta}");
+
+        // The cost, same packet: both noise hits were selected too — the
+        // compiler ranks by score but nothing filters an observer's noise
+        // before the budget does.
+        let fused_ids: HashSet<&str> = fused.selected.iter().map(|s| s.id.as_str()).collect();
+        assert!(fused_ids.contains("obj:noise-menu"));
+        assert!(fused_ids.contains("obj:noise-weather"));
+        assert!(utilization(&fused) > utilization(&base));
+    }
+
+    /// Regime 3, the unsolved seam: with partial slack, an observer's advisory
+    /// score (0.99) outranks verified engine evidence and displaces the
+    /// weakest relevant engine chunk — recall goes DOWN. Observer confidence
+    /// is documented as advisory, not authority; the compile path does not yet
+    /// enforce that. This test records the measured failure mode; when a score
+    /// cap or observer demotion lands, update it to assert the cap.
+    #[test]
+    fn partial_slack_lets_an_advisory_score_displace_engine_evidence() {
+        use crate::rag::{RetrievalResult, RetrievedChunk};
+
+        // Hand-built retrieval for exact token arithmetic: three relevant
+        // engine chunks (9 tokens) against a budget of 10 — one token of slack.
+        let chunk = |id: usize, score: f32| RetrievedChunk {
+            id,
+            text: format!("doc {id} relay calibration evidence"),
+            score,
+            tokens: 3,
+        };
+        let retrieval = RetrievalResult {
+            chunks: vec![chunk(0, 0.9), chunk(1, 0.8), chunk(2, 0.7)],
+            total_tokens: 9,
+            budget: 10,
+            truncated: false,
+        };
+        let claims = vec![retrieval_claim("obj:shiny", "one two three four", 0.99)];
+        let tokens_for = |c: &CandidateClaimPacket, h: &crate::ingest::RetrievalHit| {
+            let _ = c;
+            crate::rag::count_tokens(h.snippet.as_deref().unwrap_or(""))
+        };
+        let base = crate::compile::compile_from_retrieval(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            EmbedderInfo::default(),
+        );
+        let fused = crate::compile::compile_from_retrieval_with_observer_claims(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            &claims,
+            EmbedderInfo::default(),
+            tokens_for,
+        );
+
+        // Precondition: the fixture really has partial slack smaller than the
+        // observer snippet, so displacement is the only possible outcome.
+        assert_eq!(retrieval.budget - retrieval.total_tokens, 1);
+        assert_eq!(observer_selected_count(&fused), 1);
+
+        // The displacement, measured: the weakest relevant engine chunk lost
+        // its slot to the advisory score, and recall fell.
+        let base_ids: HashSet<&str> = base.selected.iter().map(|s| s.id.as_str()).collect();
+        let fused_ids: HashSet<&str> = fused.selected.iter().map(|s| s.id.as_str()).collect();
+        assert_eq!(base_ids.len(), 3);
+        assert_eq!(fused_ids.len(), 3);
+        let lost: Vec<&str> = base_ids.difference(&fused_ids).copied().collect();
+        assert_eq!(lost.len(), 1, "exactly one engine chunk must be displaced");
+        assert!(fused
+            .dropped
+            .iter()
+            .any(|d| d.reason == crate::compile::DropReason::OverBudget));
+
+        let relevant: HashSet<String> = base_ids.iter().map(|s| s.to_string()).collect();
+        let cmp = compare_compiles(&base, &fused, Some(&relevant));
+        assert_eq!(cmp.recall_proxy_baseline, Some(1.0));
+        let fused_recall = cmp.recall_proxy_fused.unwrap();
+        assert!(
+            (fused_recall - 2.0 / 3.0).abs() < 1e-6,
+            "fused recall was {fused_recall}"
+        );
+        assert!(
+            cmp.recall_proxy_delta.unwrap() < 0.0,
+            "advisory score must not be able to lower recall silently"
+        );
+    }
 }

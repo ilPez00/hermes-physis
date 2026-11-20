@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+Observer fusion stays opt-in — measured, not assumed.
+
+- **The ablation the fusion contract demanded now runs.**
+  `observer_eval`'s helpers had unit tests but no caller over the real
+  pipeline. Three fixture ablations now drive RagCorpus →
+  TokenFixedRetriever → compile (baseline vs observer-fused, same budget)
+  and assert measured numbers: a sparse corpus where the observer supplies
+  the only relevant knowledge (recall 0.0 → 1.0, the win case); a dense
+  corpus with ample budget where the win rides in with both noise hits
+  selected and utilization rising (the cost case); a zero-slack budget
+  where fusion selects identically to the baseline and the observer claim
+  is dropped OverBudget (the conservative case). A can-fail mutation
+  (fusion silently dropping observer candidates) fails the win and
+  conservative cases; a first mutation attempt (removing the redundant
+  `observer_sourced` re-forcing in `compile_fused`) did not fire —
+  attribution is doubly enforced via `candidates_from_retrieval_claims`.
+- **The unsolved seam, measured:** with partial slack, an observer's
+  advisory score (0.99) outranks verified engine evidence and displaces
+  the weakest relevant engine chunk — recall falls 1.0 → 2/3
+  (`partial_slack_lets_an_advisory_score_displace_engine_evidence`).
+  Observer confidence is documented as advisory, not authority, but the
+  compile path does not yet enforce that; the test is a named tripwire —
+  when a score cap or observer demotion lands, update it to assert the cap.
+- **Verdict: default-off is correct.** Fusion wins exactly when engine
+  coverage is sparse, costs noise admission when slack is ample, and can
+  lose recall to advisory scores under partial slack. Until observer
+  candidates carry a capped/demoted rank, callers must gate fusion
+  themselves — which is what the existing "off by default" contract says.
+
 Skill: the operating manual now teaches selectivity and the reuse boundary.
 
 - **Decision policy.** Use Physis when it offers better evidence, less context,
