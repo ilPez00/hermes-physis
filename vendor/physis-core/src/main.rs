@@ -143,6 +143,11 @@ enum Command {
         /// by embedder kind (0.9 random-projection, 0.6 semantic).
         #[arg(long)]
         observer_floor: Option<f32>,
+        /// Packet headroom reserved for observer content: a number sets a
+        /// fixed reserve, "auto" sizes it from the gated-in claims themselves.
+        /// Omitted = no reserve (fusion only fires on engine slack).
+        #[arg(long)]
+        observer_reserve: Option<String>,
     },
     /// Import a knowledge vault (Obsidian/markdown notes, plain text, git log).
     Vault {
@@ -631,12 +636,14 @@ fn main() -> anyhow::Result<()> {
             max,
             observer_claims,
             observer_floor,
+            observer_reserve,
         } => run_node_search(
             &query,
             budget,
             max,
             observer_claims.as_deref(),
             observer_floor,
+            observer_reserve,
         ),
         Command::Vault { dir, git } => run_vault(&dir, git),
         Command::History { file } => run_history(&file),
@@ -1387,8 +1394,16 @@ fn run_node_search(
     max: usize,
     observer_claims: Option<&Path>,
     observer_floor: Option<f32>,
+    observer_reserve: Option<String>,
 ) -> anyhow::Result<()> {
     let (embedder, kind) = load_embedder_kind();
+    let reserve = match observer_reserve.as_deref() {
+        None | Some("") => physis_core::map::ObserverReserve::None,
+        Some("auto") => physis_core::map::ObserverReserve::Auto,
+        Some(n) => physis_core::map::ObserverReserve::Fixed(n.parse::<usize>().map_err(|e| {
+            anyhow::anyhow!("--observer-reserve must be 'auto' or a token count: {e}")
+        })?),
+    };
     let core = load_core();
     let q_emb = embedder.embed(query);
     let candidates: Vec<(usize, String, Vec<f32>)> = core
@@ -1422,7 +1437,31 @@ fn run_node_search(
                 .collect::<Vec<String>>(),
         ),
     };
-    let result = TokenFixedRetriever::new(budget, max).retrieve(&q_emb, &corpus);
+    let retrieval_budget = match observer_claims {
+        Some(claims_path) => {
+            let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
+            let reserve_tokens = physis_core::map::observer_reserve_tokens(
+                embedder.as_ref(),
+                query,
+                &load_observer_claims(claims_path)?,
+                floor,
+                reserve,
+            );
+            budget.saturating_sub(reserve_tokens).max(1)
+        }
+        None => budget,
+    };
+    let mut result = TokenFixedRetriever::new(retrieval_budget, max).retrieve(&q_emb, &corpus);
+    if retrieval_budget != budget {
+        // The reserve capped the ENGINE retrieval; the packet budget stays the
+        // caller's full budget so the reserved headroom is actually usable by
+        // the append stage (the docs-mode path passes the full effective
+        // budget the same way). Without this, the reduced budget flows into
+        // the packet compile and the observer block it was reserving for has
+        // no room — measured: budget 30, auto reserve 29, packet budget 1,
+        // block excluded.
+        result.budget = budget;
+    }
 
     let Some(claims_path) = observer_claims else {
         // Unchanged output when no observer claims are supplied.

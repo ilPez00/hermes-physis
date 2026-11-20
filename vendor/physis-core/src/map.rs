@@ -839,6 +839,63 @@ is replaced every quarter while the invoice reconciliation runs";
     // drops the engine budget to 24, below the 32-token chunk — the engine
     // loses content it could have kept), while Auto reserves exactly the
     // accepted block and keeps both.
+    // The shared reserve helper is the single source of the headroom number:
+    // Auto prices only the blocks the gate accepts (noise claims contribute
+    // nothing), Fixed passes the guess through, None reserves nothing. The
+    // node-search path calls this same helper — drift here would mean the
+    // two fusion paths reserve different amounts for identical claims.
+    #[test]
+    fn observer_reserve_tokens_prices_accepted_blocks_only() {
+        let embedder = RandomProjectionEmbedder::new(64);
+        let claims = vec![
+            retrieval_claim(
+                "obj:relay-procedure",
+                "relay calibration bench harness reference meter",
+                0.9,
+            ),
+            retrieval_claim("obj:noise-menu", "cafeteria lunch menu rotates daily", 0.1),
+        ];
+        let auto = observer_reserve_tokens(
+            &embedder,
+            "relay calibration bench harness",
+            &claims,
+            0.9,
+            ObserverReserve::Auto,
+        );
+        assert!(auto > 0, "auto prices the accepted block");
+        let block_only = observer_reserve_tokens(
+            &embedder,
+            "relay calibration bench harness",
+            &claims[..1],
+            0.9,
+            ObserverReserve::Auto,
+        );
+        assert_eq!(
+            auto, block_only,
+            "noise claims must not inflate the reserve"
+        );
+        assert_eq!(
+            observer_reserve_tokens(
+                &embedder,
+                "relay calibration",
+                &claims,
+                0.9,
+                ObserverReserve::None
+            ),
+            0
+        );
+        assert_eq!(
+            observer_reserve_tokens(
+                &embedder,
+                "relay calibration",
+                &claims,
+                0.9,
+                ObserverReserve::Fixed(7)
+            ),
+            7
+        );
+    }
+
     #[test]
     fn auto_reserve_sizes_the_trade_exactly_and_avoids_starving_the_engine() {
         let embedder = RandomProjectionEmbedder::new(64);
@@ -1123,6 +1180,53 @@ fn observer_block(claim: &crate::ingest::CandidateClaimPacket, snippet: &str) ->
     )
 }
 
+/// Token headroom an observer reserve should carve out of the engine's
+/// retrieval budget, computed before retrieval: `Fixed(n)` is the caller's
+/// guess; `Auto` pre-gates the claims (the gate is pure and needs only
+/// embeddings, both available pre-retrieval) and sums the accepted blocks —
+/// the trade is exactly as large as the observer content actually needs.
+/// Shared by every fusion path so the docs-mode and packet-level callers
+/// cannot drift apart.
+pub fn observer_reserve_tokens(
+    embedder: &dyn crate::embed::VectorEmbed,
+    query: &str,
+    observer_claims: &[crate::ingest::CandidateClaimPacket],
+    observer_floor: f32,
+    observer_reserve: ObserverReserve,
+) -> usize {
+    if observer_claims.is_empty() {
+        return 0;
+    }
+    match observer_reserve {
+        ObserverReserve::None => 0,
+        ObserverReserve::Fixed(n) => n,
+        ObserverReserve::Auto => {
+            let q_emb = embedder.embed(query);
+            observer_claims
+                .iter()
+                .filter_map(|claim| {
+                    let crate::ingest::ClaimPayload::Retrieval(hit) = &claim.payload else {
+                        return None;
+                    };
+                    let snippet = hit.snippet.as_deref().unwrap_or("");
+                    let gate = crate::gate::gate_retrieval_hit(
+                        &q_emb,
+                        &embedder.embed(snippet),
+                        claim,
+                        hit,
+                        observer_floor,
+                    );
+                    if gate.decision == crate::gate::GateDecision::AcceptCandidate {
+                        Some(crate::rag::count_tokens(&observer_block(claim, snippet)))
+                    } else {
+                        None
+                    }
+                })
+                .sum()
+        }
+    }
+}
+
 pub fn compile_context_with_observer(
     docs: &[(String, String)],
     embedder: &dyn crate::embed::VectorEmbed,
@@ -1173,41 +1277,13 @@ pub fn compile_context_with_observer(
     // fills ANY budget, leaving zero slack and making fusion inert).
     let effective = budget.max(64);
     let top_k = chunked.len().clamp(3, 8);
-    let reserve_tokens = if observer_claims.is_empty() {
-        0
-    } else {
-        match observer_reserve {
-            ObserverReserve::None => 0,
-            ObserverReserve::Fixed(n) => n,
-            ObserverReserve::Auto => {
-                // Pre-gate: the gate is pure and needs only embeddings, both
-                // available before retrieval. Reserve exactly what the
-                // accepted blocks will cost.
-                let q_emb = embedder.embed(query);
-                observer_claims
-                    .iter()
-                    .filter_map(|claim| {
-                        let crate::ingest::ClaimPayload::Retrieval(hit) = &claim.payload else {
-                            return None;
-                        };
-                        let snippet = hit.snippet.as_deref().unwrap_or("");
-                        let gate = crate::gate::gate_retrieval_hit(
-                            &q_emb,
-                            &embedder.embed(snippet),
-                            claim,
-                            hit,
-                            observer_floor,
-                        );
-                        if gate.decision == crate::gate::GateDecision::AcceptCandidate {
-                            Some(crate::rag::count_tokens(&observer_block(claim, snippet)))
-                        } else {
-                            None
-                        }
-                    })
-                    .sum::<usize>()
-            }
-        }
-    };
+    let reserve_tokens = observer_reserve_tokens(
+        embedder,
+        query,
+        observer_claims,
+        observer_floor,
+        observer_reserve,
+    );
     let engine_budget = if reserve_tokens == 0 {
         effective
     } else {

@@ -277,6 +277,77 @@ def test_context_code_mode_observer_claims_passthrough(tmp_path):
     assert result["results"] == 3
 
 
+def test_context_code_mode_observer_reserve_passthrough(tmp_path):
+    """observer_reserve ('auto' or int) must reach the engine argv in code
+    mode — the reserve is what makes code-mode fusion usable when the engine
+    fills the budget."""
+    binary = tmp_path / "fake-engine-obs-reserve"
+    binary.write_text(
+        textwrap.dedent("""\
+        #!/usr/bin/env python3
+        import json, sys
+        argv = sys.argv[1:]
+        with open("ARGV_DUMP", "w") as f:
+            json.dump(argv, f)
+        print("Fixed-token search: 2 results (75 tokens, budget 100)")
+        print("  1. 0.081  engine label (12 tokens)")
+        print("  2. 0.500  [observer: obj:x] observer snippet (63 tokens)")
+        if "--observer-claims" in argv:
+            print("OBSERVER obj:x AcceptCandidate (in packet)")
+        """)
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    claims = [
+        {"id": "c0", "source": {"uri": "doc://observer"}, "extractor": {"id": "obs"},
+         "payload": {"kind": "retrieval", "data": {"object_id": "obj:x", "score": 0.5,
+                     "snippet": "observer snippet"}}},
+    ]
+    result = HANDLERS["physis_context"](
+        {
+            "engine_bin": str(binary),
+            "path": str(tmp_path),
+            "task": "relay calibration",
+            "mode": "code",
+            "observer_claims": claims,
+            "observer_reserve": "auto",
+        }
+    )
+    assert result["ok"] is True, result
+    argv = result["argv"]
+    assert "--observer-reserve" in argv
+    assert argv[argv.index("--observer-reserve") + 1] == "auto"
+    assert result["observer_selected"] == 1
+
+    # integer form passes through as its string value
+    result2 = HANDLERS["physis_context"](
+        {
+            "engine_bin": str(binary),
+            "path": str(tmp_path),
+            "task": "relay calibration",
+            "mode": "code",
+            "observer_claims": claims,
+            "observer_reserve": 250,
+        }
+    )
+    assert result2["ok"] is True, result2
+    argv2 = result2["argv"]
+    assert argv2[argv2.index("--observer-reserve") + 1] == "250"
+
+    # invalid values are blocked before the engine runs
+    result3 = HANDLERS["physis_context"](
+        {
+            "engine_bin": str(binary),
+            "path": str(tmp_path),
+            "task": "relay calibration",
+            "mode": "code",
+            "observer_claims": claims,
+            "observer_reserve": "sometimes",
+        }
+    )
+    assert result3["ok"] is False
+    assert "observer_reserve" in result3["error"]
+
+
 def test_context_code_mode_uses_graph(tmp_path):
     binary = make_binary(tmp_path, CORE_COMMANDS)
     result = HANDLERS["physis_context"](

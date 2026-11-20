@@ -90,7 +90,7 @@ CONTEXT = {
                 ),
             },
             "observer_reserve": {
-                "type": "integer",
+                "type": ["integer", "string"],
                 "description": (
                     "Tokens of packet headroom reserved for observer content: the "
                     "engine retrieval is capped at budget-minus-reserve. Measured on "
