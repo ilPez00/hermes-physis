@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **observer reserve, auto-sized** (`3735f67` follow-up): `--observer-reserve auto` sizes the headroom from the gated-in claims themselves (pre-gate + join-overhead bound), measured on the real corpus: all three held-out queries answerable AND the corpus-covered control query keeps its answer (fixed-250 lost it). Plugin accepts `observer_reserve: "auto"` or an integer. A measurement defect was found and closed at the source: the retriever budgeted bare chunk tokens while the assembled packet pays 3 tokens per `\n\n---\n\n` join — `TokenFixedRetriever::with_separator` now budgets the assembled string (opt-in; direct `retrieve` callers keep legacy accounting), so no packet can exceed its nominal budget.
+- **observer reserve, auto-sized** (`3735f67` follow-up): `--observer-reserve auto` sizes the headroom from the gated-in claims themselves (pre-gate + join-overhead bound), measured on the real corpus: all three held-out queries answerable AND the corpus-covered control query keeps its answer (fixed-250 lost it). Plugin accepts `observer_reserve: "auto"` or an integer. The reserve also reaches code mode: node-search caps its retrieval through the shared `observer_reserve_tokens` helper (single source for both paths), with the packet budget kept at the caller's full budget so the reserved headroom is usable. A measurement defect was found and closed at the source: the retriever budgeted bare chunk tokens while the assembled packet pays 3 tokens per `\n\n---\n\n` join — `TokenFixedRetriever::with_separator` now budgets the assembled string (opt-in; direct `retrieve` callers keep legacy accounting), so no packet can exceed its nominal budget.
 
 Observer fusion stays opt-in — measured, not assumed.
 
