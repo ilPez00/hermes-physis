@@ -370,8 +370,10 @@ enum Command {
         observer_claims: Option<PathBuf>,
         /// Relevance floor for observer retrieval hits (query↔snippet cosine;
         /// meaning is embedder-dependent — see gate_retrieval_hit docs).
-        #[arg(long, default_value_t = 0.9)]
-        observer_floor: f32,
+        /// When omitted, defaults by embedder kind: 0.9 for random-projection,
+        /// 0.6 for a semantic (ONNX) embedder.
+        #[arg(long)]
+        observer_floor: Option<f32>,
         #[arg(long)]
         json: bool,
     },
@@ -2913,12 +2915,29 @@ fn cmd_ngram_cells(
     Ok(())
 }
 
+/// Default observer relevance floor, by embedder kind — measured, not assumed.
+///
+/// Random-projection (lexical hash): same-language text clusters in a narrow
+/// band — measured against the relay-calibration fixture, a relevant snippet
+/// scores 0.934/0.917 and topical noise 0.892/0.858, so only a high floor
+/// (0.9) separates anything at all. A semantic embedder (bge-small) separates
+/// cleanly: relevant 0.891/0.644, noise 0.375–0.445, so 0.6 admits both
+/// relevant hits with margin and rejects all noise. The caller can always
+/// override with --observer-floor.
+fn default_observer_floor(kind: &str) -> f32 {
+    if kind == "random-projection" {
+        0.9
+    } else {
+        0.6
+    }
+}
+
 fn cmd_context(
     corpus: &Path,
     query: &str,
     budget: usize,
     observer_claims: Option<&Path>,
-    observer_floor: f32,
+    observer_floor: Option<f32>,
     json: bool,
 ) -> anyhow::Result<()> {
     use physis_core::map::compile_context_with_observer;
@@ -2928,7 +2947,8 @@ fn cmd_context(
         "no corpus documents under {}",
         corpus.display()
     );
-    let embedder = load_embedder();
+    let (embedder, kind) = load_embedder_kind();
+    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
     let claims: Vec<physis_core::ingest::CandidateClaimPacket> = match observer_claims {
         Some(path) => {
             let body = std::fs::read_to_string(path).map_err(|e| {
@@ -2940,8 +2960,7 @@ fn cmd_context(
         }
         None => Vec::new(),
     };
-    let report =
-        compile_context_with_observer(&docs, &embedder, query, budget, &claims, observer_floor)?;
+    let report = compile_context_with_observer(&docs, &embedder, query, budget, &claims, floor)?;
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
@@ -3339,7 +3358,16 @@ impl PersistCore for PhysisCore {
 
 #[cfg(test)]
 mod tests {
-    use super::elide_middle;
+    use super::{default_observer_floor, elide_middle};
+
+    #[test]
+    fn observer_floor_default_is_embedder_aware() {
+        // Measured: RP needs a high floor (narrow band), semantic separates
+        // cleanly at 0.6 (relevant ≥ 0.64, noise ≤ 0.45 with bge-small).
+        assert_eq!(default_observer_floor("random-projection"), 0.9);
+        assert_eq!(default_observer_floor("onnx-explicit"), 0.6);
+        assert_eq!(default_observer_floor("onnx-minilm"), 0.6);
+    }
 
     #[test]
     fn single_line_collapses_embedded_newlines() {

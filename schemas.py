@@ -65,6 +65,28 @@ CONTEXT = {
                     "source files; docs uses the markdown/text context compiler"
                 ),
             },
+            "observer_claims": {
+                "type": "array",
+                "items": {"type": "object"},
+                "description": (
+                    "docs mode only: observer retrieval-hit claims (candidate-claim "
+                    "packets) to gate against the task and fuse into the packet. Each "
+                    "needs payload.kind='retrieval' with object_id, score, snippet. "
+                    "Hits are relevance-gated (advisory scores never override engine "
+                    "evidence) and only fill budget slack; gate receipts come back in "
+                    "observer_gated. Requires an engine that supports --observer-claims."
+                ),
+            },
+            "observer_floor": {
+                "type": "number",
+                "description": (
+                    "docs mode only: relevance floor (query↔snippet cosine, 0.0-1.0) "
+                    "for observer_claims; below the floor the hit is deferred with "
+                    "the reason returned. When omitted the engine picks by embedder "
+                    "kind (0.9 random-projection, 0.6 semantic) — the floor's meaning "
+                    "is embedder-dependent."
+                ),
+            },
         },
         "required": ["task"],
     },

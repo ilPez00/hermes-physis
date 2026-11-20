@@ -134,6 +134,105 @@ def test_context_compiles_packet(tmp_path):
     assert result["physis_context"] == "packed"
 
 
+def test_context_observer_claims_passthrough(tmp_path):
+    # A fake engine that records its argv and echoes observer fields when the
+    # claims flag is present.
+    binary = tmp_path / "fake-engine-obs"
+    binary.write_text(
+        textwrap.dedent("""\
+        #!/usr/bin/env python3
+        import json, sys
+        argv = sys.argv[1:]
+        (tmp,) = sys.argv[0:1]  # unused; argv dump via env-free file below
+        """)
+    )
+    # simpler: script writes argv json next to itself
+    binary.write_text(
+        textwrap.dedent("""\
+        #!/usr/bin/env python3
+        import json, sys
+        argv = sys.argv[1:]
+        with open("ARGV_DUMP", "w") as f:
+            json.dump(argv, f)
+        payload = {
+            "source_documents": 2, "baseline_tokens": 1000,
+            "physis_tokens": 200, "compression_ratio": 0.8,
+            "clusters": ["src"], "physis_context": "packed",
+        }
+        if "--observer-claims" in argv:
+            payload["observer_selected"] = 1
+            payload["observer_gated"] = [
+                {"object_id": "obj:x", "decision": "AcceptCandidate",
+                 "included": True, "relevance": 0.93, "reasons": []}
+            ]
+        print(json.dumps(payload))
+        """)
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    claims = [
+        {
+            "id": "claim:1",
+            "source": {"uri": "doc://observer"},
+            "extractor": {"id": "obs"},
+            "payload": {
+                "kind": "retrieval",
+                "data": {"object_id": "obj:x", "score": 0.9,
+                          "snippet": "relay calibration notes"},
+            },
+        }
+    ]
+    result = HANDLERS["physis_context"](
+        {
+            "engine_bin": str(binary),
+            "path": str(tmp_path),
+            "task": "relay calibration",
+            "mode": "docs",
+            "observer_claims": claims,
+            "observer_floor": 0.8,
+        }
+    )
+    assert result["ok"] is True, result
+    argv = result["argv"]
+    assert "--observer-claims" in argv
+    assert "--observer-floor" in argv
+    assert argv[argv.index("--observer-floor") + 1] == "0.8"
+    claims_path = Path(argv[argv.index("--observer-claims") + 1])
+    assert not claims_path.exists(), "temp claims file must be cleaned up"
+    assert result["observer_selected"] == 1
+    assert result["observer_gated"][0]["object_id"] == "obj:x"
+
+
+def test_context_observer_claims_rejects_non_list(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_context"](
+        {
+            "engine_bin": binary,
+            "path": str(tmp_path),
+            "task": "relay calibration",
+            "mode": "docs",
+            "observer_claims": "not-a-list",
+        }
+    )
+    assert result["ok"] is False
+    assert "observer_claims" in result["error"]
+
+
+def test_context_observer_claims_rejects_bad_floor(tmp_path):
+    binary = make_binary(tmp_path, CORE_COMMANDS)
+    result = HANDLERS["physis_context"](
+        {
+            "engine_bin": binary,
+            "path": str(tmp_path),
+            "task": "relay calibration",
+            "mode": "docs",
+            "observer_claims": [],
+            "observer_floor": 1.5,
+        }
+    )
+    assert result["ok"] is False
+    assert "observer_floor" in result["error"]
+
+
 def test_context_code_mode_uses_graph(tmp_path):
     binary = make_binary(tmp_path, CORE_COMMANDS)
     result = HANDLERS["physis_context"](

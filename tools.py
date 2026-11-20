@@ -827,6 +827,54 @@ def _count_files(root: str, limit: int) -> int:
     return count
 
 
+def _cleanup_claims_file(argv: list[str]) -> None:
+    """Best-effort removal of the temp observer-claims file, if any."""
+    if "--observer-claims" in argv:
+        idx = argv.index("--observer-claims")
+        if idx + 1 < len(argv):
+            try:
+                os.unlink(argv[idx + 1])
+            except OSError:
+                pass
+
+
+def _context_docs_argv(
+    path: str, task: str, budget: int, merged: dict[str, Any]
+) -> list[str]:
+    """Build the `context` argv for docs mode, including gated observer
+    claims when the caller supplies them. Claims are passed to the engine as
+    a temp JSON file (the CLI reads a path); the file is removed after the
+    call. Validation errors raise ValueError with a caller-facing message."""
+    argv = ["context", "--corpus", path, "--query", task, "--budget", str(budget), "--json"]
+    claims = merged.get("observer_claims")
+    floor = merged.get("observer_floor")
+    if claims is None and floor is None:
+        return argv
+    if claims is not None and not isinstance(claims, list):
+        raise ValueError("observer_claims must be a list of candidate-claim packets")
+    if floor is not None:
+        try:
+            floor_val = float(floor)
+        except (TypeError, ValueError):
+            raise ValueError("observer_floor must be a number") from None
+        if not 0.0 <= floor_val <= 1.0:
+            raise ValueError("observer_floor must be between 0.0 and 1.0")
+    if claims:
+        import tempfile
+
+        fd, claims_path = tempfile.mkstemp(prefix="physis-observer-claims-", suffix=".json")
+        try:
+            with os.fdopen(fd, "w") as fh:
+                json.dump(claims, fh)
+        except BaseException:
+            os.unlink(claims_path)
+            raise
+        argv += ["--observer-claims", claims_path]
+    if floor is not None:
+        argv += ["--observer-floor", str(float(floor))]
+    return argv
+
+
 def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     """Fixed-token context packet.
 
@@ -864,11 +912,12 @@ def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
                 "error": f"corpus is too large for the docs compiler ({doc_files}+ files)",
                 "hint": "point path at a docs/ subdirectory or use mode=code on an indexed subtree",
             }
-        result = _run(
-            pool,
-            ["context", "--corpus", path, "--query", task, "--budget", str(budget), "--json"],
-            merged,
-        )
+        try:
+            argv = _context_docs_argv(path, task, budget, merged)
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc)}
+        result = _run(pool, argv, merged)
+        _cleanup_claims_file(argv)
         payload = _json_payload(result)
         if payload:
             for key in (
@@ -881,6 +930,8 @@ def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
                 "contradictions",
                 "clusters",
                 "physis_context",
+                "observer_gated",
+                "observer_selected",
             ):
                 if key in payload:
                     result[key] = payload[key]

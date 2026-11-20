@@ -72,6 +72,22 @@ Observer fusion stays opt-in — measured, not assumed.
   The compile.rs gated-fusion path remains the packet-level API; the map
   path is the CLI-level one — both share `gate_retrieval_hit`, the
   measured, tested piece.
+- **Plugin wiring: the whole path is agent-reachable.** `physis_context`
+  (docs mode) accepts `observer_claims` (inline candidate-claim packets;
+  passed to the engine via a cleaned-up temp file) and `observer_floor`;
+  `observer_gated`/`observer_selected` are surfaced in the tool result.
+  Validation: non-list claims and out-of-range floors are rejected with
+  named errors (tests).
+- **The floor default is embedder-aware — a real defect caught by wiring
+  the path end-to-end.** The CLI's fixed 0.9 default was calibrated on the
+  random-projection embedder. Through the plugin the engine loads the
+  semantic bge-small model (`PHYSIS_MODEL_DIR`), where measured separation
+  is relevant 0.891/0.644 vs noise 0.375–0.445 — the 0.9 default deferred
+  a genuinely relevant hit. `context` now takes `--observer-floor` as an
+  override and defaults by embedder kind (`default_observer_floor`):
+  0.9 random-projection, 0.6 semantic. End-to-end through the plugin with
+  bge-small and no floor: both relevant hits admitted with labelled
+  blocks, all noise deferred, budget kept.
 - **Verdict: default-off stands, for a different reason.** The recall
   argument is gone — fusion can no longer lose recall, and unused budget
   slack is the only thing observer items consume. What remains is
