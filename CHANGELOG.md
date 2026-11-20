@@ -88,6 +88,17 @@ Observer fusion stays opt-in — measured, not assumed.
   0.9 random-projection, 0.6 semantic. End-to-end through the plugin with
   bge-small and no floor: both relevant hits admitted with labelled
   blocks, all noise deferred, budget kept.
+- **Code mode is agent-reachable too.** `node-search` gains the same
+  `--observer-claims`/`--observer-floor` surface: accepted observer hits
+  join the ranked results strictly below engine evidence (the packet tier
+  via `compile_from_retrieval_with_gated_observer_claims` — its first
+  production caller), filling only the token budget the engine selection
+  left; receipts print in the same OBSERVER format. Output without claims
+  is byte-identical to before. The plugin's code mode passes the claims
+  through (same validation/temp-file handling) and parses the receipt
+  lines into `observer_gated`/`observer_selected`. End-to-end through the
+  plugin with bge-small: 2 engine + 1 observer result, noise deferred at
+  the semantic floor (0.445 < 0.6).
 - **Verdict: default-off stands, for a different reason.** The recall
   argument is gone — fusion can no longer lose recall, and unused budget
   slack is the only thing observer items consume. What remains is

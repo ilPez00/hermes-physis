@@ -947,11 +947,14 @@ def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return _unsupported(pool, "node-search")
 
     def _node_search() -> dict[str, Any]:
-        return _run(
-            pool,
-            ["node-search", task, "--budget", str(budget), "--max", str(merged.get("max") or 12)],
-            merged,
-        )
+        try:
+            argv = _node_search_argv(task, budget, merged)
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc)}
+        result = _run(pool, argv, merged)
+        _cleanup_claims_file(argv)
+        _parse_observer_receipts(result)
+        return result
 
     result = _node_search()
     text = result.get("stdout") or ""
@@ -993,6 +996,73 @@ def physis_context(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     result["task"] = task
     result["budget"] = budget
     return result
+
+
+def _node_search_argv(task: str, budget: int, merged: dict[str, Any]) -> list[str]:
+    """Build the `node-search` argv for code mode, including gated observer
+    claims when the caller supplies them (same validation and temp-file
+    handling as docs mode)."""
+    argv = [
+        "node-search",
+        task,
+        "--budget",
+        str(budget),
+        "--max",
+        str(merged.get("max") or 12),
+    ]
+    claims = merged.get("observer_claims")
+    floor = merged.get("observer_floor")
+    if claims is None and floor is None:
+        return argv
+    if claims is not None and not isinstance(claims, list):
+        raise ValueError("observer_claims must be a list of candidate-claim packets")
+    if floor is not None:
+        try:
+            floor_val = float(floor)
+        except (TypeError, ValueError):
+            raise ValueError("observer_floor must be a number") from None
+        if not 0.0 <= floor_val <= 1.0:
+            raise ValueError("observer_floor must be between 0.0 and 1.0")
+    if claims:
+        fd, claims_path = tempfile.mkstemp(prefix="physis-observer-claims-", suffix=".json")
+        try:
+            with os.fdopen(fd, "w") as fh:
+                json.dump(claims, fh)
+        except BaseException:
+            os.unlink(claims_path)
+            raise
+        argv += ["--observer-claims", claims_path]
+    if floor is not None:
+        argv += ["--observer-floor", str(float(floor))]
+    return argv
+
+
+_OBSERVER_RECEIPT_RE = re.compile(
+    r"^OBSERVER\s+(\S+)\s+(AcceptCandidate|Defer|Reject|Abstain)\s+(\(in packet\)|\(excluded: (.*)\))\s*$"
+)
+
+
+def _parse_observer_receipts(result: dict[str, Any]) -> None:
+    """Surface the engine's OBSERVER receipt lines (node-search prints them as
+    text; the context command returns them in JSON) as structured keys."""
+    text = result.get("stdout") or ""
+    gated = []
+    for line in text.splitlines():
+        m = _OBSERVER_RECEIPT_RE.match(line.strip())
+        if not m:
+            continue
+        excluded = m.group(3).startswith("(excluded")
+        gated.append(
+            {
+                "object_id": m.group(1),
+                "decision": m.group(2),
+                "included": not excluded,
+                "reasons": [m.group(4)] if excluded else [],
+            }
+        )
+    if gated:
+        result["observer_gated"] = gated
+        result["observer_selected"] = sum(1 for g in gated if g["included"])
 
 
 def physis_query(args: Any = None, **kwargs: Any) -> dict[str, Any]:

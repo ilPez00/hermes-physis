@@ -135,6 +135,14 @@ enum Command {
         /// Max results.
         #[arg(long, default_value_t = 12)]
         max: usize,
+        /// Optional JSON file of observer candidate-claim packets (retrieval
+        /// hits) to gate against the query and fuse into the ranked results.
+        #[arg(long)]
+        observer_claims: Option<PathBuf>,
+        /// Relevance floor for observer retrieval hits; when omitted, defaults
+        /// by embedder kind (0.9 random-projection, 0.6 semantic).
+        #[arg(long)]
+        observer_floor: Option<f32>,
     },
     /// Import a knowledge vault (Obsidian/markdown notes, plain text, git log).
     Vault {
@@ -608,7 +616,19 @@ fn main() -> anyhow::Result<()> {
             clear_pin,
         } => run_node_edit(&id, &label, domain, mode, clear_pin),
         Command::NodeDelete { id } => run_node_delete(&id),
-        Command::NodeSearch { query, budget, max } => run_node_search(&query, budget, max),
+        Command::NodeSearch {
+            query,
+            budget,
+            max,
+            observer_claims,
+            observer_floor,
+        } => run_node_search(
+            &query,
+            budget,
+            max,
+            observer_claims.as_deref(),
+            observer_floor,
+        ),
         Command::Vault { dir, git } => run_vault(&dir, git),
         Command::History { file } => run_history(&file),
         Command::Praxis { file } => run_praxis(&file),
@@ -1350,8 +1370,14 @@ fn run_node_delete(id: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn run_node_search(query: &str, budget: usize, max: usize) -> anyhow::Result<()> {
-    let embedder = load_embedder();
+fn run_node_search(
+    query: &str,
+    budget: usize,
+    max: usize,
+    observer_claims: Option<&Path>,
+    observer_floor: Option<f32>,
+) -> anyhow::Result<()> {
+    let (embedder, kind) = load_embedder_kind();
     let core = load_core();
     let q_emb = embedder.embed(query);
     let candidates: Vec<(usize, String, Vec<f32>)> = core
@@ -1386,21 +1412,92 @@ fn run_node_search(query: &str, budget: usize, max: usize) -> anyhow::Result<()>
         ),
     };
     let result = TokenFixedRetriever::new(budget, max).retrieve(&q_emb, &corpus);
+
+    let Some(claims_path) = observer_claims else {
+        // Unchanged output when no observer claims are supplied.
+        println!(
+            "Fixed-token search: {} results ({} tokens, budget {})",
+            result.chunks.len(),
+            result.total_tokens,
+            result.budget
+        );
+        for (i, c) in result.chunks.iter().enumerate() {
+            println!(
+                "  {}. {:.3}  {} ({} tokens)",
+                i + 1,
+                c.score,
+                c.text,
+                c.tokens
+            );
+        }
+        return Ok(());
+    };
+
+    // Gated observer fusion: accepted hits join the ranked results strictly
+    // below engine evidence (the packet tier), filling only the token budget
+    // the engine selection left. Receipts print; exclusions are never silent.
+    let claims = load_observer_claims(claims_path)?;
+    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
+    let (packet, gated) = physis_core::compile_from_retrieval_with_gated_observer_claims(
+        query,
+        &result,
+        &["graph"],
+        &claims,
+        embedder.as_ref(),
+        floor,
+    );
+    let mut texts: std::collections::HashMap<String, String> = result
+        .chunks
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (format!("chunk:{i}"), c.text.clone()))
+        .collect();
+    let mut included_ids = std::collections::HashSet::new();
+    for (claim, g) in claims.iter().zip(&gated) {
+        let accepted = g.decision == physis_core::gate::GateDecision::AcceptCandidate;
+        if let physis_core::ingest::ClaimPayload::Retrieval(hit) = &claim.payload {
+            if accepted {
+                if let Some(snippet) = &hit.snippet {
+                    texts.insert(hit.object_id.clone(), snippet.clone());
+                }
+                if packet
+                    .selected
+                    .iter()
+                    .any(|s| s.observer_sourced && s.id == hit.object_id)
+                {
+                    included_ids.insert(hit.object_id.clone());
+                }
+            }
+        }
+    }
     println!(
         "Fixed-token search: {} results ({} tokens, budget {})",
-        result.chunks.len(),
-        result.total_tokens,
-        result.budget
+        packet.selected.len(),
+        packet.stats.selected_tokens,
+        packet.stats.budget
     );
-    for (i, c) in result.chunks.iter().enumerate() {
-        println!(
-            "  {}. {:.3}  {} ({} tokens)",
-            i + 1,
-            c.score,
-            c.text,
-            c.tokens
-        );
+    for (i, s) in packet.selected.iter().enumerate() {
+        let text = texts.get(&s.id).map(String::as_str).unwrap_or("");
+        if s.observer_sourced {
+            println!(
+                "  {}. {:.3}  [observer: {}] {} ({} tokens)",
+                i + 1,
+                s.score,
+                s.id,
+                text,
+                s.tokens
+            );
+        } else {
+            println!(
+                "  {}. {:.3}  {} ({} tokens)",
+                i + 1,
+                s.score,
+                text,
+                s.tokens
+            );
+        }
     }
+    print_observer_receipts(&claims, &gated, &included_ids);
     Ok(())
 }
 
@@ -2932,6 +3029,41 @@ fn default_observer_floor(kind: &str) -> f32 {
     }
 }
 
+fn load_observer_claims(
+    path: &Path,
+) -> anyhow::Result<Vec<physis_core::ingest::CandidateClaimPacket>> {
+    let body = std::fs::read_to_string(path)
+        .map_err(|e| anyhow::anyhow!("cannot read observer claims {}: {e}", path.display()))?;
+    serde_json::from_str(&body)
+        .map_err(|e| anyhow::anyhow!("cannot parse observer claims {}: {e}", path.display()))
+}
+
+/// Print one OBSERVER receipt line per claim, pairing gate results with the
+/// claims they came from (the packet-level gate result carries no id). Same
+/// format as the `context` command's receipts.
+fn print_observer_receipts(
+    claims: &[physis_core::ingest::CandidateClaimPacket],
+    gated: &[physis_core::gate::RetrievalHitGateResult],
+    included_ids: &std::collections::HashSet<String>,
+) {
+    for (claim, r) in claims.iter().zip(gated) {
+        let object_id = match &claim.payload {
+            physis_core::ingest::ClaimPayload::Retrieval(hit) => hit.object_id.clone(),
+            _ => claim.id.clone(),
+        };
+        println!(
+            "OBSERVER {} {:?}{}",
+            object_id,
+            r.decision,
+            if included_ids.contains(&object_id) {
+                " (in packet)".to_string()
+            } else {
+                format!(" (excluded: {})", r.reasons.join("; "))
+            }
+        );
+    }
+}
+
 fn cmd_context(
     corpus: &Path,
     query: &str,
@@ -2950,14 +3082,7 @@ fn cmd_context(
     let (embedder, kind) = load_embedder_kind();
     let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
     let claims: Vec<physis_core::ingest::CandidateClaimPacket> = match observer_claims {
-        Some(path) => {
-            let body = std::fs::read_to_string(path).map_err(|e| {
-                anyhow::anyhow!("cannot read observer claims {}: {e}", path.display())
-            })?;
-            serde_json::from_str(&body).map_err(|e| {
-                anyhow::anyhow!("cannot parse observer claims {}: {e}", path.display())
-            })?
-        }
+        Some(path) => load_observer_claims(path)?,
         None => Vec::new(),
     };
     let report = compile_context_with_observer(&docs, &embedder, query, budget, &claims, floor)?;

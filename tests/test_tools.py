@@ -233,6 +233,50 @@ def test_context_observer_claims_rejects_bad_floor(tmp_path):
     assert "observer_floor" in result["error"]
 
 
+def test_context_code_mode_observer_claims_passthrough(tmp_path):
+    binary = tmp_path / "fake-engine-obs-code"
+    binary.write_text(
+        textwrap.dedent("""\
+        #!/usr/bin/env python3
+        import json, sys
+        argv = sys.argv[1:]
+        with open("ARGV_DUMP", "w") as f:
+            json.dump(argv, f)
+        print("Fixed-token search: 3 results (78 tokens, budget 200)")
+        print("  1. 0.081  engine label (25 tokens)")
+        print("  2. 0.500  [observer: obj:x] observer snippet (15 tokens)")
+        if "--observer-claims" in argv:
+            print("OBSERVER obj:x AcceptCandidate (in packet)")
+            print("OBSERVER obj:y Defer (excluded: relevance 0.400 below floor 0.600)")
+        """)
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    claims = [
+        {"id": "c0", "source": {"uri": "doc://observer"}, "extractor": {"id": "obs"},
+         "payload": {"kind": "retrieval", "data": {"object_id": "obj:x", "score": 0.5,
+                     "snippet": "observer snippet"}}},
+    ]
+    result = HANDLERS["physis_context"](
+        {
+            "engine_bin": str(binary),
+            "path": str(tmp_path),
+            "task": "relay calibration",
+            "mode": "code",
+            "observer_claims": claims,
+        }
+    )
+    assert result["ok"] is True, result
+    argv = result["argv"]
+    assert "--observer-claims" in argv
+    claims_path = Path(argv[argv.index("--observer-claims") + 1])
+    assert not claims_path.exists(), "temp claims file must be cleaned up"
+    assert result["observer_selected"] == 1
+    assert result["observer_gated"][0]["object_id"] == "obj:x"
+    assert result["observer_gated"][0]["decision"] == "AcceptCandidate"
+    assert result["observer_gated"][1]["decision"] == "Defer"
+    assert result["results"] == 3
+
+
 def test_context_code_mode_uses_graph(tmp_path):
     binary = make_binary(tmp_path, CORE_COMMANDS)
     result = HANDLERS["physis_context"](
