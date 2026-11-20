@@ -7,13 +7,15 @@
 
 use std::collections::HashSet;
 
+use serde::{Deserialize, Serialize};
+
 use crate::compile::CompiledContext;
 use crate::gate::{
     GateDecision, GateOutcome, LessonGateResult, RelationGateResult, ResolutionGateResult,
 };
 
 /// Count resolution-gate outcomes (accept/defer/reject/abstain).
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolutionOutcomeCounts {
     pub accept: usize,
     pub defer: usize,
@@ -40,7 +42,7 @@ pub fn resolution_outcomes(results: &[ResolutionGateResult]) -> ResolutionOutcom
 }
 
 /// Count relation-gate outcomes.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SimpleOutcomeCounts {
     pub accept: usize,
     pub defer: usize,
@@ -126,7 +128,7 @@ pub fn utilization(packet: &CompiledContext) -> f32 {
 /// `relevant_ids`, when provided, yields a recall-proxy delta
 /// (fused - baseline). Positive delta means the fused packet selected more of
 /// the relevant set under the same budget; this is a proxy, not a verdict.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompileComparison {
     pub baseline_selected: usize,
     pub fused_selected: usize,
@@ -302,7 +304,7 @@ pub fn assessed_outcome_counts(assessed: &[crate::gate::AssessedIntake]) -> Simp
 /// Per-kind outcome tallies for typed gate outcomes (dispatch/assessment
 /// results). Deterministic fixture accounting (counts/proxies only, never a
 /// verdict): relation/equivalence/lesson/grounding/claim buckets.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GateOutcomeCountsByKind {
     pub relation: SimpleOutcomeCounts,
     pub equivalence: SimpleOutcomeCounts,
@@ -351,6 +353,82 @@ pub fn assessed_outcomes_by_kind(
         }
     }
     out
+}
+
+/// Composed, deterministic summary of gate/assessed outcomes for a fixture or
+/// batch (counts/proxies only, never a verdict). Serializable for harness
+/// consumption/evidence capture.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GateAssessmentSummary {
+    pub total: usize,
+    pub accept: usize,
+    pub defer: usize,
+    pub reject: usize,
+    pub abstain: usize,
+    /// Contradiction candidates surfaced by equivalence assessments
+    /// (proposal-only, never a merge).
+    pub equivalence_contradictions: usize,
+    pub by_kind: GateOutcomeCountsByKind,
+}
+
+fn sum_simple(c: &SimpleOutcomeCounts) -> usize {
+    c.accept + c.defer + c.reject + c.abstain
+}
+
+fn fold_simple(total: &mut SimpleOutcomeCounts, part: &SimpleOutcomeCounts) {
+    total.accept += part.accept;
+    total.defer += part.defer;
+    total.reject += part.reject;
+    total.abstain += part.abstain;
+}
+
+fn gate_outcome_contradiction_count(outcome: &GateOutcome) -> usize {
+    match outcome {
+        GateOutcome::Equivalence(r) if r.contradiction.is_some() => 1,
+        _ => 0,
+    }
+}
+
+/// Summarize typed gate outcomes (dispatch results) as counts/proxies only.
+pub fn summarize_gate_outcomes(outcomes: &[GateOutcome]) -> GateAssessmentSummary {
+    let by_kind = gate_outcomes_by_kind(outcomes);
+    let mut totals = SimpleOutcomeCounts::default();
+    fold_simple(&mut totals, &by_kind.relation);
+    fold_simple(&mut totals, &by_kind.equivalence);
+    fold_simple(&mut totals, &by_kind.lesson);
+    fold_simple(&mut totals, &by_kind.grounding);
+    fold_simple(&mut totals, &by_kind.claim);
+    let equivalence_contradictions = outcomes.iter().map(gate_outcome_contradiction_count).sum();
+    GateAssessmentSummary {
+        total: sum_simple(&totals),
+        accept: totals.accept,
+        defer: totals.defer,
+        reject: totals.reject,
+        abstain: totals.abstain,
+        equivalence_contradictions,
+        by_kind,
+    }
+}
+
+/// Summarize assessed intakes (intake+outcome pairs) as counts/proxies only.
+pub fn summarize_assessed(assessed: &[crate::gate::AssessedIntake]) -> GateAssessmentSummary {
+    let by_kind = assessed_outcomes_by_kind(assessed);
+    let mut totals = SimpleOutcomeCounts::default();
+    fold_simple(&mut totals, &by_kind.relation);
+    fold_simple(&mut totals, &by_kind.equivalence);
+    fold_simple(&mut totals, &by_kind.lesson);
+    fold_simple(&mut totals, &by_kind.grounding);
+    fold_simple(&mut totals, &by_kind.claim);
+    let equivalence_contradictions = assessed_contradiction_count(assessed);
+    GateAssessmentSummary {
+        total: sum_simple(&totals),
+        accept: totals.accept,
+        defer: totals.defer,
+        reject: totals.reject,
+        abstain: totals.abstain,
+        equivalence_contradictions,
+        by_kind,
+    }
 }
 
 /// Count contradiction candidates surfaced by assessed equivalence outcomes.
@@ -788,6 +866,84 @@ mod tests {
         assert_eq!(aby.equivalence, SimpleOutcomeCounts::default());
         assert_eq!(aby.lesson, SimpleOutcomeCounts::default());
         assert_eq!(aby.grounding, SimpleOutcomeCounts::default());
+    }
+
+    #[test]
+    fn gate_assessment_summaries_compose_counts_and_contradictions() {
+        use crate::ingest::EntityMention;
+        let core = crate::core::PhysisCore::new();
+        let rel = ProposedRelation {
+            subject: "a".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "b".into(),
+            fact: None,
+        };
+        let r = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        let eq = EquivalenceProposal {
+            left: "n1".into(),
+            right: "n2".into(),
+            similarity: Some(0.1), // conflict surfaced as candidate contradiction, no merge
+            rationale: None,
+        };
+        let er = gate::gate_equivalence(&core, &claim(ClaimPayload::Equivalence(eq.clone())), &eq);
+        let cr = gate::gate_claim(&claim(ClaimPayload::Entity(EntityMention {
+            label: "e".into(),
+            refers_to: None,
+            concept: None,
+        })));
+        let outcomes = vec![
+            GateOutcome::Relation(r),
+            GateOutcome::Equivalence(er),
+            GateOutcome::Claim(cr),
+        ];
+        let sum = summarize_gate_outcomes(&outcomes);
+        assert_eq!(sum.total, 3);
+        assert_eq!(sum.by_kind.relation.accept, 1);
+        assert_eq!(sum.by_kind.claim.accept, 1);
+        assert_eq!(sum.accept + sum.defer + sum.reject + sum.abstain, sum.total);
+        assert_eq!(
+            sum.equivalence_contradictions <= 1,
+            true,
+            "equivalence path is proposal-only and may surface at most one contradiction candidate here"
+        );
+        // no certified merge implied
+        assert_ne!(sum.by_kind.equivalence.accept, 1);
+
+        let mut core2 = crate::core::PhysisCore::new();
+        let claims = vec![
+            claim(ClaimPayload::Relation(ProposedRelation {
+                subject: "a".into(),
+                predicate: "depends_on".into(),
+                relation_type: Some(RelationType::DependsOn),
+                object: "b".into(),
+                fact: None,
+            })),
+            claim(ClaimPayload::Entity(EntityMention {
+                label: "e".into(),
+                refers_to: None,
+                concept: None,
+            })),
+        ];
+        let assessed = crate::gate::assess_claims_with_intake(
+            &mut core2,
+            &claims,
+            &[],
+            "obs",
+            chrono::Utc::now(),
+        );
+        let asum = summarize_assessed(&assessed);
+        assert_eq!(asum.total, 2);
+        assert_eq!(asum.by_kind.relation.accept, 1);
+        assert_eq!(asum.by_kind.claim.accept, 1);
+        assert_eq!(asum.equivalence_contradictions, 0);
+        assert_eq!(
+            asum.accept + asum.defer + asum.reject + asum.abstain,
+            asum.total
+        );
+        // serializable for harness capture (counts/proxies only)
+        let j = serde_json::to_string(&asum).unwrap();
+        assert!(j.contains("\"total\":2"));
     }
 
     /// A retrieval-hit claim from an observer, attributed to a named extractor

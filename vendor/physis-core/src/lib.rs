@@ -401,6 +401,7 @@ pub use observer_eval::{
     context_recall_proxy, gate_outcome_counts, gate_outcomes_by_kind, grounding_outcomes,
     lesson_outcomes, observer_selected_count, observer_selection_ratio, pair_precision_recall_f1,
     precision_recall_f1, relation_outcomes, resolution_contradiction_yield, resolution_outcomes,
-    stable_accepted_lessons, utilization, CompileComparison, GateOutcomeCountsByKind,
-    ResolutionOutcomeCounts, SimpleOutcomeCounts,
+    stable_accepted_lessons, summarize_assessed, summarize_gate_outcomes, utilization,
+    CompileComparison, GateAssessmentSummary, GateOutcomeCountsByKind, ResolutionOutcomeCounts,
+    SimpleOutcomeCounts,
 };

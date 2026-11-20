@@ -737,6 +737,7 @@ mod tests {
             400,
             &claims,
             0.9,
+            0,
         )
         .unwrap();
 
@@ -759,6 +760,73 @@ mod tests {
         assert!(!report.physis_context.contains("cafeteria"));
         assert!(!report.physis_context.contains("courtyard"));
         assert!(report.physis_tokens <= 400);
+    }
+
+    // Measured on real corpora (24 physis-next plan docs, bge-small): a
+    // greedy budget-capped retriever fills ANY budget (596/600, 1195/1200),
+    // so fill-slack-only fusion is structurally inert there. The reserve is
+    // the caller's explicit trade: engine retrieval capped at budget minus
+    // reserve, observer content fills the reserved headroom.
+    #[test]
+    fn observer_reserve_makes_room_when_the_engine_would_fill_the_budget() {
+        let embedder = RandomProjectionEmbedder::new(64);
+        // One ~35-token doc: at budget 40 the engine selection alone consumes
+        // 35 of 40 — the observer block (~15 tokens) cannot fit the slack.
+        let long_doc = "relay calibration requires the bench harness and a reference meter \
+two pass verification catches swapped contacts and the reference meter readings \
+are logged each run for the calibration record"
+            .repeat(1);
+        let docs = vec![("relay.md".to_string(), long_doc)];
+        let claims = vec![
+            retrieval_claim(
+                "obj:relay-procedure",
+                "relay calibration: bench harness, reference meter, two-pass verification",
+                0.9,
+            ),
+            retrieval_claim("obj:noise-menu", "cafeteria lunch menu rotates daily", 0.1),
+        ];
+
+        let no_reserve = compile_context_with_observer(
+            &docs,
+            &embedder,
+            "relay calibration bench harness",
+            40,
+            &claims,
+            0.9,
+            0,
+        )
+        .unwrap();
+        assert_eq!(
+            no_reserve.observer_selected, 0,
+            "no reserve: engine fills, observer excluded"
+        );
+
+        let reserved = compile_context_with_observer(
+            &docs,
+            &embedder,
+            "relay calibration bench harness",
+            40,
+            &claims,
+            0.9,
+            20,
+        )
+        .unwrap();
+        eprintln!("RESERVED receipts: {:?}", reserved.observer_gated);
+        eprintln!("RESERVED tokens: {}", reserved.physis_tokens);
+        assert_eq!(
+            reserved.observer_selected, 1,
+            "reserve: observer content fits"
+        );
+        assert!(reserved
+            .physis_context
+            .contains("observer: obj:relay-procedure"));
+        assert!(!reserved.physis_context.contains("cafeteria"));
+        assert!(reserved.physis_tokens <= 40);
+        // The trade is real: the engine contributed fewer tokens under reserve.
+        assert!(
+            reserved.physis_tokens > no_reserve.physis_tokens
+                || reserved.observer_selected > no_reserve.observer_selected
+        );
     }
 
     #[test]
@@ -789,6 +857,7 @@ mod tests {
             20,
             &claims,
             0.9,
+            0,
         )
         .unwrap();
         assert_eq!(report.observer_selected, 0);
@@ -920,7 +989,7 @@ pub fn compile_context(
     query: &str,
     budget: usize,
 ) -> anyhow::Result<ContextReport> {
-    compile_context_with_observer(docs, embedder, query, budget, &[], 0.0)
+    compile_context_with_observer(docs, embedder, query, budget, &[], 0.0, 0)
 }
 
 /// What happened to one observer retrieval hit during gated context fusion.
@@ -953,6 +1022,7 @@ pub fn compile_context_with_observer(
     budget: usize,
     observer_claims: &[crate::ingest::CandidateClaimPacket],
     observer_floor: f32,
+    observer_reserve: usize,
 ) -> anyhow::Result<ContextReport> {
     anyhow::ensure!(!docs.is_empty(), "no documents to compile context from");
     // Retrieval packs whole chunks, so a document must be split to fit the
@@ -988,10 +1058,19 @@ pub fn compile_context_with_observer(
     let baseline_context = crate::rag::assemble_context(&base_res, "\n\n---\n\n");
     let baseline_tokens = crate::rag::count_tokens(&baseline_context);
 
-    // Physis: the same retriever, but capped at the fixed budget.
+    // Physis: the same retriever, but capped at the fixed budget. When the
+    // caller reserves headroom for observer content, the engine retrieval is
+    // capped lower — an explicit trade of engine tokens for observer tokens
+    // (measured on real corpora: a greedy budget-capped retriever otherwise
+    // fills ANY budget, leaving zero slack and making fusion inert).
+    let engine_budget = if observer_claims.is_empty() || observer_reserve == 0 {
+        budget.max(64)
+    } else {
+        budget.saturating_sub(observer_reserve).max(64)
+    };
     let top_k = chunked.len().clamp(3, 8);
     let (_res, mut physis_context) =
-        crate::rag::retrieve_from_texts(&texts, query, embedder, budget.max(64), top_k);
+        crate::rag::retrieve_from_texts(&texts, query, embedder, engine_budget, top_k);
     let mut used = crate::rag::count_tokens(&physis_context);
 
     // Gated observer fusion: relevance-gate each retrieval hit against the

@@ -382,6 +382,12 @@ enum Command {
         /// 0.6 for a semantic (ONNX) embedder.
         #[arg(long)]
         observer_floor: Option<f32>,
+        /// Tokens of packet headroom reserved for observer content: the engine
+        /// retrieval is capped at budget-minus-reserve. Measured on real
+        /// corpora: a greedy budget-capped retriever otherwise fills any
+        /// budget, leaving zero slack and making fusion inert. 0 = no reserve.
+        #[arg(long, default_value_t = 0)]
+        observer_reserve: usize,
         #[arg(long)]
         json: bool,
     },
@@ -712,6 +718,7 @@ fn main() -> anyhow::Result<()> {
             budget,
             observer_claims,
             observer_floor,
+            observer_reserve,
             json,
         } => cmd_context(
             &corpus,
@@ -719,6 +726,7 @@ fn main() -> anyhow::Result<()> {
             budget,
             observer_claims.as_deref(),
             observer_floor,
+            observer_reserve,
             json,
         ),
         Command::Benchmark {
@@ -3070,6 +3078,7 @@ fn cmd_context(
     budget: usize,
     observer_claims: Option<&Path>,
     observer_floor: Option<f32>,
+    observer_reserve: usize,
     json: bool,
 ) -> anyhow::Result<()> {
     use physis_core::map::compile_context_with_observer;
@@ -3085,7 +3094,15 @@ fn cmd_context(
         Some(path) => load_observer_claims(path)?,
         None => Vec::new(),
     };
-    let report = compile_context_with_observer(&docs, &embedder, query, budget, &claims, floor)?;
+    let report = compile_context_with_observer(
+        &docs,
+        &embedder,
+        query,
+        budget,
+        &claims,
+        floor,
+        observer_reserve,
+    )?;
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
