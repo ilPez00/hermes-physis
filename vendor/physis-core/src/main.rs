@@ -364,6 +364,14 @@ enum Command {
         query: String,
         #[arg(long, default_value_t = 1200)]
         budget: usize,
+        /// Optional JSON file of observer candidate-claim packets (retrieval
+        /// hits) to gate against the query and fuse into the packet.
+        #[arg(long)]
+        observer_claims: Option<PathBuf>,
+        /// Relevance floor for observer retrieval hits (query↔snippet cosine;
+        /// meaning is embedder-dependent — see gate_retrieval_hit docs).
+        #[arg(long, default_value_t = 0.9)]
+        observer_floor: f32,
         #[arg(long)]
         json: bool,
     },
@@ -680,8 +688,17 @@ fn main() -> anyhow::Result<()> {
             corpus,
             query,
             budget,
+            observer_claims,
+            observer_floor,
             json,
-        } => cmd_context(&corpus, &query, budget, json),
+        } => cmd_context(
+            &corpus,
+            &query,
+            budget,
+            observer_claims.as_deref(),
+            observer_floor,
+            json,
+        ),
         Command::Benchmark {
             order,
             budget,
@@ -2896,8 +2913,15 @@ fn cmd_ngram_cells(
     Ok(())
 }
 
-fn cmd_context(corpus: &Path, query: &str, budget: usize, json: bool) -> anyhow::Result<()> {
-    use physis_core::map::compile_context;
+fn cmd_context(
+    corpus: &Path,
+    query: &str,
+    budget: usize,
+    observer_claims: Option<&Path>,
+    observer_floor: f32,
+    json: bool,
+) -> anyhow::Result<()> {
+    use physis_core::map::compile_context_with_observer;
     let docs = physis_core::map::load_corpus(corpus)?;
     anyhow::ensure!(
         !docs.is_empty(),
@@ -2905,11 +2929,35 @@ fn cmd_context(corpus: &Path, query: &str, budget: usize, json: bool) -> anyhow:
         corpus.display()
     );
     let embedder = load_embedder();
-    let report = compile_context(&docs, &embedder, query, budget)?;
+    let claims: Vec<physis_core::ingest::CandidateClaimPacket> = match observer_claims {
+        Some(path) => {
+            let body = std::fs::read_to_string(path).map_err(|e| {
+                anyhow::anyhow!("cannot read observer claims {}: {e}", path.display())
+            })?;
+            serde_json::from_str(&body).map_err(|e| {
+                anyhow::anyhow!("cannot parse observer claims {}: {e}", path.display())
+            })?
+        }
+        None => Vec::new(),
+    };
+    let report =
+        compile_context_with_observer(&docs, &embedder, query, budget, &claims, observer_floor)?;
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
         print!("{}", report.render());
+        for r in &report.observer_gated {
+            println!(
+                "OBSERVER {} {:?}{}",
+                r.object_id,
+                r.decision,
+                if r.included {
+                    " (in packet)".to_string()
+                } else {
+                    format!(" (excluded: {})", r.reasons.join("; "))
+                }
+            );
+        }
         println!(
             "
 ── COMPILED CONTEXT (first {} chars) ──",

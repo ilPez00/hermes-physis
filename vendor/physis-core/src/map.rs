@@ -559,6 +559,35 @@ pub fn render(report: &MapReport) -> String {
 mod tests {
     use super::*;
     use crate::embed::RandomProjectionEmbedder;
+    use crate::ingest::{
+        CandidateClaimPacket, ClaimPayload, ClaimSource, ExtractorInfo, RetrievalHit,
+    };
+
+    fn retrieval_claim(object_id: &str, snippet: &str, score: f32) -> CandidateClaimPacket {
+        CandidateClaimPacket {
+            id: format!("claim:{object_id}"),
+            intake_id: Some("i1".into()),
+            source: ClaimSource {
+                uri: "doc://observer".into(),
+                span: Some("0..1".into()),
+                kind: None,
+            },
+            extractor: ExtractorInfo::new("test-observer"),
+            asserted_at: None,
+            observed_at: None,
+            raw_ref: Some("r".into()),
+            confidence: Some(score),
+            payload: ClaimPayload::Retrieval(RetrievalHit {
+                object_id: object_id.into(),
+                score,
+                strategy: Some("vec".into()),
+                snippet: Some(snippet.into()),
+            }),
+            lossy_fields: vec![],
+            extras: Default::default(),
+        }
+        .normalize()
+    }
 
     fn corpus() -> Vec<(String, String)> {
         let mut v: Vec<(String, String)> = Vec::new();
@@ -670,6 +699,106 @@ mod tests {
             "build dir skipped"
         );
     }
+
+    // Measured with this embedder against the query "relay calibration bench
+    // harness": the additive snippet scores ~0.93, the noise snippets
+    // 0.892/0.858 — floor 0.9 separates them.
+    #[test]
+    fn context_fusion_admits_the_relevant_observer_hit_and_defers_noise() {
+        let embedder = RandomProjectionEmbedder::new(64);
+        let docs: Vec<(String, String)> = [
+            "relay.md",
+            "relay calibration requires the bench harness and a reference meter",
+            "verify.md",
+            "relay calibration two pass verification catches swapped contacts",
+            "other.md",
+            "shift handover notes filed weekly",
+        ]
+        .chunks(2)
+        .map(|c| (c[0].to_string(), c[1].to_string()))
+        .collect();
+        let claims = vec![
+            retrieval_claim(
+                "obj:relay-procedure",
+                "relay calibration: bench harness, reference meter, two-pass verification",
+                0.9,
+            ),
+            retrieval_claim("obj:noise-menu", "cafeteria lunch menu rotates daily", 0.1),
+            retrieval_claim(
+                "obj:noise-weather",
+                "the courtyard fountain runs from nine to five",
+                0.1,
+            ),
+        ];
+        let report = compile_context_with_observer(
+            &docs,
+            &embedder,
+            "relay calibration bench harness",
+            400,
+            &claims,
+            0.9,
+        )
+        .unwrap();
+
+        // Gate receipts: one accept (included), two defers (excluded, floor
+        // named). Nothing silent.
+        assert_eq!(report.observer_gated.len(), 3);
+        assert_eq!(report.observer_selected, 1);
+        assert!(report.observer_gated[0].included);
+        for r in &report.observer_gated[1..] {
+            assert_eq!(r.decision, crate::gate::GateDecision::Defer);
+            assert!(!r.included);
+            assert!(r.reasons.iter().any(|x| x.contains("below floor")));
+        }
+
+        // The packet: the observer block present, noise absent, budget kept.
+        assert!(report
+            .physis_context
+            .contains("observer: obj:relay-procedure"));
+        assert!(report.physis_context.contains("two-pass verification"));
+        assert!(!report.physis_context.contains("cafeteria"));
+        assert!(!report.physis_context.contains("courtyard"));
+        assert!(report.physis_tokens <= 400);
+    }
+
+    #[test]
+    fn context_fusion_fills_slack_only_and_reports_over_budget() {
+        let embedder = RandomProjectionEmbedder::new(64);
+        let docs: Vec<(String, String)> = [
+            "relay.md",
+            "relay calibration requires the bench harness and a reference meter, two pass verification catches swapped contacts, reference meter readings are logged each run",
+            "other.md",
+            "shift handover notes filed weekly",
+        ]
+        .chunks(2)
+        .map(|c| (c[0].to_string(), c[1].to_string()))
+        .collect();
+        // Budget 20: the engine retrieval alone consumes it; no observer
+        // content may enter, and every accepted hit must say why.
+        let claims = vec![retrieval_claim(
+            "obj:relay-procedure",
+            "relay calibration: bench harness, reference meter, two-pass verification",
+            0.9,
+        )];
+        // Same query as the admit test so the hit passes the gate (~0.93) and
+        // the budget stage is what this test exercises.
+        let report = compile_context_with_observer(
+            &docs,
+            &embedder,
+            "relay calibration bench harness",
+            20,
+            &claims,
+            0.9,
+        )
+        .unwrap();
+        assert_eq!(report.observer_selected, 0);
+        assert!(!report.observer_gated[0].included);
+        assert!(report.observer_gated[0]
+            .reasons
+            .iter()
+            .any(|x| x.contains("over budget")));
+        assert!(!report.physis_context.contains("observer:"));
+    }
 }
 
 // ── Demo B — PHYSIS CONTEXT COMPILER ─────────────────────────────────────────
@@ -694,6 +823,13 @@ pub struct ContextReport {
     pub contradictions: usize,
     pub clusters: Vec<String>,
     pub physis_context: String,
+    /// Per-claim receipts from gated observer fusion (empty when no claims
+    /// were supplied). `#[serde(default)]` keeps old JSON parseable.
+    #[serde(default)]
+    pub observer_gated: Vec<ObserverGateReceipt>,
+    /// How many observer snippets actually entered the packet.
+    #[serde(default)]
+    pub observer_selected: usize,
 }
 
 impl ContextReport {
@@ -784,6 +920,40 @@ pub fn compile_context(
     query: &str,
     budget: usize,
 ) -> anyhow::Result<ContextReport> {
+    compile_context_with_observer(docs, embedder, query, budget, &[], 0.0)
+}
+
+/// What happened to one observer retrieval hit during gated context fusion.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObserverGateReceipt {
+    pub object_id: String,
+    /// The gate decision (relevance/provenance stage).
+    pub decision: crate::gate::GateDecision,
+    /// Whether the hit's snippet actually entered the packet (an accepted hit
+    /// can still be excluded at the append stage when the budget is spent).
+    pub included: bool,
+    pub relevance: Option<f32>,
+    /// Gate reasons plus append-stage reasons (e.g. over budget).
+    pub reasons: Vec<String>,
+}
+
+/// Compile a fixed-budget context for `query` over `docs`, optionally fusing
+/// **gated** observer retrieval-hit claims.
+///
+/// The engine pipeline is unchanged; accepted observer hits (see
+/// [`crate::gate::gate_retrieval_hit`]) append a labelled block to the packet
+/// only while token budget remains — observer content fills slack, never
+/// displaces engine-selected text. Every claim produces a receipt, so
+/// exclusions are visible, never silent. With no claims this is exactly
+/// [`compile_context`].
+pub fn compile_context_with_observer(
+    docs: &[(String, String)],
+    embedder: &dyn crate::embed::VectorEmbed,
+    query: &str,
+    budget: usize,
+    observer_claims: &[crate::ingest::CandidateClaimPacket],
+    observer_floor: f32,
+) -> anyhow::Result<ContextReport> {
     anyhow::ensure!(!docs.is_empty(), "no documents to compile context from");
     // Retrieval packs whole chunks, so a document must be split to fit the
     // budget or it can never be selected (the old whole-file behaviour made a
@@ -820,9 +990,63 @@ pub fn compile_context(
 
     // Physis: the same retriever, but capped at the fixed budget.
     let top_k = chunked.len().clamp(3, 8);
-    let (_res, physis_context) =
+    let (_res, mut physis_context) =
         crate::rag::retrieve_from_texts(&texts, query, embedder, budget.max(64), top_k);
-    let physis_tokens = crate::rag::count_tokens(&physis_context);
+    let mut used = crate::rag::count_tokens(&physis_context);
+
+    // Gated observer fusion: relevance-gate each retrieval hit against the
+    // query, then let accepted hits fill the remaining budget — never
+    // displacing engine-selected text.
+    let q_emb = embedder.embed(query);
+    let mut receipts: Vec<ObserverGateReceipt> = Vec::with_capacity(observer_claims.len());
+    let mut observer_selected = 0usize;
+    for claim in observer_claims {
+        let crate::ingest::ClaimPayload::Retrieval(hit) = &claim.payload else {
+            receipts.push(ObserverGateReceipt {
+                object_id: claim.id.clone(),
+                decision: crate::gate::GateDecision::Defer,
+                included: false,
+                relevance: None,
+                reasons: vec![format!(
+                    "not a retrieval hit: {}",
+                    claim.payload.kind_label()
+                )],
+            });
+            continue;
+        };
+        let snippet = hit.snippet.as_deref().unwrap_or("");
+        let snippet_emb = embedder.embed(snippet);
+        let gate =
+            crate::gate::gate_retrieval_hit(&q_emb, &snippet_emb, claim, hit, observer_floor);
+        let mut receipt = ObserverGateReceipt {
+            object_id: hit.object_id.clone(),
+            decision: gate.decision,
+            included: false,
+            relevance: gate.relevance,
+            reasons: gate.reasons,
+        };
+        if gate.decision == crate::gate::GateDecision::AcceptCandidate {
+            let block = format!(
+                "\n\n--- observer: {} ({}) ---\n{}",
+                hit.object_id,
+                claim.extractor.id,
+                snippet.trim()
+            );
+            let block_tokens = crate::rag::count_tokens(&block);
+            if used + block_tokens <= budget.max(64) {
+                physis_context.push_str(&block);
+                used += block_tokens;
+                observer_selected += 1;
+                receipt.included = true;
+            } else {
+                receipt
+                    .reasons
+                    .push(format!("over budget: {block_tokens} tokens, {used} used"));
+            }
+        }
+        receipts.push(receipt);
+    }
+    let physis_tokens = used;
 
     // Structural tag: the deterministic map over the same corpus.
     let map = build_map(docs, embedder, None)?;
@@ -845,5 +1069,7 @@ pub fn compile_context(
         contradictions: map.contradictions.len(),
         clusters: map.repeats.iter().map(|r| r.name.clone()).take(8).collect(),
         physis_context,
+        observer_gated: receipts,
+        observer_selected,
     })
 }

@@ -56,6 +56,22 @@ Observer fusion stays opt-in — measured, not assumed.
   separates only coarse overlap; with a semantic embedder (minilm via the
   `embed-onnx` feature) the floor separates topical relevance. The floor is
   a caller policy parameter for exactly this reason.
+- **Production wiring: the gate is now callable from the CLI.**
+  `map::compile_context_with_observer` runs the unchanged engine pipeline
+  and appends accepted observer retrieval-hit blocks to the packet only
+  while token budget remains (observer content fills slack, never
+  displaces engine-selected text); every claim produces an
+  `ObserverGateReceipt` (decision, included, relevance, reasons) carried
+  on `ContextReport.observer_gated` (serde-defaulted, old JSON still
+  parses). The `context` CLI command takes `--observer-claims <json>`
+  (a file of candidate-claim packets) and `--observer-floor <f>`
+  (default 0.9), prints gate receipts in text mode, and serializes them
+  in JSON mode. Measured live: relevant hit accepted and in packet,
+  noise deferred with the floor named. Can-fail verified: bypassing the
+  gate in the map path makes the admit test fail (3 selected, not 1).
+  The compile.rs gated-fusion path remains the packet-level API; the map
+  path is the CLI-level one — both share `gate_retrieval_hit`, the
+  measured, tested piece.
 - **Verdict: default-off stands, for a different reason.** The recall
   argument is gone — fusion can no longer lose recall, and unused budget
   slack is the only thing observer items consume. What remains is
