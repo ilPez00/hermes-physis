@@ -902,9 +902,8 @@ mod tests {
         assert_eq!(sum.by_kind.relation.accept, 1);
         assert_eq!(sum.by_kind.claim.accept, 1);
         assert_eq!(sum.accept + sum.defer + sum.reject + sum.abstain, sum.total);
-        assert_eq!(
+        assert!(
             sum.equivalence_contradictions <= 1,
-            true,
             "equivalence path is proposal-only and may surface at most one contradiction candidate here"
         );
         // no certified merge implied

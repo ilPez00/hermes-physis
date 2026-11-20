@@ -848,7 +848,8 @@ def _context_docs_argv(
     argv = ["context", "--corpus", path, "--query", task, "--budget", str(budget), "--json"]
     claims = merged.get("observer_claims")
     floor = merged.get("observer_floor")
-    if claims is None and floor is None:
+    reserve = merged.get("observer_reserve")
+    if claims is None and floor is None and reserve is None:
         return argv
     if claims is not None and not isinstance(claims, list):
         raise ValueError("observer_claims must be a list of candidate-claim packets")
@@ -859,6 +860,13 @@ def _context_docs_argv(
             raise ValueError("observer_floor must be a number") from None
         if not 0.0 <= floor_val <= 1.0:
             raise ValueError("observer_floor must be between 0.0 and 1.0")
+    if reserve is not None:
+        try:
+            reserve_val = int(reserve)
+        except (TypeError, ValueError):
+            raise ValueError("observer_reserve must be a non-negative integer") from None
+        if reserve_val < 0:
+            raise ValueError("observer_reserve must be a non-negative integer")
     if claims:
         import tempfile
 
@@ -872,6 +880,8 @@ def _context_docs_argv(
         argv += ["--observer-claims", claims_path]
     if floor is not None:
         argv += ["--observer-floor", str(float(floor))]
+    if reserve is not None:
+        argv += ["--observer-reserve", str(int(reserve))]
     return argv
 
 
@@ -1012,7 +1022,8 @@ def _node_search_argv(task: str, budget: int, merged: dict[str, Any]) -> list[st
     ]
     claims = merged.get("observer_claims")
     floor = merged.get("observer_floor")
-    if claims is None and floor is None:
+    reserve = merged.get("observer_reserve")
+    if claims is None and floor is None and reserve is None:
         return argv
     if claims is not None and not isinstance(claims, list):
         raise ValueError("observer_claims must be a list of candidate-claim packets")
@@ -1023,6 +1034,13 @@ def _node_search_argv(task: str, budget: int, merged: dict[str, Any]) -> list[st
             raise ValueError("observer_floor must be a number") from None
         if not 0.0 <= floor_val <= 1.0:
             raise ValueError("observer_floor must be between 0.0 and 1.0")
+    if reserve is not None:
+        try:
+            reserve_val = int(reserve)
+        except (TypeError, ValueError):
+            raise ValueError("observer_reserve must be a non-negative integer") from None
+        if reserve_val < 0:
+            raise ValueError("observer_reserve must be a non-negative integer")
     if claims:
         fd, claims_path = tempfile.mkstemp(prefix="physis-observer-claims-", suffix=".json")
         try:
@@ -1034,6 +1052,8 @@ def _node_search_argv(task: str, budget: int, merged: dict[str, Any]) -> list[st
         argv += ["--observer-claims", claims_path]
     if floor is not None:
         argv += ["--observer-floor", str(float(floor))]
+    if reserve is not None:
+        argv += ["--observer-reserve", str(int(reserve))]
     return argv
 
 

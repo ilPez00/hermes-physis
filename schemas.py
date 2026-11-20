@@ -89,6 +89,19 @@ CONTEXT = {
                     "embedder-dependent."
                 ),
             },
+            "observer_reserve": {
+                "type": "integer",
+                "description": (
+                    "Tokens of packet headroom reserved for observer content: the "
+                    "engine retrieval is capped at budget-minus-reserve. Measured on "
+                    "real corpora: a greedy budget-capped retriever otherwise fills "
+                    "any budget, leaving zero slack and making fusion inert. This is "
+                    "a real trade — corpus coverage is exchanged for observer "
+                    "knowledge (measured: held-out queries became answerable, a "
+                    "corpus-covered control query lost its answer at reserve 250). "
+                    "Default 0 = no reserve."
+                ),
+            },
         },
         "required": ["task"],
     },
