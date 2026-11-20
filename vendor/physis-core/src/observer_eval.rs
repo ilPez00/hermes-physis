@@ -1,0 +1,648 @@
+//! Deterministic evaluation stubs for observer-assisted vs baseline flows.
+//!
+//! Pure, in-crate helpers over in-memory fixtures (no IO, no network, no models).
+//! These support evidence-gated comparisons (counts, proxies, yield) but do not
+//! themselves claim wins — measurements must be interpreted against baselines
+//! and construction-matched nulls.
+
+use std::collections::HashSet;
+
+use crate::compile::CompiledContext;
+use crate::gate::{
+    GateDecision, GateOutcome, LessonGateResult, RelationGateResult, ResolutionGateResult,
+};
+
+/// Count resolution-gate outcomes (accept/defer/reject/abstain).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ResolutionOutcomeCounts {
+    pub accept: usize,
+    pub defer: usize,
+    pub reject: usize,
+    pub abstain: usize,
+    pub contradictions: usize,
+}
+
+/// Tally outcomes of equivalence/resolution gate results.
+pub fn resolution_outcomes(results: &[ResolutionGateResult]) -> ResolutionOutcomeCounts {
+    let mut c = ResolutionOutcomeCounts::default();
+    for r in results {
+        match r.decision {
+            GateDecision::AcceptCandidate => c.accept += 1,
+            GateDecision::Defer => c.defer += 1,
+            GateDecision::Reject => c.reject += 1,
+            GateDecision::Abstain => c.abstain += 1,
+        }
+        if r.contradiction.is_some() {
+            c.contradictions += 1;
+        }
+    }
+    c
+}
+
+/// Count relation-gate outcomes.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SimpleOutcomeCounts {
+    pub accept: usize,
+    pub defer: usize,
+    pub reject: usize,
+    pub abstain: usize,
+}
+
+/// Tally outcomes of relation gate results.
+pub fn relation_outcomes(results: &[RelationGateResult]) -> SimpleOutcomeCounts {
+    let mut c = SimpleOutcomeCounts::default();
+    for r in results {
+        match r.decision {
+            GateDecision::AcceptCandidate => c.accept += 1,
+            GateDecision::Defer => c.defer += 1,
+            GateDecision::Reject => c.reject += 1,
+            GateDecision::Abstain => c.abstain += 1,
+        }
+    }
+    c
+}
+
+/// Tally outcomes of lesson gate results.
+pub fn lesson_outcomes(results: &[LessonGateResult]) -> SimpleOutcomeCounts {
+    let mut c = SimpleOutcomeCounts::default();
+    for r in results {
+        match r.decision {
+            GateDecision::AcceptCandidate => c.accept += 1,
+            GateDecision::Defer => c.defer += 1,
+            GateDecision::Reject => c.reject += 1,
+            GateDecision::Abstain => c.abstain += 1,
+        }
+    }
+    c
+}
+
+/// Tally outcomes of grounding gate results (mapped candidate vs unmapped
+/// discovery/coverage defer etc.), for deterministic observer/grounding
+/// ablation accounting. Counts/proxies only — never a truth verdict.
+pub fn grounding_outcomes(results: &[crate::gate::GroundingGateResult]) -> SimpleOutcomeCounts {
+    let mut c = SimpleOutcomeCounts::default();
+    for r in results {
+        match r.decision {
+            GateDecision::AcceptCandidate => c.accept += 1,
+            GateDecision::Defer => c.defer += 1,
+            GateDecision::Reject => c.reject += 1,
+            GateDecision::Abstain => c.abstain += 1,
+        }
+    }
+    c
+}
+
+/// Recall proxy: fraction of `relevant_ids` present in selected packet ids.
+/// Returns 1.0 when `relevant_ids` is empty (vacuous), so callers should
+/// check emptiness separately when that matters.
+pub fn context_recall_proxy(packet: &CompiledContext, relevant_ids: &HashSet<String>) -> f32 {
+    if relevant_ids.is_empty() {
+        return 1.0;
+    }
+    let selected: HashSet<&str> = packet.selected.iter().map(|s| s.id.as_str()).collect();
+    let hit = relevant_ids
+        .iter()
+        .filter(|id| selected.contains(id.as_str()))
+        .count();
+    hit as f32 / relevant_ids.len() as f32
+}
+
+/// How many selected items originated from an observer (unverified).
+pub fn observer_selected_count(packet: &CompiledContext) -> usize {
+    packet
+        .selected
+        .iter()
+        .filter(|s| s.observer_sourced)
+        .count()
+}
+
+/// Budget utilization ratio recorded in the packet (heuristic units).
+pub fn utilization(packet: &CompiledContext) -> f32 {
+    packet.stats.utilization
+}
+
+/// Deterministic comparison between a baseline and an observer-fused compile.
+///
+/// `relevant_ids`, when provided, yields a recall-proxy delta
+/// (fused - baseline). Positive delta means the fused packet selected more of
+/// the relevant set under the same budget; this is a proxy, not a verdict.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompileComparison {
+    pub baseline_selected: usize,
+    pub fused_selected: usize,
+    pub baseline_observer_selected: usize,
+    pub fused_observer_selected: usize,
+    pub baseline_utilization: f32,
+    pub fused_utilization: f32,
+    pub recall_proxy_baseline: Option<f32>,
+    pub recall_proxy_fused: Option<f32>,
+    pub recall_proxy_delta: Option<f32>,
+}
+
+/// Compare two compiled packets (typically engine-only baseline vs fused).
+pub fn compare_compiles(
+    baseline: &CompiledContext,
+    fused: &CompiledContext,
+    relevant_ids: Option<&HashSet<String>>,
+) -> CompileComparison {
+    let (rb, rf, rd) = if let Some(rel) = relevant_ids {
+        let b = context_recall_proxy(baseline, rel);
+        let f = context_recall_proxy(fused, rel);
+        (Some(b), Some(f), Some(f - b))
+    } else {
+        (None, None, None)
+    };
+    CompileComparison {
+        baseline_selected: baseline.stats.selected_count,
+        fused_selected: fused.stats.selected_count,
+        baseline_observer_selected: observer_selected_count(baseline),
+        fused_observer_selected: observer_selected_count(fused),
+        baseline_utilization: baseline.stats.utilization,
+        fused_utilization: fused.stats.utilization,
+        recall_proxy_baseline: rb,
+        recall_proxy_fused: rf,
+        recall_proxy_delta: rd,
+    }
+}
+
+/// Count how many lesson-gate results are both accepted and shadow-stable
+/// (robustness probe reported no degradation). A coarse survival proxy.
+pub fn stable_accepted_lessons(results: &[LessonGateResult]) -> usize {
+    results
+        .iter()
+        .filter(|r| {
+            r.decision == GateDecision::AcceptCandidate && r.robustness_stable == Some(true)
+        })
+        .count()
+}
+
+/// Count contradictions surfaced by resolution gates (conflict candidates).
+pub fn resolution_contradiction_yield(results: &[ResolutionGateResult]) -> usize {
+    results.iter().filter(|r| r.contradiction.is_some()).count()
+}
+
+/// Fraction of selected packet items that originated from an observer.
+/// Returns 0.0 when nothing is selected.
+pub fn observer_selection_ratio(packet: &CompiledContext) -> f32 {
+    if packet.stats.selected_count == 0 {
+        return 0.0;
+    }
+    observer_selected_count(packet) as f32 / packet.stats.selected_count as f32
+}
+
+/// Deterministic set-based precision/recall over string ids (generic).
+///
+/// - precision = |pred ∩ relevant| / |pred|  (1.0 if pred empty and relevant empty else 0.0 if pred empty)
+/// - recall    = |pred ∩ relevant| / |relevant| (1.0 if relevant empty)
+///
+/// Returns `(precision, recall, f1, true_positive_count)`.
+pub fn precision_recall_f1(
+    predicted: &HashSet<String>,
+    relevant: &HashSet<String>,
+) -> (f32, f32, f32, usize) {
+    let tp = predicted.intersection(relevant).count();
+    let precision = if predicted.is_empty() {
+        if relevant.is_empty() {
+            1.0
+        } else {
+            0.0
+        }
+    } else {
+        tp as f32 / predicted.len() as f32
+    };
+    let recall = if relevant.is_empty() {
+        1.0
+    } else {
+        tp as f32 / relevant.len() as f32
+    };
+    let f1 = if precision + recall == 0.0 {
+        0.0
+    } else {
+        2.0 * precision * recall / (precision + recall)
+    };
+    (precision, recall, f1, tp)
+}
+
+/// Build a predicted-id set from relation-gate results whose decision is
+/// `AcceptCandidate` (using proposed edge evidence/provenance-neutral identity
+/// `source->target` as a comparable key). Useful as a coarse relation-yield
+/// proxy in fixture benchmarks with matching keys.
+pub fn accepted_relation_keys(results: &[RelationGateResult]) -> HashSet<String> {
+    results
+        .iter()
+        .filter(|r| r.decision == GateDecision::AcceptCandidate)
+        .map(|r| {
+            format!(
+                "{}->{}",
+                r.proposed_edge.source_id, r.proposed_edge.target_id
+            )
+        })
+        .collect()
+}
+
+/// Canonical undirected pair key (sorted, deterministic) for equivalence
+/// false-merge/split scoring over labeled corpora.
+pub fn canonical_pair_key(a: &str, b: &str) -> String {
+    if a <= b {
+        format!("{}={}", a, b)
+    } else {
+        format!("{}={}", b, a)
+    }
+}
+
+/// Precision/recall/F1 over undirected pair sets (false-merge/split proxy).
+///
+/// `predicted_pairs`/`gold_pairs` should contain canonical keys
+/// (see [`canonical_pair_key`]). Returns `(precision, recall, f1, tp)`.
+pub fn pair_precision_recall_f1(
+    predicted_pairs: &HashSet<String>,
+    gold_pairs: &HashSet<String>,
+) -> (f32, f32, f32, usize) {
+    precision_recall_f1(predicted_pairs, gold_pairs)
+}
+
+/// Build canonical predicted pair keys from equivalence gate results that were
+/// accepted as candidate resolutions (proposal-only, never a merge).
+pub fn accepted_equivalence_pair_keys(results: &[ResolutionGateResult]) -> HashSet<String> {
+    results
+        .iter()
+        .filter(|r| r.decision == GateDecision::AcceptCandidate)
+        .filter_map(|r| r.pair.as_ref().map(|(l, r)| canonical_pair_key(l, r)))
+        .collect()
+}
+
+/// Tally decisions over typed gate outcomes (dispatch/assessment results).
+pub fn gate_outcome_counts(outcomes: &[GateOutcome]) -> SimpleOutcomeCounts {
+    let mut c = SimpleOutcomeCounts::default();
+    for o in outcomes {
+        match o.decision() {
+            GateDecision::AcceptCandidate => c.accept += 1,
+            GateDecision::Defer => c.defer += 1,
+            GateDecision::Reject => c.reject += 1,
+            GateDecision::Abstain => c.abstain += 1,
+        }
+    }
+    c
+}
+
+/// Tally decisions over assessed intakes (intake + gate outcome pairs).
+pub fn assessed_outcome_counts(assessed: &[crate::gate::AssessedIntake]) -> SimpleOutcomeCounts {
+    let mut c = SimpleOutcomeCounts::default();
+    for a in assessed {
+        match a.outcome.decision() {
+            GateDecision::AcceptCandidate => c.accept += 1,
+            GateDecision::Defer => c.defer += 1,
+            GateDecision::Reject => c.reject += 1,
+            GateDecision::Abstain => c.abstain += 1,
+        }
+    }
+    c
+}
+
+/// Count contradiction candidates surfaced by assessed equivalence outcomes.
+///
+/// A contradiction candidate indicates conflict detected by the resolution gate
+/// (proposal-only, never a merge). Other outcome kinds contribute zero.
+pub fn assessed_contradiction_count(assessed: &[crate::gate::AssessedIntake]) -> usize {
+    assessed
+        .iter()
+        .filter(|a| matches!(&a.outcome, GateOutcome::Equivalence(r) if r.contradiction.is_some()))
+        .count()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compile::{compile_context, CompileCandidate, CompileOptions, EmbedderInfo};
+    use crate::gate::{self, GateOutcome};
+    use crate::ingest::{
+        CandidateClaimPacket, ClaimPayload, ClaimSource, ConsolidatedLesson, EquivalenceProposal,
+        ExtractorInfo, ProposedRelation,
+    };
+    use crate::relation::RelationType;
+
+    fn claim(payload: ClaimPayload) -> CandidateClaimPacket {
+        CandidateClaimPacket {
+            id: "claim:auto".into(),
+            intake_id: Some("i".into()),
+            source: ClaimSource {
+                uri: "d".into(),
+                span: Some("0..1".into()),
+                kind: None,
+            },
+            extractor: ExtractorInfo::new("x"),
+            asserted_at: None,
+            observed_at: None,
+            raw_ref: Some("r".into()),
+            confidence: Some(0.5),
+            payload,
+            lossy_fields: vec![],
+            extras: Default::default(),
+        }
+        .normalize()
+    }
+
+    #[test]
+    fn outcome_tallies_are_deterministic() {
+        let core = crate::core::PhysisCore::new();
+        let rel = ProposedRelation {
+            subject: "a".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "b".into(),
+            fact: None,
+        };
+        let r = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        let rc = relation_outcomes(&[r]);
+        assert_eq!(rc.accept, 1);
+
+        let eq = EquivalenceProposal {
+            left: "n1".into(),
+            right: "n2".into(),
+            similarity: Some(0.9),
+            rationale: None,
+        };
+        let er = gate::gate_equivalence(&core, &claim(ClaimPayload::Relation(rel)), &eq);
+        let ec = resolution_outcomes(&[er]);
+        assert_eq!(ec.abstain, 1);
+
+        let lesson = ConsolidatedLesson {
+            statement: "x".into(),
+            prediction: None,
+            episodes: vec![],
+        };
+        let lr = gate::gate_lesson(&core, &claim(ClaimPayload::Lesson(lesson.clone())), &lesson);
+        let lc = lesson_outcomes(&[lr]);
+        assert_eq!(lc.defer, 1);
+    }
+
+    #[test]
+    fn context_recall_proxy_counts_selected_relevant() {
+        let cands = vec![
+            CompileCandidate {
+                id: "a".into(),
+                kind: "k".into(),
+                text: "a".into(),
+                tokens: 1,
+                score: 1.0,
+                strategies: vec![],
+                reasons: vec![],
+                observer_sourced: false,
+                source: None,
+            },
+            CompileCandidate {
+                id: "b".into(),
+                kind: "k".into(),
+                text: "b".into(),
+                tokens: 1,
+                score: 0.5,
+                strategies: vec![],
+                reasons: vec![],
+                observer_sourced: true,
+                source: None,
+            },
+        ];
+        let pkt = compile_context(
+            "q",
+            cands,
+            &CompileOptions {
+                budget: 10,
+                ..Default::default()
+            },
+            EmbedderInfo::default(),
+        );
+        let rel: HashSet<String> = ["a".to_string(), "c".to_string()].into_iter().collect();
+        assert!((context_recall_proxy(&pkt, &rel) - 0.5).abs() < 1e-6);
+        assert_eq!(observer_selected_count(&pkt), 1);
+    }
+
+    #[test]
+    fn compile_comparison_reports_recall_delta() {
+        let base_cands = vec![CompileCandidate {
+            id: "a".into(),
+            kind: "k".into(),
+            text: "a".into(),
+            tokens: 1,
+            score: 1.0,
+            strategies: vec![],
+            reasons: vec![],
+            observer_sourced: false,
+            source: None,
+        }];
+        let fused_cands = vec![
+            CompileCandidate {
+                id: "a".into(),
+                kind: "k".into(),
+                text: "a".into(),
+                tokens: 1,
+                score: 1.0,
+                strategies: vec![],
+                reasons: vec![],
+                observer_sourced: false,
+                source: None,
+            },
+            CompileCandidate {
+                id: "obs".into(),
+                kind: "k".into(),
+                text: "o".into(),
+                tokens: 1,
+                score: 0.9,
+                strategies: vec![],
+                reasons: vec![],
+                observer_sourced: true,
+                source: None,
+            },
+        ];
+        let opts = CompileOptions {
+            budget: 10,
+            ..Default::default()
+        };
+        let base = compile_context("q", base_cands, &opts, EmbedderInfo::default());
+        let fused = compile_context("q", fused_cands, &opts, EmbedderInfo::default());
+        let rel: HashSet<String> = ["a".to_string(), "obs".to_string()].into_iter().collect();
+        let cmp = compare_compiles(&base, &fused, Some(&rel));
+        assert_eq!(cmp.recall_proxy_baseline, Some(0.5));
+        assert_eq!(cmp.recall_proxy_fused, Some(1.0));
+        assert_eq!(cmp.recall_proxy_delta, Some(0.5));
+        assert_eq!(cmp.fused_observer_selected, 1);
+    }
+
+    #[test]
+    fn precision_recall_and_observer_ratio() {
+        let pred: HashSet<String> = ["a", "b", "c"].into_iter().map(String::from).collect();
+        let rel: HashSet<String> = ["b", "c", "d"].into_iter().map(String::from).collect();
+        let (p, r, f1, tp) = precision_recall_f1(&pred, &rel);
+        assert_eq!(tp, 2);
+        assert!((p - 2.0 / 3.0).abs() < 1e-6);
+        assert!((r - 2.0 / 3.0).abs() < 1e-6);
+        assert!(f1 > 0.0);
+
+        let cands = vec![
+            CompileCandidate {
+                id: "a".into(),
+                kind: "k".into(),
+                text: "a".into(),
+                tokens: 1,
+                score: 1.0,
+                strategies: vec![],
+                reasons: vec![],
+                observer_sourced: false,
+                source: None,
+            },
+            CompileCandidate {
+                id: "b".into(),
+                kind: "k".into(),
+                text: "b".into(),
+                tokens: 1,
+                score: 0.5,
+                strategies: vec![],
+                reasons: vec![],
+                observer_sourced: true,
+                source: None,
+            },
+        ];
+        let pkt = compile_context(
+            "q",
+            cands,
+            &CompileOptions {
+                budget: 10,
+                ..Default::default()
+            },
+            EmbedderInfo::default(),
+        );
+        assert!((observer_selection_ratio(&pkt) - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn pair_keys_and_equivalence_scoring_are_deterministic() {
+        assert_eq!(canonical_pair_key("b", "a"), "a=b");
+        assert_eq!(canonical_pair_key("a", "b"), "a=b");
+        let pred: HashSet<String> = ["a=b", "c=d"].into_iter().map(String::from).collect();
+        let gold: HashSet<String> = ["a=b", "c=e"].into_iter().map(String::from).collect();
+        let (p, r, _f1, tp) = pair_precision_recall_f1(&pred, &gold);
+        assert_eq!(tp, 1);
+        assert!((p - 0.5).abs() < 1e-6);
+        assert!((r - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn gate_outcome_counts_tallies_dispatch_results() {
+        let core = crate::core::PhysisCore::new();
+        let rel = ProposedRelation {
+            subject: "a".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "b".into(),
+            fact: None,
+        };
+        let r = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        let eq = EquivalenceProposal {
+            left: "n1".into(),
+            right: "n2".into(),
+            similarity: Some(0.9),
+            rationale: None,
+        };
+        let er = gate::gate_equivalence(&core, &claim(ClaimPayload::Relation(rel)), &eq);
+        let outcomes = vec![GateOutcome::Relation(r), GateOutcome::Equivalence(er)];
+        let c = gate_outcome_counts(&outcomes);
+        assert_eq!(c.accept, 1);
+        assert_eq!(c.abstain, 1);
+
+        // Same tally over assessed intakes.
+        let mut core2 = crate::core::PhysisCore::new();
+        let claims = vec![claim(ClaimPayload::Relation(ProposedRelation {
+            subject: "a".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "b".into(),
+            fact: None,
+        }))];
+        let assessed = crate::gate::assess_claims_with_intake(
+            &mut core2,
+            &claims,
+            &[],
+            "obs",
+            chrono::Utc::now(),
+        );
+        let ac = assessed_outcome_counts(&assessed);
+        assert_eq!(ac.accept, 1);
+        assert_eq!(assessed[0].decision(), GateDecision::AcceptCandidate);
+        assert_eq!(assessed_contradiction_count(&assessed), 0);
+    }
+
+    #[test]
+    fn assessed_contradiction_count_surfaces_equivalence_conflicts() {
+        let mut core = crate::core::PhysisCore::new();
+        let eq = EquivalenceProposal {
+            left: "n1".into(),
+            right: "n2".into(),
+            similarity: Some(0.1), // low agreement -> conflict surfaced, no merge
+            rationale: None,
+        };
+        let claims = vec![claim(ClaimPayload::Equivalence(eq))];
+        let assessed = crate::gate::assess_claims_with_intake(
+            &mut core,
+            &claims,
+            &[],
+            "obs",
+            chrono::Utc::now(),
+        );
+        assert_eq!(assessed.len(), 1);
+        // May abstain or reject depending on resolution path, but never a merge;
+        // contradiction is surfaced as candidate when conflict is detected.
+        assert!(matches!(assessed[0].outcome, GateOutcome::Equivalence(_)));
+        let n = assessed_contradiction_count(&assessed);
+        assert!(n <= 1);
+        // Resolution/equivalence outcomes never certify merges (proposal-only).
+        assert_ne!(assessed[0].decision(), GateDecision::AcceptCandidate);
+    }
+
+    #[test]
+    fn grounding_outcome_tallies_mapped_vs_unmapped() {
+        use crate::ingest::GroundedConcept;
+        let known = vec!["MEMORY".to_string(), "IO".to_string()];
+        let ok = gate::assess_grounding(
+            &claim(ClaimPayload::Grounding(GroundedConcept {
+                concept: "cache".into(),
+                cell: Some("MEMORY".into()),
+                mapped_type: None,
+            })),
+            &GroundedConcept {
+                concept: "cache".into(),
+                cell: Some("MEMORY".into()),
+                mapped_type: None,
+            },
+            &known,
+        );
+        let unk = gate::assess_grounding(
+            &claim(ClaimPayload::Grounding(GroundedConcept {
+                concept: "mystery".into(),
+                cell: Some("NOWHERE".into()),
+                mapped_type: None,
+            })),
+            &GroundedConcept {
+                concept: "mystery".into(),
+                cell: Some("NOWHERE".into()),
+                mapped_type: None,
+            },
+            &known,
+        );
+        let empty = gate::assess_grounding(
+            &claim(ClaimPayload::Grounding(GroundedConcept {
+                concept: "".into(),
+                cell: Some("MEMORY".into()),
+                mapped_type: None,
+            })),
+            &GroundedConcept {
+                concept: "".into(),
+                cell: Some("MEMORY".into()),
+                mapped_type: None,
+            },
+            &known,
+        );
+        let c = grounding_outcomes(&[ok, unk, empty]);
+        assert_eq!(c.accept, 1); // mapped to known label -> candidate proposal
+        assert_eq!(c.defer, 1); // unmapped -> discovery/coverage defer
+        assert_eq!(c.reject, 1); // empty concept
+    }
+}

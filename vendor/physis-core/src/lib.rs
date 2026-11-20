@@ -116,6 +116,34 @@
 //!
 //! ---
 //!
+//! ## Semantic observers and candidate-claim contract (additive)
+//!
+//! External extractors/consolidators (e.g. Cognee, sidecar or Cognee-RS behind an
+//! adapter) are **optional semantic observers**, never the canonical substrate and
+//! never a source of verified truth. Their emissions enter as provenance-carrying
+//! *candidate claims* ([`CandidateClaimPacket`], optionally batched in a versioned,
+//! lossy-explicit [`CandidateClaimEnvelope`] for adapter/sidecar interchange) via
+//! [`SemanticObserver`] adapters: recorded append-only as intake/audit observations,
+//! then gated into proposals (hypotheses/evidence/typed-edge or equivalence/grounding/
+//! lesson candidates) by [`assess_claim`]/[`assess_claims_with_intake`] or
+//! [`crate::core::PhysisCore::observe_and_assess`] (or intake-only via
+//! [`crate::core::PhysisCore::observe_and_ingest`]/[`crate::core::PhysisCore::ingest_observer_claims`]).
+//! Gates reuse alignment/stability/recurrence/contradiction/TMS signals and may
+//! accept-as-candidate, defer, reject, or abstain — but **never auto-certify,
+//! never auto-merge identities, and never bypass contradiction or DependsOn revision**.
+//! Intake records what was asserted; assessment returns proposals/decisions; neither
+//! registers anything as verified state. Extractor confidence is advisory, not authority.
+//!
+//! Observer-derived retrieval hits may be fused into receipt-carrying context
+//! compilation ([`CompiledContext`]) as attributed, **unverified** candidates that
+//! Physis selects/drops under a hard budget; fusion is ablatable and should be
+//! enabled only on measured wins over core-only baselines. No Cognee graph
+//! database is used as Physis state. Deterministic in-crate eval stubs
+//! ([`compare_compiles`], outcome tallies/proxies) support fixture-based
+//! comparisons, not claims.
+//!
+//! ---
+//!
 //! ## Quick Start Example
 //!
 //! ```rust
@@ -181,13 +209,14 @@
 //! - [`studio`]: Embedded lightweight web studio GUI and RESTful API endpoints.
 
 pub mod act;
+pub mod alignment;
 pub mod becoming;
 pub mod bench;
 pub mod chain;
 pub mod classify;
-pub mod grid;
 pub mod coherence_dimensions;
 pub mod coherence_query;
+pub mod compile;
 pub mod config_run;
 pub mod contradiction;
 pub mod core;
@@ -202,9 +231,12 @@ pub mod embed_ngram;
 pub mod epistemic;
 pub mod experiments;
 pub mod explanation;
+pub mod gate;
+pub mod grid;
 pub mod ground;
 pub mod history;
 pub mod hypothesis;
+pub mod ingest;
 pub mod linkage;
 pub mod map;
 pub mod model_provider;
@@ -212,6 +244,8 @@ pub mod models;
 pub mod ngram_table;
 pub mod notebook;
 pub mod observe;
+pub mod observer;
+pub mod observer_eval;
 pub mod ontology;
 pub mod oracle;
 pub mod praxis;
@@ -221,7 +255,10 @@ pub mod provenance;
 pub mod quality;
 pub mod rag;
 pub mod relation;
+pub mod revision;
+pub mod stability;
 pub mod store;
+pub mod support;
 /// Typed, calibrated, interchangeable decision rungs — `rule | pattern |
 /// count-table | lexical | prototype | knn | ngram | Jev | LLM | human` — and
 /// the loop that compiles a repeatedly-expensive judgement into the cheapest one
@@ -251,7 +288,6 @@ pub mod studio_lab;
 pub mod embed_onnx;
 
 pub use classify::{CellClassifier, CellScore, TopKStrategy};
-pub use grid::{GridCellView, GridView};
 pub use coherence_dimensions::{CoherenceDimension, CoherenceProfile};
 pub use coherence_query::{
     EpistemicQuery, EpistemicQueryResult, FailedPredictionSummary, HypothesisSummary,
@@ -259,21 +295,27 @@ pub use coherence_query::{
 pub use contradiction::{Contradiction, ContradictionParty, ResolutionStatus};
 pub use core::PhysisCore;
 pub use delta_engine::{
-    evaluate_mutation, route_transition, AdjudicationDecision, AdjudicationRoute,
+    analyse_convergence, analyse_report_convergence, classify_delta_with, compare_reports,
+    evaluate_mutation, evaluate_mutation_with_params, route_transition, route_transition_with,
+    AblationComparison, AdjudicationDecision, AdjudicationRoute, ConvergenceSignature, DeltaParams,
     EvaluationContext, HypothesisTransition, MutationOp, NodeDelta, OntologyDeltaReport,
-    OntologyMutation, RevisionWalk, WalkStep, ADJUDICATION_STRATEGIC_FLOOR, DEGRADATION_THRESHOLD,
-    GAMMA, MAX_PROPAGATION_DEPTH, MAX_REVISION_WALK_NODES, MIN_IMPACT,
+    OntologyMutation, PropagationStep, RevisionWalk, WalkStep, ADJUDICATION_STRATEGIC_FLOOR,
+    DEGRADATION_THRESHOLD, GAMMA, MAX_PROPAGATION_DEPTH, MAX_REVISION_WALK_NODES, MIN_IMPACT,
 };
 pub use discovery::{discover, DiscoveryConfig, DiscoveryReport, ProposedDomain};
 pub use dream::{
-    dream_over_history, ProposalKind, RetrospectiveProposal, RETIRE_AFTER_CONTRADICTIONS,
+    analyse_stability as analyse_history_stability, dream_over_history, ProposalKind,
+    RecurrenceEvidence, RetrospectiveProposal, StabilityFlag, RETIRE_AFTER_CONTRADICTIONS,
 };
 pub use embed::{RandomProjectionEmbedder, VectorEmbed};
 pub use epistemic::{
     EpistemicAuditTrail, EpistemicEvent, EpistemicEventType, HighWaterMark, IntakeReceipt,
 };
 pub use explanation::{ExplanationReport, HistoricalPrecedent};
-pub use history::importer_for as history_importer_for;
+pub use grid::{GridCellView, GridView};
+pub use history::{
+    importer_for as history_importer_for, points_to_occurrences, DynamicalTrace, TracePoint,
+};
 pub use hypothesis::{
     Evidence, EvidencePolarity, FitnessBreakdown, Hypothesis, HypothesisStatus, Prediction,
     Revision, CONTRADICTION_PENALTY_CAP, CONTRADICTION_PENALTY_PER_ITEM,
@@ -282,6 +324,7 @@ pub use hypothesis::{
     FITNESS_WEIGHT_ONTOLOGICAL_FIT, FITNESS_WEIGHT_PREDICTIVE_SUCCESS, FITNESS_WEIGHT_SEMANTIC_FIT,
 };
 pub use models::*;
+pub use observe::{observation_from_trace_point, observations_from_trace};
 pub use ontology::OntologyLoader;
 pub use praxis::{BehaviourRecord, BehaviourStatus};
 pub use process::{
@@ -295,6 +338,10 @@ pub use quality::{
 };
 pub use rag::{count_tokens, RagChunk, RagCorpus, RetrievalResult, TokenFixedRetriever};
 pub use relation::{RelationType, TypedEdge};
+pub use stability::{
+    assess_robustness, evidence_ablation, HypothesisMargin, HypothesisSnapshot, PerturbationOp,
+    PerturbationScenario, RobustnessReport, ScenarioOutcome,
+};
 pub use temporal::TemporalValidity;
 pub use transform::{
     apply, find_homomorphisms, Constraint, ConstraintKind, PatElem, Predicate, PropKind,
@@ -307,3 +354,49 @@ pub use studio::{run, run_with_model, StudioState};
 
 #[cfg(feature = "embed-onnx")]
 pub use embed_onnx::{OnnxConfig, OnnxEmbedder, PoolingStrategy};
+
+// Semantic-observer candidate ingest (Cognee/extractors as observers, never authority)
+pub use ingest::{
+    hypothesis_from_claim, lesson_proposal, record_candidate_intake, record_candidate_intake_batch,
+    relation_proposal, CandidateClaimEnvelope, CandidateClaimPacket, ClaimPayload, ClaimSource,
+    ConsolidatedLesson, EntityMention, EquivalenceProposal, ExtractorInfo, GroundedConcept,
+    ProposedRelation, RetrievalHit,
+};
+pub use observer::{
+    MockObserver, NoopObserver, ObserverInput, RecordingObserver, SemanticObserver,
+};
+
+// Verification/promotion gates for observer claims (abstention-first, no auto-merge/truth)
+pub use gate::{
+    assess_claim, assess_claims_with_intake, assess_grounding, gate_claim, gate_equivalence,
+    gate_lesson, gate_relation, AssessedIntake, ClaimGateSummary, GateDecision, GateOutcome,
+    GroundingGateResult, LessonGateResult, RelationGateResult, ResolutionGateResult,
+};
+
+// Receipt-carrying context compilation (deterministic, budgeted)
+pub use compile::{
+    candidates_from_retrieval_claims, compile_context, compile_from_retrieval,
+    compile_from_retrieval_with_observer_claims, compile_fused, CompileCandidate, CompileOptions,
+    CompileStats, CompiledContext, DropReason, DropReceipt, EmbedderInfo as CompileEmbedderInfo,
+    SelectionReceipt,
+};
+
+// Action/mutation preview, affected-set (DependOn/TMS) explanation, and staged commit helpers
+pub use revision::{
+    explain_affected_set, fingerprint_state, preview_mutation, preview_retraction_cascade,
+    transact, transact_and_persist, transact_and_persist_default, AffectedSetExplanation,
+    CommitReceipt, DriftError, MutationPreview, RollbackReceipt, StagedMutation, StateFingerprint,
+};
+
+// "Why supported / affected now" TMS explanation surfaces (deterministic, read-only)
+pub use support::{explain_support_snapshot, SupportSnapshot};
+
+// Deterministic observer/candidate evaluation stubs (in-crate, no IO/network)
+pub use observer_eval::{
+    accepted_equivalence_pair_keys, accepted_relation_keys, assessed_contradiction_count,
+    assessed_outcome_counts, canonical_pair_key, compare_compiles, context_recall_proxy,
+    gate_outcome_counts, grounding_outcomes, lesson_outcomes, observer_selected_count,
+    observer_selection_ratio, pair_precision_recall_f1, precision_recall_f1, relation_outcomes,
+    resolution_contradiction_yield, resolution_outcomes, stable_accepted_lessons, utilization,
+    CompileComparison, ResolutionOutcomeCounts, SimpleOutcomeCounts,
+};

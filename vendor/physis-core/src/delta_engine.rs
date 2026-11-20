@@ -51,6 +51,45 @@ pub const MAX_PROPAGATION_DEPTH: usize = 5;
 /// Minimum impact factor below which propagation stops.
 pub const MIN_IMPACT: f32 = 0.01;
 
+/// Named propagation/adjudication parameters (ablation-friendly).
+///
+/// Defaults reproduce the frozen constants. Analysis callers may override to
+/// compare coupled vs decoupled or tightened vs relaxed assumptions; every
+/// report records the effective params it ran with.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct DeltaParams {
+    pub gamma: f32,
+    pub degradation_threshold: f32,
+    pub max_propagation_depth: usize,
+    pub min_impact: f32,
+    pub adjudication_strategic_floor: f32,
+}
+
+impl Default for DeltaParams {
+    fn default() -> Self {
+        Self {
+            gamma: GAMMA,
+            degradation_threshold: DEGRADATION_THRESHOLD,
+            max_propagation_depth: MAX_PROPAGATION_DEPTH,
+            min_impact: MIN_IMPACT,
+            adjudication_strategic_floor: ADJUDICATION_STRATEGIC_FLOOR,
+        }
+    }
+}
+
+/// Per-hop/per-depth impact record for one affected node (diagnostic).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PropagationStep {
+    pub node_id: String,
+    /// Hops from the mutated node (0 = the mutated node itself).
+    pub depth: usize,
+    /// Attenuated impact `source_sim * gamma^depth` at collection time.
+    pub impact: f32,
+    /// Why propagation stopped expanding past this node, if it did.
+    #[serde(default)]
+    pub cutoff: Option<String>,
+}
+
 /// A2 (Atlas take): hard cap on visited nodes for the DependsOn revision
 /// walk (Atlas `MAX_NODES_DEFAULT = 5000`). The walk truncates at the cap
 /// and says so via [`RevisionWalk::truncated`] — never silently.
@@ -401,6 +440,12 @@ pub struct OntologyDeltaReport {
     /// only; no queue surface ships in P1).
     #[serde(default)]
     pub adjudications: Vec<AdjudicationDecision>,
+    /// Per-depth/hop propagation diagnostics (additive).
+    #[serde(default)]
+    pub propagation_steps: Vec<PropagationStep>,
+    /// Effective propagation/adjudication parameters (additive).
+    #[serde(default)]
+    pub params: Option<DeltaParams>,
 }
 
 /// One node visited by the A2 DependsOn revision walk.
@@ -480,9 +525,24 @@ pub fn route_transition(
     prev_status: HypothesisStatus,
     coherence_delta: Score,
 ) -> AdjudicationRoute {
+    route_transition_with(
+        prev_status,
+        coherence_delta,
+        DEGRADATION_THRESHOLD,
+        ADJUDICATION_STRATEGIC_FLOOR,
+    )
+}
+
+/// A5: route a proposed demotion with explicit threshold/floor (ablation).
+pub fn route_transition_with(
+    prev_status: HypothesisStatus,
+    coherence_delta: Score,
+    degradation_threshold: Score,
+    strategic_floor: Score,
+) -> AdjudicationRoute {
     if prev_status == HypothesisStatus::Certified {
         AdjudicationRoute::CoreProtected
-    } else if coherence_delta > DEGRADATION_THRESHOLD + ADJUDICATION_STRATEGIC_FLOOR {
+    } else if coherence_delta > degradation_threshold + strategic_floor {
         AdjudicationRoute::StrategicReview
     } else {
         AdjudicationRoute::AutoApply
@@ -583,11 +643,16 @@ pub fn retract_evidence_with_cascade(
 
 /// Classify a coherence delta.
 fn classify_delta(delta: f32) -> &'static str {
+    classify_delta_with(delta, DEGRADATION_THRESHOLD)
+}
+
+/// Classify a coherence delta using an explicit degradation threshold.
+pub fn classify_delta_with(delta: f32, degradation_threshold: f32) -> &'static str {
     if delta.abs() < 1e-6 {
         "Unchanged"
     } else if delta > 0.0 {
         "Strengthened"
-    } else if delta < -DEGRADATION_THRESHOLD {
+    } else if delta < -degradation_threshold {
         "Invalidated"
     } else {
         "Shifted"
@@ -597,27 +662,40 @@ fn classify_delta(delta: f32) -> &'static str {
 /// Depth-first collection of affected nodes with impact factors.
 ///
 /// The impact factor for a node at depth d is `source_sim × γ^d`.
-/// Propagation stops when depth exceeds [`MAX_PROPAGATION_DEPTH`] or impact
-/// falls below [`MIN_IMPACT`].
+/// Propagation stops when depth exceeds `params.max_propagation_depth` or
+/// impact falls below `params.min_impact`.
 fn dfs_collect(
     current_id: &str,
     adjacency: &HashMap<String, Vec<String>>,
     depth: usize,
     visited: &mut HashSet<String>,
-    affected: &mut Vec<(String, f32)>,
+    affected: &mut Vec<(String, usize, f32)>,
+    cutoffs: &mut HashMap<String, String>,
     source_sim: f32,
+    params: &DeltaParams,
 ) {
-    if depth > MAX_PROPAGATION_DEPTH || visited.contains(current_id) {
+    if visited.contains(current_id) {
+        return;
+    }
+    if depth > params.max_propagation_depth {
+        cutoffs.insert(current_id.to_string(), "max_depth_exceeded".to_string());
         return;
     }
     visited.insert(current_id.to_string());
 
-    let impact = source_sim * GAMMA.powi(depth as i32);
-    if impact.abs() < MIN_IMPACT && depth > 0 {
+    let impact = source_sim * params.gamma.powi(depth as i32);
+    if impact.abs() < params.min_impact && depth > 0 {
+        cutoffs.insert(current_id.to_string(), "min_impact".to_string());
         return;
     }
 
-    affected.push((current_id.to_string(), impact));
+    affected.push((current_id.to_string(), depth, impact));
+
+    // Record if this node sits at the depth boundary (children would exceed).
+    if depth >= params.max_propagation_depth {
+        cutoffs.insert(current_id.to_string(), "at_depth_limit".to_string());
+        return;
+    }
 
     if let Some(neighbors) = adjacency.get(current_id) {
         for neighbor_id in neighbors {
@@ -628,7 +706,9 @@ fn dfs_collect(
                     depth + 1,
                     visited,
                     affected,
+                    cutoffs,
                     source_sim,
+                    params,
                 );
             }
         }
@@ -690,6 +770,18 @@ pub fn evaluate_mutation(
     ctx: &mut EvaluationContext,
     mutation: OntologyMutation,
 ) -> OntologyDeltaReport {
+    evaluate_mutation_with_params(ctx, mutation, &DeltaParams::default())
+}
+
+/// Evaluate a mutation with explicit propagation/adjudication parameters.
+///
+/// Lets callers ablate coupling (`gamma`), thresholds, depth/impact caps, and
+/// strategic floors without changing the frozen defaults.
+pub fn evaluate_mutation_with_params(
+    ctx: &mut EvaluationContext,
+    mutation: OntologyMutation,
+    params: &DeltaParams,
+) -> OntologyDeltaReport {
     ctx.mutation_log.push(mutation.clone());
 
     // A7 no-perturbation invariant: a zero-shift EmbeddingShift (old == new)
@@ -708,6 +800,8 @@ pub fn evaluate_mutation(
                 net_coherence_delta: 0.0,
                 revision_walk: None,
                 adjudications: Vec::new(),
+                propagation_steps: Vec::new(),
+                params: Some(*params),
             };
         }
     }
@@ -745,21 +839,25 @@ pub fn evaluate_mutation(
     let adjacency = ctx.build_adjacency();
 
     let mut visited: HashSet<String> = HashSet::new();
-    let mut affected: Vec<(String, f32)> = Vec::new(); // (node_id, impact)
+    let mut affected: Vec<(String, usize, f32)> = Vec::new(); // (node_id, depth, impact)
+    let mut cutoffs: HashMap<String, String> = HashMap::new();
     dfs_collect(
         &target_id,
         &adjacency,
         0,
         &mut visited,
         &mut affected,
+        &mut cutoffs,
         source_sim,
+        params,
     );
 
     // ── Local Recalculation: update coherence scores ───────────────────
     let mut node_deltas: Vec<NodeDelta> = Vec::new();
+    let mut propagation_steps: Vec<PropagationStep> = Vec::new();
     let mut net_delta = 0.0_f32;
 
-    for (node_id, _impact) in &affected {
+    for (node_id, depth, impact) in &affected {
         // Capture pre-update coherence from the effective node (base or shadow)
         let prev_coherence = ctx
             .effective_node(node_id)
@@ -781,25 +879,21 @@ pub fn evaluate_mutation(
             node_id: node_id.clone(),
             previous_coherence: prev_coherence,
             new_coherence,
-            delta_type: classify_delta(delta).to_string(),
+            delta_type: classify_delta_with(delta, params.degradation_threshold).to_string(),
+        });
+        propagation_steps.push(PropagationStep {
+            node_id: node_id.clone(),
+            depth: *depth,
+            impact: *impact,
+            cutoff: cutoffs.get(node_id).cloned(),
         });
     }
 
     // ── Hypothesis Evaluation ──────────────────────────────────────────
     let mut hypothesis_transitions: Vec<HypothesisTransition> = Vec::new();
-    let affected_node_ids: Vec<String> = affected.iter().map(|(id, _)| id.clone()).collect();
+    let affected_node_ids: Vec<String> = affected.iter().map(|(id, _, _)| id.clone()).collect();
 
     // ── A2 (Atlas take): revision selection by declared dependency ───────
-    //
-    // Hypothesis revision is selected by the DependsOn closure of the
-    // mutated node, NOT by the breadth wave above. Mere arrival — a similar
-    // embedding, a shared cell pin, a label prefix — must not shift a
-    // hypothesis; only a declared DependsOn edge justifies a revision. The
-    // breadth wave keeps its node-coherence reporting job; it no longer
-    // selects hypotheses. If the graph declares no DependsOn dependents the
-    // engine falls back to the previous breadth-affected selection and logs
-    // it (`fallback_breadth_used`) — a sparse DependsOn graph must not go
-    // blind (A2 risk note).
     let mut walk = ctx.depends_on_walk(&target_id);
     let has_declared_dependents = !walk.dependents.is_empty();
     walk.fallback_breadth_used = !has_declared_dependents;
@@ -855,7 +949,7 @@ pub fn evaluate_mutation(
 
         let coherence_delta = prev_coherence - updated.coherence;
 
-        if coherence_delta > DEGRADATION_THRESHOLD
+        if coherence_delta > params.degradation_threshold
             && matches!(
                 prev_status,
                 HypothesisStatus::Supported
@@ -864,12 +958,17 @@ pub fn evaluate_mutation(
             )
         {
             let new_status = HypothesisStatus::Contradicted;
-            let route = route_transition(prev_status, coherence_delta);
+            let route = route_transition_with(
+                prev_status,
+                coherence_delta,
+                params.degradation_threshold,
+                params.adjudication_strategic_floor,
+            );
             let rationale = format!(
                 "Semantic degradation Δcoherence={:.4} exceeds ε={} (mutation {}): \
                  coherence {:.4} → {:.4}, fitness {:.4} → {:.4}",
                 coherence_delta,
-                DEGRADATION_THRESHOLD,
+                params.degradation_threshold,
                 mutation.id,
                 prev_coherence,
                 updated.coherence,
@@ -893,7 +992,7 @@ pub fn evaluate_mutation(
                         trigger_reason: format!(
                             "Semantic degradation exceeded threshold ε={} \
                              (Δcoherence={:.4})",
-                            DEGRADATION_THRESHOLD, coherence_delta,
+                            params.degradation_threshold, coherence_delta,
                         ),
                     });
 
@@ -958,6 +1057,8 @@ pub fn evaluate_mutation(
         net_coherence_delta: net_delta,
         revision_walk: Some(walk),
         adjudications,
+        propagation_steps,
+        params: Some(*params),
     }
 }
 
@@ -1009,12 +1110,24 @@ mod tests {
 
         let mut visited = HashSet::new();
         let mut affected = Vec::new();
-        dfs_collect("n0", &adjacency, 0, &mut visited, &mut affected, 1.0);
+        let mut cutoffs = HashMap::new();
+        let params = DeltaParams::default();
+        dfs_collect(
+            "n0",
+            &adjacency,
+            0,
+            &mut visited,
+            &mut affected,
+            &mut cutoffs,
+            1.0,
+            &params,
+        );
 
         // With MAX_PROPAGATION_DEPTH=5, nodes n0..n5 should all be visited
         assert_eq!(affected.len(), 6);
         assert_eq!(affected[0].0, "n0");
         assert_eq!(affected[5].0, "n5");
+        assert_eq!(affected[5].1, 5, "depth should be recorded");
     }
 
     #[test]
@@ -1055,11 +1168,214 @@ mod tests {
             net_coherence_delta: -0.2,
             revision_walk: None,
             adjudications: vec![],
+            propagation_steps: vec![],
+            params: Some(DeltaParams::default()),
         };
 
         let json = serde_json::to_string(&report).unwrap();
         let back: OntologyDeltaReport = serde_json::from_str(&json).unwrap();
         assert_eq!(back.net_coherence_delta, -0.2);
         assert_eq!(back.affected_nodes[0].delta_type, "Invalidated");
+        assert!(back.propagation_steps.is_empty());
+        assert!(back.params.is_some());
+    }
+}
+
+// ── Propagation / convergence diagnostics (iterative, additive) ──────────
+//
+// Single-step evaluation reports what one mutation does now. When callers
+// compare successive evaluations or replayed steps, they need to know whether
+// the system is settling, overshooting, or oscillating — the “breathing”
+// signature translated into coherence-delta terms. These helpers are
+// read-only diagnostics over reports/traces (no mutation, no commit).
+
+/// Stability/oscillation signature over an ordered sequence of net coherence
+/// deltas (e.g. successive `OntologyDeltaReport::net_coherence_delta` values
+/// or per-node deltas across compared states).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ConvergenceSignature {
+    pub steps: usize,
+    /// Number of sign changes between consecutive non-zero deltas.
+    pub sign_flips: usize,
+    /// True when deltas alternate in sign (persistent oscillation).
+    pub oscillating: bool,
+    /// True when magnitude grows again after shrinking (overshoot/relax pattern).
+    pub overshoot: bool,
+    /// True when absolute deltas are non-increasing overall (monotone settling).
+    pub monotone_settling: bool,
+    pub max_abs_delta: f32,
+    pub last_abs_delta: f32,
+    pub summary: String,
+}
+
+/// Analyse an ordered sequence of coherence deltas for oscillation/overshoot.
+pub fn analyse_convergence(deltas: &[f32]) -> ConvergenceSignature {
+    let steps = deltas.len();
+    if steps == 0 {
+        return ConvergenceSignature {
+            steps: 0,
+            sign_flips: 0,
+            oscillating: false,
+            overshoot: false,
+            monotone_settling: true,
+            max_abs_delta: 0.0,
+            last_abs_delta: 0.0,
+            summary: "no steps".to_string(),
+        };
+    }
+    let eps = 1e-6f32;
+    let mut sign_flips = 0usize;
+    let mut prev_sign = 0i32;
+    for &d in deltas {
+        let s = if d > eps {
+            1
+        } else if d < -eps {
+            -1
+        } else {
+            0
+        };
+        if s != 0 {
+            if prev_sign != 0 && s != prev_sign {
+                sign_flips += 1;
+            }
+            prev_sign = s;
+        }
+    }
+    let mags: Vec<f32> = deltas.iter().map(|d| d.abs()).collect();
+    let max_abs_delta = mags.iter().copied().fold(0.0f32, f32::max);
+    let last_abs_delta = *mags.last().unwrap_or(&0.0);
+    // Overshoot: magnitude shrinks then grows again meaningfully.
+    let mut overshoot = false;
+    let mut saw_shrink = false;
+    for w in mags.windows(2) {
+        if w[1] + eps < w[0] {
+            saw_shrink = true;
+        } else if saw_shrink && w[1] > w[0] + eps {
+            overshoot = true;
+            break;
+        }
+    }
+    // Monotone settling: never increases in magnitude (allow tiny float noise).
+    let monotone_settling = mags.windows(2).all(|w| w[1] <= w[0] + eps);
+    // Oscillating: frequent sign alternation relative to steps.
+    let nonzero = deltas.iter().filter(|d| d.abs() > eps).count();
+    let oscillating = sign_flips >= 2
+        && nonzero >= 3
+        && sign_flips >= nonzero.saturating_sub(1).saturating_sub(nonzero / 3);
+    let summary = if oscillating {
+        "oscillating (alternating deltas)"
+    } else if overshoot {
+        "overshoot/relax (non-monotone magnitude)"
+    } else if monotone_settling {
+        "monotone settling"
+    } else {
+        "mixed/non-monotone"
+    }
+    .to_string();
+    ConvergenceSignature {
+        steps,
+        sign_flips,
+        oscillating,
+        overshoot,
+        monotone_settling,
+        max_abs_delta,
+        last_abs_delta,
+        summary,
+    }
+}
+
+/// Analyse convergence over a sequence of reports (by net coherence delta).
+pub fn analyse_report_convergence(reports: &[OntologyDeltaReport]) -> ConvergenceSignature {
+    let deltas: Vec<f32> = reports.iter().map(|r| r.net_coherence_delta).collect();
+    analyse_convergence(&deltas)
+}
+
+/// Compare a baseline report to an ablated/alternative report (same mutation
+/// class) to surface coupling sensitivity as a diagnostic. Positive
+/// `delta_magnitude_change` means the alternative produced a larger net move.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AblationComparison {
+    pub baseline_net: f32,
+    pub alternative_net: f32,
+    pub net_difference: f32,
+    pub baseline_affected: usize,
+    pub alternative_affected: usize,
+    pub affected_difference: i64,
+    pub baseline_transitions: usize,
+    pub alternative_transitions: usize,
+    pub transition_difference: i64,
+}
+
+/// Compare two reports as an ablation/coupling diagnostic.
+pub fn compare_reports(
+    baseline: &OntologyDeltaReport,
+    alternative: &OntologyDeltaReport,
+) -> AblationComparison {
+    let baseline_net = baseline.net_coherence_delta;
+    let alternative_net = alternative.net_coherence_delta;
+    AblationComparison {
+        baseline_net,
+        alternative_net,
+        net_difference: alternative_net - baseline_net,
+        baseline_affected: baseline.affected_nodes.len(),
+        alternative_affected: alternative.affected_nodes.len(),
+        affected_difference: alternative.affected_nodes.len() as i64
+            - baseline.affected_nodes.len() as i64,
+        baseline_transitions: baseline.hypothesis_status_shifts.len(),
+        alternative_transitions: alternative.hypothesis_status_shifts.len(),
+        transition_difference: alternative.hypothesis_status_shifts.len() as i64
+            - baseline.hypothesis_status_shifts.len() as i64,
+    }
+}
+
+#[cfg(test)]
+mod convergence_tests {
+    use super::*;
+
+    #[test]
+    fn convergence_detects_oscillation_and_settling() {
+        let osc = analyse_convergence(&[0.2, -0.2, 0.15, -0.1, 0.05]);
+        assert!(osc.sign_flips >= 3);
+        assert!(
+            osc.oscillating || osc.summary.contains("oscillat") || osc.summary.contains("mixed")
+        );
+
+        let settle = analyse_convergence(&[0.4, 0.2, 0.1, 0.05]);
+        assert!(settle.monotone_settling);
+        assert!(!settle.oscillating);
+    }
+
+    #[test]
+    fn convergence_detects_overshoot() {
+        let sig = analyse_convergence(&[0.3, 0.1, 0.25, 0.05]);
+        assert!(sig.overshoot, "expected overshoot, got {:?}", sig.summary);
+        assert!(!sig.monotone_settling);
+    }
+
+    #[test]
+    fn compare_reports_is_pure_diagnostic() {
+        let base = OntologyDeltaReport {
+            mutation_source: OntologyMutation::new(
+                "n",
+                MutationOp::PropertySet {
+                    key: "k".into(),
+                    old_val: serde_json::Value::Null,
+                    new_val: serde_json::Value::Null,
+                },
+            ),
+            affected_nodes: vec![],
+            hypothesis_status_shifts: vec![],
+            net_coherence_delta: 0.1,
+            revision_walk: None,
+            adjudications: vec![],
+            propagation_steps: vec![],
+            params: None,
+        };
+        let alt = OntologyDeltaReport {
+            net_coherence_delta: -0.2,
+            ..base.clone()
+        };
+        let c = compare_reports(&base, &alt);
+        assert!((c.net_difference - (-0.3)).abs() < 1e-6);
     }
 }

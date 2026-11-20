@@ -34,11 +34,7 @@ pub struct GridView {
 
 impl GridView {
     pub fn from_classifier(classifier: &CellClassifier) -> Self {
-        let mut domains: Vec<String> = classifier
-            .cells
-            .iter()
-            .map(|c| c.domain.clone())
-            .collect();
+        let mut domains: Vec<String> = classifier.cells.iter().map(|c| c.domain.clone()).collect();
         let mut modes: Vec<String> = classifier.cells.iter().map(|c| c.mode.clone()).collect();
         domains.sort();
         domains.dedup();
@@ -54,11 +50,7 @@ impl GridView {
                 entries: c.entries.clone(),
             })
             .collect();
-        cells.sort_by(|a, b| {
-            a.domain
-                .cmp(&b.domain)
-                .then_with(|| a.mode.cmp(&b.mode))
-        });
+        cells.sort_by(|a, b| a.domain.cmp(&b.domain).then_with(|| a.mode.cmp(&b.mode)));
 
         let shape = [domains.len(), modes.len()];
         Self {

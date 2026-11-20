@@ -9,6 +9,8 @@ use crate::explanation::ExplanationReport;
 use crate::hypothesis::{HypothesisStatus, Prediction, Revision};
 use crate::models::Score;
 use crate::relation::TypedEdge;
+use crate::revision::AffectedSetExplanation;
+use crate::support::SupportSnapshot;
 
 /// Query request specifying the question being asked of Physis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,6 +35,16 @@ pub enum EpistemicQuery {
     FailedPredictions { limit: usize },
     /// List hypotheses with highest empirical support.
     HighestEmpiricalFitness { limit: usize },
+    /// Deterministic "why supported / affected now" snapshot for a hypothesis
+    /// (evidence/provenance intake citations, DependsOn dependents, recent audit
+    /// events). Read-only diagnostic, not a verdict.
+    WhySupported {
+        id: String,
+        recent_event_limit: usize,
+    },
+    /// DependsOn-selected affected hypothesis set for a node mutation origin
+    /// (read-only diagnostic / blast-radius explanation).
+    WhatIsAffectedBy { node_id: String },
 }
 
 /// Structured result of an epistemic query.
@@ -66,6 +78,15 @@ pub enum EpistemicQueryResult {
     FailedPredictionsList {
         failures: Vec<FailedPredictionSummary>,
     },
+    /// Support/affected snapshot for a hypothesis (None if unknown).
+    SupportSnapshot {
+        subject_id: String,
+        snapshot: Option<Box<SupportSnapshot>>,
+    },
+    /// DependsOn-affected set explanation for a node.
+    AffectedSet {
+        explanation: AffectedSetExplanation,
+    },
 }
 
 /// Compact summary of a hypothesis for ranked listings.
@@ -91,4 +112,25 @@ pub struct FailedPredictionSummary {
     pub actual_outcome: Option<String>,
     pub made_at: chrono::DateTime<chrono::Utc>,
     pub observed_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn support_and_affected_query_variants_are_well_formed() {
+        let q = EpistemicQuery::WhySupported {
+            id: "h1".into(),
+            recent_event_limit: 5,
+        };
+        let j = serde_json::to_value(&q).unwrap();
+        assert!(j.get("WhySupported").is_some());
+
+        let q2 = EpistemicQuery::WhatIsAffectedBy {
+            node_id: "n1".into(),
+        };
+        let j2 = serde_json::to_value(&q2).unwrap();
+        assert!(j2.get("WhatIsAffectedBy").is_some());
+    }
 }

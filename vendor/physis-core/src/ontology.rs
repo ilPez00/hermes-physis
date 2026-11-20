@@ -215,14 +215,8 @@ pub static BUILTIN_ONTOLOGIES: &[(&str, &str, &str)] = &[
 /// Extra domain-specific ontologies, always loaded into `custom_domains`.
 /// To add one: drop a JSON file in `config/` using the grid vocabulary.
 pub static EXTRA_ONTOLOGIES: &[(&str, &str)] = &[
-    (
-        "expanded",
-        include_str!("../config/expanded_ontology.json"),
-    ),
-    (
-        "agentic",
-        include_str!("../config/agentic_ontology.json"),
-    ),
+    ("expanded", include_str!("../config/expanded_ontology.json")),
+    ("agentic", include_str!("../config/agentic_ontology.json")),
     (
         "agent_world",
         include_str!("../config/agent_world_ontology.json"),

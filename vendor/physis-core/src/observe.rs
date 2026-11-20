@@ -1108,3 +1108,100 @@ mod tests {
         assert_eq!(v[0].subject, "3");
     }
 }
+
+// ── Dynamical-trace ingestion (observe-side glue) ───────────────────────
+//
+// Convert time-ordered trace points into observations so evolving external
+// traces (simulations, sensor/process streams) can enter the append-only log
+// and participate in replay/dream/promotion paths. Pure data adaptation:
+// no simulation, no network.
+
+use crate::history::TracePoint;
+
+/// Convert a trace point into an [`Observation`]. `t` is preserved as the
+/// observation timestamp when it looks like unix seconds or milliseconds;
+/// otherwise the current time is used and `t` is recorded in the body.
+pub fn observation_from_trace_point(p: &TracePoint, default_source: &str) -> Observation {
+    let source = p
+        .source
+        .clone()
+        .unwrap_or_else(|| default_source.to_string());
+    let subject = p
+        .subject
+        .clone()
+        .or_else(|| p.label.clone())
+        .unwrap_or_else(|| format!("trace:t={}", p.t));
+    let mut body = p.text.clone().unwrap_or_default();
+    if body.is_empty() {
+        if let Some(ref emb) = p.embedding {
+            body = format!("<embedding dim={}>", emb.len());
+        }
+    }
+    let mut o = Observation::new(source, subject)
+        .with_body(body)
+        .by("trace_ingest");
+    // Heuristic: treat plausible unix epoch seconds/millis as timestamps.
+    let ts = if p.t > 1_000_000_000_000 {
+        chrono::DateTime::from_timestamp_millis(p.t)
+    } else if p.t > 1_000_000_000 {
+        chrono::DateTime::from_timestamp(p.t, 0)
+    } else {
+        None
+    };
+    if let Some(at) = ts {
+        o.at = at;
+    }
+    o
+}
+
+/// Build observations from trace points in order (does not append).
+pub fn observations_from_trace(points: &[TracePoint], default_source: &str) -> Vec<Observation> {
+    points
+        .iter()
+        .map(|p| observation_from_trace_point(p, default_source))
+        .collect()
+}
+
+#[cfg(test)]
+mod trace_ingest_tests {
+    use super::*;
+    use crate::history::TracePoint;
+
+    #[test]
+    fn trace_point_becomes_observation_with_epoch_timestamp() {
+        let p = TracePoint {
+            t: 1_700_000_000,
+            text: Some("state=ok".into()),
+            subject: Some("motor".into()),
+            source: Some("sensor".into()),
+            ..Default::default()
+        };
+        let o = observation_from_trace_point(&p, "trace");
+        assert_eq!(o.source, "sensor");
+        assert_eq!(o.subject, "motor");
+        assert!(o.body.contains("state=ok"));
+        assert_eq!(o.produced_by.as_deref(), Some("trace_ingest"));
+        assert_eq!(o.at.timestamp(), 1_700_000_000);
+    }
+
+    #[test]
+    fn observations_from_trace_preserve_order_and_defaults() {
+        let pts = vec![
+            TracePoint {
+                t: 1,
+                label: Some("a".into()),
+                ..Default::default()
+            },
+            TracePoint {
+                t: 2,
+                label: Some("b".into()),
+                ..Default::default()
+            },
+        ];
+        let obs = observations_from_trace(&pts, "sim");
+        assert_eq!(obs.len(), 2);
+        assert_eq!(obs[0].subject, "a");
+        assert_eq!(obs[1].subject, "b");
+        assert!(obs.iter().all(|o| o.source == "sim"));
+    }
+}

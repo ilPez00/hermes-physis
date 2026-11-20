@@ -69,7 +69,7 @@ struct PersistedCoreOwned {
 }
 
 /// Central engine state.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PhysisCore {
     /// All coherence nodes keyed by ID.
     pub nodes: HashMap<String, CoherenceNode>,
@@ -529,6 +529,542 @@ impl PhysisCore {
             core.nodes.insert(n.id.clone(), n);
         }
         Ok(core)
+    }
+
+    /// Atomically persist this core's full state to `path` as JSON.
+    ///
+    /// Concrete persisted/write-path helper (integrates with staged workflows:
+    /// commit a [`crate::revision::StagedMutation`] into a target core, then
+    /// persist the committed target, or use
+    /// [`crate::revision::StagedMutation::commit_and_persist`] to do both with a
+    /// drift check and no in-memory/disk divergence on write failure).
+    pub fn save_to_path(&self, path: impl AsRef<std::path::Path>) -> anyhow::Result<()> {
+        crate::store::save_core(path.as_ref(), self)
+    }
+
+    /// Load a core from `path` (JSON, v1 bare-array or v2 object).
+    pub fn load_from_path(path: impl AsRef<std::path::Path>) -> anyhow::Result<Self> {
+        crate::store::load_core(path.as_ref())
+    }
+
+    /// Stage a mutation over a working clone, apply `f`, then commit into `self`.
+    ///
+    /// High-level in-memory workflow orchestration (drift-checked, audited commit
+    /// event). `f` must not certify truth or bypass contradiction/TMS semantics.
+    pub fn transact<F>(
+        &mut self,
+        description: impl Into<String>,
+        f: F,
+    ) -> Result<crate::revision::CommitReceipt, Box<crate::revision::DriftError>>
+    where
+        F: FnOnce(&mut Self),
+    {
+        crate::revision::transact(self, description, f)
+    }
+
+    /// Stage a mutation, apply `f`, commit, and atomically persist to `path`.
+    ///
+    /// Concrete persisted/write-path workflow: drift checked before write; on
+    /// refusal/write failure neither in-memory state nor `path` is modified.
+    pub fn transact_and_persist<F>(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        description: impl Into<String>,
+        f: F,
+    ) -> anyhow::Result<crate::revision::CommitReceipt>
+    where
+        F: FnOnce(&mut Self),
+    {
+        crate::revision::transact_and_persist(self, path, description, f)
+    }
+
+    /// Load from the default nodes path, or a fresh empty core if missing/empty.
+    pub fn load_default() -> Self {
+        crate::store::load_core_default()
+    }
+
+    /// Atomically persist to the default nodes path.
+    pub fn save_default(&self) -> anyhow::Result<()> {
+        crate::store::save_core_default(self)
+    }
+
+    /// Append-only: record an acted command/outcome into the epistemic audit as
+    /// observation events (intent + outcome). Records what was attempted/observed,
+    /// not verified truth/certification; creates no hypotheses, edges, or
+    /// contradictions.
+    pub fn record_acted(&mut self, acted: &crate::act::Acted) -> Vec<String> {
+        crate::act::record_acted_in_audit(self, acted)
+    }
+
+    /// Stage-record an acted outcome into core state and commit (in-memory
+    /// workflow orchestration, drift-checked, audited commit event).
+    pub fn transact_record_acted(
+        &mut self,
+        acted: &crate::act::Acted,
+        description: impl Into<String>,
+    ) -> Result<crate::revision::CommitReceipt, Box<crate::revision::DriftError>> {
+        self.transact(description, |w| {
+            w.record_acted(acted);
+        })
+    }
+
+    /// Stage-record an acted outcome, commit, and atomically persist to `path`.
+    /// On refusal/write failure neither in-memory state nor `path` is modified.
+    pub fn transact_record_acted_and_persist(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        acted: &crate::act::Acted,
+        description: impl Into<String>,
+    ) -> anyhow::Result<crate::revision::CommitReceipt> {
+        self.transact_and_persist(path, description, |w| {
+            w.record_acted(acted);
+        })
+    }
+
+    /// Stage a mutation, apply `f`, commit, and atomically persist to the
+    /// default core store path.
+    pub fn transact_and_persist_default<F>(
+        &mut self,
+        description: impl Into<String>,
+        f: F,
+    ) -> anyhow::Result<crate::revision::CommitReceipt>
+    where
+        F: FnOnce(&mut Self),
+    {
+        crate::revision::transact_and_persist_default(self, description, f)
+    }
+
+    /// Stage-record an acted outcome, commit, and atomically persist to the
+    /// default core store path.
+    pub fn transact_record_acted_and_persist_default(
+        &mut self,
+        acted: &crate::act::Acted,
+        description: impl Into<String>,
+    ) -> anyhow::Result<crate::revision::CommitReceipt> {
+        self.transact_and_persist_default(description, |w| {
+            w.record_acted(acted);
+        })
+    }
+
+    /// Stage and record append-only observer intake, commit, and atomically
+    /// persist to `path`. Returns commit receipt and intake receipts.
+    ///
+    /// Intake records what observers asserted (audit/watermarks) but never
+    /// verified truth; creates no hypotheses, edges, or contradictions.
+    pub fn transact_ingest_observer_claims_and_persist(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::epistemic::IntakeReceipt>,
+    )> {
+        let mut staged = crate::revision::StagedMutation::begin(self);
+        let receipts = staged
+            .working
+            .ingest_observer_claims(claims, stream_id, arrival);
+        let commit = staged.commit_and_persist(self, path, description)?;
+        Ok((commit, receipts))
+    }
+
+    /// Stage and record append-only observer intake, commit, and atomically
+    /// persist to the default core store path.
+    pub fn transact_ingest_observer_claims_and_persist_default(
+        &mut self,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::epistemic::IntakeReceipt>,
+    )> {
+        self.transact_ingest_observer_claims_and_persist(
+            crate::store::nodes_path(),
+            claims,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Stage and record append-only observer intake from an interchange
+    /// envelope, commit, and atomically persist to `path`. Candidate-only,
+    /// never verified truth; no hypotheses/edges/contradictions registered.
+    pub fn transact_ingest_envelope_and_persist(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::epistemic::IntakeReceipt>,
+    )> {
+        self.transact_ingest_observer_claims_and_persist(
+            path,
+            &envelope.claims,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Stage and record append-only observer intake from an interchange
+    /// envelope, commit, and atomically persist to the default core store path.
+    pub fn transact_ingest_envelope_and_persist_default(
+        &mut self,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::epistemic::IntakeReceipt>,
+    )> {
+        self.transact_ingest_envelope_and_persist(
+            crate::store::nodes_path(),
+            envelope,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Observe via `observer`, then stage+record append-only intake, commit, and
+    /// atomically persist to `path`. Observer extraction runs before staging; on
+    /// refusal/write failure neither in-memory state nor `path` is modified.
+    pub fn observe_and_ingest_and_persist(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::epistemic::IntakeReceipt>,
+    )> {
+        let claims = observer.ingest(inputs)?;
+        self.transact_ingest_observer_claims_and_persist(
+            path,
+            &claims,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Stage+record append-only intake and gate assessment, commit, and
+    /// atomically persist to `path`. Returns proposals/decisions (intake recorded,
+    /// no hypotheses/edges/contradictions registered, no certification/merge).
+    pub fn transact_assess_observer_claims_and_persist(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::gate::AssessedIntake>,
+    )> {
+        let mut staged = crate::revision::StagedMutation::begin(self);
+        let assessed =
+            staged
+                .working
+                .assess_observer_claims(claims, known_labels, stream_id, arrival);
+        let commit = staged.commit_and_persist(self, path, description)?;
+        Ok((commit, assessed))
+    }
+
+    /// Observe via `observer`, then stage+record append-only intake and gate
+    /// assessment, commit, and atomically persist to `path`. Observer extraction
+    /// runs before staging; no proposals are registered/certified/merged.
+    pub fn observe_and_assess_and_persist(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::gate::AssessedIntake>,
+    )> {
+        let claims = observer.ingest(inputs)?;
+        self.transact_assess_observer_claims_and_persist(
+            path,
+            &claims,
+            known_labels,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Stage+record append-only intake and gate assessment, commit, and
+    /// atomically persist to the default core store path.
+    pub fn transact_assess_observer_claims_and_persist_default(
+        &mut self,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::gate::AssessedIntake>,
+    )> {
+        self.transact_assess_observer_claims_and_persist(
+            crate::store::nodes_path(),
+            claims,
+            known_labels,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Observe via `observer`, then stage+record append-only intake, commit, and
+    /// atomically persist to the default core store path.
+    pub fn observe_and_ingest_and_persist_default(
+        &mut self,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::epistemic::IntakeReceipt>,
+    )> {
+        let claims = observer.ingest(inputs)?;
+        self.transact_ingest_observer_claims_and_persist_default(
+            &claims,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Observe via `observer`, then stage+record append-only intake and gate
+    /// assessment, commit, and atomically persist to the default core store path.
+    pub fn observe_and_assess_and_persist_default(
+        &mut self,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::gate::AssessedIntake>,
+    )> {
+        let claims = observer.ingest(inputs)?;
+        self.transact_assess_observer_claims_and_persist_default(
+            &claims,
+            known_labels,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Stage+record append-only intake and gate assessment from an interchange
+    /// envelope, commit, and atomically persist to `path`. Returns proposals/
+    /// decisions only (intake recorded) — no hypotheses/edges/contradictions
+    /// registered, no certification/merge.
+    pub fn transact_assess_envelope_and_persist(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::gate::AssessedIntake>,
+    )> {
+        self.transact_assess_observer_claims_and_persist(
+            path,
+            &envelope.claims,
+            known_labels,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Stage+record append-only intake and gate assessment from an interchange
+    /// envelope, commit, and atomically persist to the default core store path.
+    pub fn transact_assess_envelope_and_persist_default(
+        &mut self,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::gate::AssessedIntake>,
+    )> {
+        self.transact_assess_envelope_and_persist(
+            crate::store::nodes_path(),
+            envelope,
+            known_labels,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Stage and record append-only observer intake, commit (in-memory, no
+    /// persistence). Intake records what observers asserted (audit/watermarks)
+    /// but never verified truth; creates no hypotheses, edges, or contradictions.
+    /// On drift refusal neither in-memory state is modified.
+    pub fn transact_ingest_observer_claims(
+        &mut self,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> Result<
+        (
+            crate::revision::CommitReceipt,
+            Vec<crate::epistemic::IntakeReceipt>,
+        ),
+        Box<crate::revision::DriftError>,
+    > {
+        let mut staged = crate::revision::StagedMutation::begin(self);
+        let receipts = staged
+            .working
+            .ingest_observer_claims(claims, stream_id, arrival);
+        let commit = staged.commit(self, description)?;
+        Ok((commit, receipts))
+    }
+
+    /// Stage and record append-only observer intake from an interchange
+    /// envelope, commit (in-memory, no persistence). Candidate-only, never
+    /// verified truth; no hypotheses/edges/contradictions registered.
+    pub fn transact_ingest_envelope(
+        &mut self,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> Result<
+        (
+            crate::revision::CommitReceipt,
+            Vec<crate::epistemic::IntakeReceipt>,
+        ),
+        Box<crate::revision::DriftError>,
+    > {
+        self.transact_ingest_observer_claims(&envelope.claims, stream_id, arrival, description)
+    }
+
+    /// Stage+record append-only intake and gate assessment, commit (in-memory,
+    /// no persistence). Returns proposals/decisions (intake recorded, no
+    /// hypotheses/edges/contradictions registered, no certification/merge).
+    pub fn transact_assess_observer_claims(
+        &mut self,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> Result<
+        (
+            crate::revision::CommitReceipt,
+            Vec<crate::gate::AssessedIntake>,
+        ),
+        Box<crate::revision::DriftError>,
+    > {
+        let mut staged = crate::revision::StagedMutation::begin(self);
+        let assessed =
+            staged
+                .working
+                .assess_observer_claims(claims, known_labels, stream_id, arrival);
+        let commit = staged.commit(self, description)?;
+        Ok((commit, assessed))
+    }
+
+    /// Stage+record append-only intake and gate assessment from an interchange
+    /// envelope, commit (in-memory, no persistence). Returns proposals/decisions
+    /// only — no hypotheses/edges/contradictions registered, no certification/merge.
+    pub fn transact_assess_envelope(
+        &mut self,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> Result<
+        (
+            crate::revision::CommitReceipt,
+            Vec<crate::gate::AssessedIntake>,
+        ),
+        Box<crate::revision::DriftError>,
+    > {
+        self.transact_assess_observer_claims(
+            &envelope.claims,
+            known_labels,
+            stream_id,
+            arrival,
+            description,
+        )
+    }
+
+    /// Observe via `observer`, then stage+record append-only intake, commit
+    /// (in-memory, no persistence). Observer extraction runs before staging; on
+    /// refusal/drift/extraction failure in-memory state is not modified by the
+    /// transaction. Intake is candidate-only (never verified truth) and creates
+    /// no hypotheses, edges, or contradictions.
+    pub fn transact_observe_and_ingest(
+        &mut self,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::epistemic::IntakeReceipt>,
+    )> {
+        let claims = observer.ingest(inputs)?;
+        self.transact_ingest_observer_claims(&claims, stream_id, arrival, description)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))
+    }
+
+    /// Observe via `observer`, then stage+record append-only intake and gate
+    /// assessment, commit (in-memory, no persistence). Observer extraction runs
+    /// before staging; returns proposals/decisions only (intake recorded) with no
+    /// hypotheses/edges/contradictions registered and no certification/merge.
+    pub fn transact_observe_and_assess(
+        &mut self,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+        description: impl Into<String>,
+    ) -> anyhow::Result<(
+        crate::revision::CommitReceipt,
+        Vec<crate::gate::AssessedIntake>,
+    )> {
+        let claims = observer.ingest(inputs)?;
+        self.transact_assess_observer_claims(&claims, known_labels, stream_id, arrival, description)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 
     // ── First-Class Hypotheses ─────────────────────────────────────────
@@ -1033,7 +1569,116 @@ impl PhysisCore {
                 hyps.truncate(*limit);
                 EpistemicQueryResult::RankedHypotheses { hypotheses: hyps }
             }
+            EpistemicQuery::WhySupported {
+                id,
+                recent_event_limit,
+            } => EpistemicQueryResult::SupportSnapshot {
+                subject_id: id.clone(),
+                snapshot: self.support_snapshot(id, *recent_event_limit).map(Box::new),
+            },
+            EpistemicQuery::WhatIsAffectedBy { node_id } => EpistemicQueryResult::AffectedSet {
+                explanation: self.affected_set(node_id),
+            },
         }
+    }
+    /// Deterministic "why supported / affected now" snapshot for a hypothesis
+    /// (evidence/provenance intake citations, DependsOn-affected dependents,
+    /// recent audit events). Read-only diagnostic, not a verdict.
+    pub fn support_snapshot(
+        &self,
+        hypothesis_id: &str,
+        recent_event_limit: usize,
+    ) -> Option<crate::support::SupportSnapshot> {
+        crate::support::explain_support_snapshot(self, hypothesis_id, recent_event_limit)
+    }
+
+    /// Append-only intake of observer candidate claims (never verified truth):
+    /// advances per-stream watermarks and records `ObservationIngested` audit
+    /// events citing intake/assertion/extractor/source. Creates no hypotheses,
+    /// edges, or contradictions — gate proposals explicitly.
+    pub fn ingest_observer_claims(
+        &mut self,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<crate::epistemic::IntakeReceipt> {
+        crate::ingest::record_candidate_intake_batch(self, claims, stream_id, arrival)
+    }
+
+    /// DependsOn-affected hypothesis set for a node (read-only diagnostic).
+    pub fn affected_set(&self, node_id: &str) -> crate::revision::AffectedSetExplanation {
+        let nodes: Vec<_> = self.nodes.values().cloned().collect();
+        let hyps: Vec<_> = self.hypotheses.values().cloned().collect();
+        crate::revision::explain_affected_set(&nodes, &hyps, &self.edges, node_id)
+    }
+    /// Append-only intake plus gate assessment for observer claims: records what
+    /// was asserted (audit/watermarks) and returns proposals/decisions, but
+    /// registers no hypotheses/edges/contradictions and never certifies/merges.
+    pub fn assess_observer_claims(
+        &mut self,
+        claims: &[crate::ingest::CandidateClaimPacket],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<crate::gate::AssessedIntake> {
+        crate::gate::assess_claims_with_intake(self, claims, known_labels, stream_id, arrival)
+    }
+
+    /// Append-only intake from an interchange envelope (candidate-only, never
+    /// verified truth). Convenience over [`Self::ingest_observer_claims`]; no
+    /// hypotheses, edges, or contradictions are registered.
+    pub fn ingest_envelope(
+        &mut self,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<crate::epistemic::IntakeReceipt> {
+        self.ingest_observer_claims(&envelope.claims, stream_id, arrival)
+    }
+
+    /// Append-only intake plus gate assessment from an interchange envelope.
+    /// Records what was asserted and returns proposals/decisions only — no
+    /// hypotheses/edges/contradictions registered, never certifies/merges.
+    pub fn assess_envelope(
+        &mut self,
+        envelope: &crate::ingest::CandidateClaimEnvelope,
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<crate::gate::AssessedIntake> {
+        self.assess_observer_claims(&envelope.claims, known_labels, stream_id, arrival)
+    }
+
+    /// Observe inputs via a semantic observer, then append-only intake + gate
+    /// assessment (records what was asserted and returns proposals/decisions).
+    /// Registers no hypotheses/edges/contradictions and never certifies/merges.
+    /// Candidate-only: caller decides whether to record proposals explicitly.
+    pub fn observe_and_assess(
+        &mut self,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        known_labels: &[String],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+    ) -> anyhow::Result<Vec<crate::gate::AssessedIntake>> {
+        let claims = observer.ingest(inputs)?;
+        Ok(self.assess_observer_claims(&claims, known_labels, stream_id, arrival))
+    }
+
+    /// Observe inputs via a semantic observer, then append-only intake only
+    /// (records what was asserted: audit/watermarks). Registers no hypotheses,
+    /// edges, or contradictions and performs no gate assessment — use
+    /// [`Self::observe_and_assess`] or [`Self::assess_observer_claims`] when you
+    /// also want candidate proposals/decisions.
+    pub fn observe_and_ingest(
+        &mut self,
+        observer: &dyn crate::observer::SemanticObserver,
+        inputs: &[crate::observer::ObserverInput],
+        stream_id: &str,
+        arrival: chrono::DateTime<chrono::Utc>,
+    ) -> anyhow::Result<Vec<crate::epistemic::IntakeReceipt>> {
+        let claims = observer.ingest(inputs)?;
+        Ok(self.ingest_observer_claims(&claims, stream_id, arrival))
     }
 }
 
@@ -1472,5 +2117,534 @@ mod tests {
         assert!(explanation.contains("Confidence: 0.80"));
         assert!(explanation.contains("log"));
         assert!(explanation.contains("Fitness:"));
+    }
+
+    #[test]
+    fn query_coherence_support_and_affected_surfaces() {
+        use crate::coherence_query::{EpistemicQuery, EpistemicQueryResult};
+        use crate::relation::{RelationType, TypedEdge};
+
+        let mut core = PhysisCore::new();
+        let a = core.register_node_vec(vec![1.0, 0.0]);
+        let b = core.register_node_vec(vec![0.0, 1.0]);
+        core.add_edge(TypedEdge::new(
+            RelationType::DependsOn,
+            a.clone(),
+            b.clone(),
+        ));
+
+        let mut h = Hypothesis::new("subject", vec![]);
+        h.ontology_refs.push(b.clone());
+        h.add_supporting_evidence(Evidence::supports("s1", "ok").with_intake_id("i1"));
+        let hid = core.register_hypothesis(h);
+
+        let mut dep = Hypothesis::new("dependent", vec![]);
+        dep.ontology_refs.push(a.clone());
+        let dep_id = core.register_hypothesis(dep);
+
+        match core.query_coherence(&EpistemicQuery::WhySupported {
+            id: hid.clone(),
+            recent_event_limit: 10,
+        }) {
+            EpistemicQueryResult::SupportSnapshot {
+                subject_id,
+                snapshot,
+            } => {
+                assert_eq!(subject_id, hid);
+                let snap = snapshot.expect("snapshot");
+                assert_eq!(snap.evidence_intake_ids, vec!["i1".to_string()]);
+                assert!(snap.dependent_hypothesis_ids.contains(&dep_id));
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+
+        match core.query_coherence(&EpistemicQuery::WhatIsAffectedBy { node_id: b }) {
+            EpistemicQueryResult::AffectedSet { explanation } => {
+                assert!(explanation.affected_hypothesis_ids.contains(&hid));
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn assess_observer_claims_records_intake_without_registration() {
+        use crate::ingest::{
+            CandidateClaimPacket, ClaimPayload, ClaimSource, ExtractorInfo, ProposedRelation,
+        };
+        use crate::relation::RelationType;
+
+        let mut core = PhysisCore::new();
+        let rel = ProposedRelation {
+            subject: "x".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "y".into(),
+            fact: None,
+        };
+        let claim = CandidateClaimPacket {
+            id: "claim:auto".into(),
+            intake_id: Some("i1".into()),
+            source: ClaimSource {
+                uri: "d".into(),
+                span: Some("0..1".into()),
+                kind: None,
+            },
+            extractor: ExtractorInfo::new("obs"),
+            asserted_at: None,
+            observed_at: None,
+            raw_ref: Some("r".into()),
+            confidence: Some(0.5),
+            payload: ClaimPayload::Relation(rel),
+            lossy_fields: vec![],
+            extras: Default::default(),
+        }
+        .normalize();
+
+        let before_h = core.hypotheses.len();
+        let before_e = core.edges.len();
+        let before_ev = core.epistemic_audit.events.len();
+        let assessed = core.assess_observer_claims(&[claim], &[], "obs", chrono::Utc::now());
+        assert_eq!(assessed.len(), 1);
+        assert_eq!(core.hypotheses.len(), before_h);
+        assert_eq!(core.edges.len(), before_e);
+        assert_eq!(core.epistemic_audit.events.len(), before_ev + 1);
+        assert_eq!(
+            assessed[0].outcome.decision(),
+            crate::gate::GateDecision::AcceptCandidate
+        );
+    }
+
+    #[test]
+    fn observe_and_assess_intakes_and_returns_proposals_without_registration() {
+        use crate::ingest::{
+            CandidateClaimPacket, ClaimPayload, ClaimSource, EntityMention, ExtractorInfo,
+        };
+        use crate::observer::{MockObserver, ObserverInput};
+
+        let mut core = PhysisCore::new();
+        let pkt = CandidateClaimPacket {
+            id: "claim:auto".into(),
+            intake_id: Some("i1".into()),
+            source: ClaimSource {
+                uri: "doc://x".into(),
+                span: Some("0..1".into()),
+                kind: None,
+            },
+            extractor: ExtractorInfo::new("mock"),
+            asserted_at: None,
+            observed_at: None,
+            raw_ref: Some("r".into()),
+            confidence: Some(0.5),
+            payload: ClaimPayload::Entity(EntityMention {
+                label: "cache".into(),
+                refers_to: None,
+                concept: None,
+            }),
+            lossy_fields: vec![],
+            extras: Default::default(),
+        };
+        let obs = MockObserver::new("mock").with_fixed_packets(vec![pkt]);
+        let inputs = vec![ObserverInput {
+            source: "doc://x".into(),
+            content: "cache".into(),
+            kind: None,
+        }];
+        let before_h = core.hypotheses.len();
+        let before_e = core.edges.len();
+        let before_ev = core.epistemic_audit.events.len();
+        let assessed = core
+            .observe_and_assess(&obs, &inputs, &[], "mock-stream", chrono::Utc::now())
+            .unwrap();
+        assert_eq!(assessed.len(), 1);
+        assert_eq!(core.hypotheses.len(), before_h);
+        assert_eq!(core.edges.len(), before_e);
+        assert_eq!(core.epistemic_audit.events.len(), before_ev + 1);
+        // Conservative gate: entity claim with provenance is accepted as a candidate
+        // summary (gate_claim) — never truth, never registration.
+        assert_eq!(
+            assessed[0].outcome.decision(),
+            crate::gate::GateDecision::AcceptCandidate
+        );
+        assert!(core.contradictions.is_empty());
+    }
+
+    #[test]
+    fn observe_and_ingest_records_intake_without_assessment_registration() {
+        use crate::ingest::{
+            CandidateClaimPacket, ClaimPayload, ClaimSource, EntityMention, ExtractorInfo,
+        };
+        use crate::observer::{MockObserver, ObserverInput};
+
+        let mut core = PhysisCore::new();
+        let pkt = CandidateClaimPacket {
+            id: "claim:auto".into(),
+            intake_id: Some("i2".into()),
+            source: ClaimSource {
+                uri: "doc://y".into(),
+                span: Some("0..1".into()),
+                kind: None,
+            },
+            extractor: ExtractorInfo::new("mock"),
+            asserted_at: None,
+            observed_at: None,
+            raw_ref: Some("r".into()),
+            confidence: Some(0.5),
+            payload: ClaimPayload::Entity(EntityMention {
+                label: "cache".into(),
+                refers_to: None,
+                concept: None,
+            }),
+            lossy_fields: vec![],
+            extras: Default::default(),
+        };
+        let obs = MockObserver::new("mock").with_fixed_packets(vec![pkt]);
+        let inputs = vec![ObserverInput {
+            source: "doc://y".into(),
+            content: "cache".into(),
+            kind: None,
+        }];
+        let before_h = core.hypotheses.len();
+        let before_e = core.edges.len();
+        let before_ev = core.epistemic_audit.events.len();
+        let receipts = core
+            .observe_and_ingest(&obs, &inputs, "mock-stream", chrono::Utc::now())
+            .unwrap();
+        assert_eq!(receipts.len(), 1);
+        assert_eq!(core.hypotheses.len(), before_h);
+        assert_eq!(core.edges.len(), before_e);
+        assert_eq!(core.epistemic_audit.events.len(), before_ev + 1);
+        assert!(core.contradictions.is_empty());
+    }
+
+    #[test]
+    fn query_why_supported_unknown_returns_none_snapshot() {
+        use crate::coherence_query::{EpistemicQuery, EpistemicQueryResult};
+        let core = PhysisCore::new();
+        match core.query_coherence(&EpistemicQuery::WhySupported {
+            id: "missing".into(),
+            recent_event_limit: 5,
+        }) {
+            EpistemicQueryResult::SupportSnapshot {
+                subject_id,
+                snapshot,
+            } => {
+                assert_eq!(subject_id, "missing");
+                assert!(snapshot.is_none());
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn save_and_load_path_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("core.json");
+        let mut core = PhysisCore::new();
+        let mut h = Hypothesis::new("persist me", vec![]);
+        h.add_supporting_evidence(Evidence::supports("s", "ok"));
+        let hid = core.register_hypothesis(h);
+        core.save_to_path(&path).unwrap();
+        let loaded = PhysisCore::load_from_path(&path).unwrap();
+        assert_eq!(loaded.hypothesis(&hid).unwrap().statement, "persist me");
+    }
+
+    #[test]
+    fn transact_and_persist_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("core.json");
+        let mut core = PhysisCore::new();
+        let receipt = core
+            .transact_and_persist(&path, "seed", |w| {
+                w.register_node_vec(vec![1.0, 0.0]);
+            })
+            .unwrap();
+        assert!(receipt.audit_event_id.is_some());
+        assert_eq!(core.nodes.len(), 1);
+        let loaded = PhysisCore::load_from_path(&path).unwrap();
+        assert_eq!(loaded.nodes.len(), 1);
+
+        core.transact("in-memory", |w| {
+            w.register_node_vec(vec![0.0, 1.0]);
+        })
+        .unwrap();
+        assert_eq!(core.nodes.len(), 2);
+    }
+
+    #[test]
+    fn transact_record_acted_persists_observational_audit() {
+        use crate::act::Acted;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("core.json");
+        let mut core = PhysisCore::new();
+        let acted = Acted {
+            command: "echo hi".into(),
+            exit_code: Some(0),
+            duration_ms: 3,
+            stdout_lines: 1,
+            stderr_tail: String::new(),
+            bearing: vec![],
+            observed: vec![1, 2],
+        };
+        let before = core.epistemic_audit.events.len();
+        let receipt = core
+            .transact_record_acted_and_persist(&path, &acted, "record act")
+            .unwrap();
+        assert!(receipt.audit_event_id.is_some());
+        // 2 acted observation events + 1 commit transaction event
+        assert_eq!(core.epistemic_audit.events.len(), before + 3);
+        assert!(core.hypotheses.is_empty());
+        assert!(core.edges.is_empty());
+        let loaded = PhysisCore::load_from_path(&path).unwrap();
+        assert_eq!(
+            loaded.epistemic_audit.events.len(),
+            core.epistemic_audit.events.len()
+        );
+    }
+
+    #[test]
+    fn transact_ingest_and_assess_observer_claims_persist_without_registration() {
+        use crate::ingest::{
+            CandidateClaimPacket, ClaimPayload, ClaimSource, ExtractorInfo, ProposedRelation,
+        };
+        use crate::relation::RelationType;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("core.json");
+        let mut core = PhysisCore::new();
+
+        let claim = CandidateClaimPacket {
+            id: "claim:auto".into(),
+            intake_id: Some("i1".into()),
+            source: ClaimSource {
+                uri: "doc://s".into(),
+                span: Some("0..1".into()),
+                kind: None,
+            },
+            extractor: ExtractorInfo::new("obs"),
+            asserted_at: None,
+            observed_at: None,
+            raw_ref: Some("r".into()),
+            confidence: Some(0.6),
+            payload: ClaimPayload::Relation(ProposedRelation {
+                subject: "a".into(),
+                predicate: "depends_on".into(),
+                relation_type: Some(RelationType::DependsOn),
+                object: "b".into(),
+                fact: None,
+            }),
+            lossy_fields: vec![],
+            extras: Default::default(),
+        }
+        .normalize();
+
+        let before_h = core.hypotheses.len();
+        let before_e = core.edges.len();
+        let before_ev = core.epistemic_audit.events.len();
+
+        let (commit, receipts) = core
+            .transact_ingest_observer_claims_and_persist(
+                &path,
+                std::slice::from_ref(&claim),
+                "obs-stream",
+                chrono::Utc::now(),
+                "ingest claims",
+            )
+            .unwrap();
+        assert!(commit.audit_event_id.is_some());
+        assert_eq!(receipts.len(), 1);
+        assert_eq!(core.hypotheses.len(), before_h);
+        assert_eq!(core.edges.len(), before_e);
+        // 1 intake observation event + 1 commit transaction event
+        assert_eq!(core.epistemic_audit.events.len(), before_ev + 2);
+        let loaded = PhysisCore::load_from_path(&path).unwrap();
+        assert_eq!(
+            loaded.epistemic_audit.events.len(),
+            core.epistemic_audit.events.len()
+        );
+
+        // assess path: records intake + assessment but no registration
+        let dir2 = tempfile::tempdir().unwrap();
+        let path2 = dir2.path().join("core2.json");
+        let mut core2 = PhysisCore::new();
+        let before_ev2 = core2.epistemic_audit.events.len();
+        let (commit2, assessed) = core2
+            .transact_assess_observer_claims_and_persist(
+                &path2,
+                std::slice::from_ref(&claim),
+                &[],
+                "obs-stream",
+                chrono::Utc::now(),
+                "assess claims",
+            )
+            .unwrap();
+        assert!(commit2.audit_event_id.is_some());
+        assert_eq!(assessed.len(), 1);
+        assert!(matches!(
+            assessed[0].outcome,
+            crate::gate::GateOutcome::Relation(_)
+        ));
+        assert_eq!(core2.hypotheses.len(), 0);
+        assert_eq!(core2.edges.len(), 0);
+        assert_eq!(core2.epistemic_audit.events.len(), before_ev2 + 2);
+        let loaded2 = PhysisCore::load_from_path(&path2).unwrap();
+        assert_eq!(
+            loaded2.epistemic_audit.events.len(),
+            core2.epistemic_audit.events.len()
+        );
+    }
+}
+
+#[cfg(test)]
+mod envelope_workflow_tests {
+    use super::*;
+    use crate::ingest::{
+        CandidateClaimEnvelope, CandidateClaimPacket, ClaimPayload, ClaimSource, ExtractorInfo,
+        ProposedRelation,
+    };
+    use crate::relation::RelationType;
+
+    fn sample_claim() -> CandidateClaimPacket {
+        CandidateClaimPacket {
+            id: "claim:auto".into(),
+            intake_id: Some("i-env".into()),
+            source: ClaimSource {
+                uri: "doc://env".into(),
+                span: Some("0..1".into()),
+                kind: None,
+            },
+            extractor: ExtractorInfo::new("obs"),
+            asserted_at: None,
+            observed_at: None,
+            raw_ref: Some("r".into()),
+            confidence: Some(0.6),
+            payload: ClaimPayload::Relation(ProposedRelation {
+                subject: "a".into(),
+                predicate: "depends_on".into(),
+                relation_type: Some(RelationType::DependsOn),
+                object: "b".into(),
+                fact: None,
+            }),
+            lossy_fields: vec![],
+            extras: Default::default(),
+        }
+        .normalize()
+    }
+
+    #[test]
+    fn ingest_and_assess_envelope_convenience_without_registration() {
+        let mut env = CandidateClaimEnvelope::new("obs-env");
+        env.claims.push(sample_claim());
+        let env = env.normalize();
+
+        let mut core = PhysisCore::new();
+        let before_h = core.hypotheses.len();
+        let before_e = core.edges.len();
+        let before_ev = core.epistemic_audit.events.len();
+        let receipts = core.ingest_envelope(&env, "obs-stream", chrono::Utc::now());
+        assert_eq!(receipts.len(), 1);
+        assert_eq!(core.hypotheses.len(), before_h);
+        assert_eq!(core.edges.len(), before_e);
+        assert_eq!(core.epistemic_audit.events.len(), before_ev + 1);
+
+        let mut core2 = PhysisCore::new();
+        let before_ev2 = core2.epistemic_audit.events.len();
+        let assessed = core2.assess_envelope(&env, &[], "obs-stream", chrono::Utc::now());
+        assert_eq!(assessed.len(), 1);
+        assert!(matches!(
+            assessed[0].outcome,
+            crate::gate::GateOutcome::Relation(_)
+        ));
+        assert_eq!(core2.hypotheses.len(), 0);
+        assert_eq!(core2.edges.len(), 0);
+        assert_eq!(core2.contradictions.len(), 0);
+        // intake recorded as part of assessment
+        assert!(core2.epistemic_audit.events.len() >= before_ev2 + 1);
+
+        // in-memory staged transact variants (audited commit event, no persistence)
+        let mut core3 = PhysisCore::new();
+        let before_ev3 = core3.epistemic_audit.events.len();
+        let (commit3, receipts3) = core3
+            .transact_ingest_envelope(&env, "obs-stream", chrono::Utc::now(), "ingest env")
+            .unwrap();
+        assert!(commit3.audit_event_id.is_some());
+        assert_eq!(receipts3.len(), 1);
+        assert_eq!(core3.hypotheses.len(), 0);
+        assert_eq!(core3.edges.len(), 0);
+        // intake + commit transaction event
+        assert_eq!(core3.epistemic_audit.events.len(), before_ev3 + 2);
+
+        let mut core4 = PhysisCore::new();
+        let before_ev4 = core4.epistemic_audit.events.len();
+        let (commit4, assessed4) = core4
+            .transact_assess_envelope(&env, &[], "obs-stream", chrono::Utc::now(), "assess env")
+            .unwrap();
+        assert!(commit4.audit_event_id.is_some());
+        assert_eq!(assessed4.len(), 1);
+        assert!(matches!(
+            assessed4[0].outcome,
+            crate::gate::GateOutcome::Relation(_)
+        ));
+        assert_eq!(core4.hypotheses.len(), 0);
+        assert_eq!(core4.edges.len(), 0);
+        assert_eq!(core4.contradictions.len(), 0);
+        assert_eq!(core4.epistemic_audit.events.len(), before_ev4 + 2);
+
+        // in-memory staged observe+transact variants (extraction before staging)
+        struct FixedObserver {
+            claims: Vec<CandidateClaimPacket>,
+        }
+        impl crate::observer::SemanticObserver for FixedObserver {
+            fn observer_id(&self) -> &str {
+                "fixed"
+            }
+            fn ingest(
+                &self,
+                _inputs: &[crate::observer::ObserverInput],
+            ) -> anyhow::Result<Vec<CandidateClaimPacket>> {
+                Ok(self.claims.clone())
+            }
+        }
+        let observer = FixedObserver {
+            claims: env.claims.clone(),
+        };
+        let mut core5 = PhysisCore::new();
+        let before_ev5 = core5.epistemic_audit.events.len();
+        let (commit5, receipts5) = core5
+            .transact_observe_and_ingest(
+                &observer,
+                &[],
+                "obs-stream",
+                chrono::Utc::now(),
+                "observe ingest",
+            )
+            .unwrap();
+        assert!(commit5.audit_event_id.is_some());
+        assert_eq!(receipts5.len(), 1);
+        assert_eq!(core5.hypotheses.len(), 0);
+        assert_eq!(core5.edges.len(), 0);
+        assert_eq!(core5.epistemic_audit.events.len(), before_ev5 + 2);
+
+        let mut core6 = PhysisCore::new();
+        let before_ev6 = core6.epistemic_audit.events.len();
+        let (commit6, assessed6) = core6
+            .transact_observe_and_assess(
+                &observer,
+                &[],
+                &[],
+                "obs-stream",
+                chrono::Utc::now(),
+                "observe assess",
+            )
+            .unwrap();
+        assert!(commit6.audit_event_id.is_some());
+        assert_eq!(assessed6.len(), 1);
+        assert!(matches!(
+            assessed6[0].outcome,
+            crate::gate::GateOutcome::Relation(_)
+        ));
+        assert_eq!(core6.hypotheses.len(), 0);
+        assert_eq!(core6.edges.len(), 0);
+        assert_eq!(core6.contradictions.len(), 0);
+        assert_eq!(core6.epistemic_audit.events.len(), before_ev6 + 2);
     }
 }

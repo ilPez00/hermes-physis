@@ -57,38 +57,368 @@ fn alpha_weight() -> f32 {
 /// that share vocabulary ("service", "review", "audit"); these are generic
 /// nouns, not fixture answers, and they only break near-ties (max +0.15).
 const DOMAIN_LEXICON: &[(&str, &[&str])] = &[
-    ("HEAL", &["patient", "health", "medical", "recovery", "therapy", "care", "wellbeing", "symptom", "treatment", "injury", "clinic", "mental"]),
-    ("CONSTRUCT", &["build", "code", "deploy", "deployment", "architecture", "software", "system", "pipeline", "release", "repository", "api", "database", "migration", "compile", "test"]),
-    ("FABRICATE", &["manufacturing", "production", "machine", "part", "assembly", "line", "material", "factory", "pump", "seal", "inventory", "equipment", "fabricate", "weld"]),
-    ("BOND", &["customer", "client", "relationship", "team", "people", "trust", "community", "partner", "stakeholder", "user", "feedback", "onboarding", "colleague"]),
-    ("STUDY", &["research", "study", "learn", "knowledge", "paper", "data", "analysis", "experiment", "question", "source", "documentation", "evidence", "literature"]),
-    ("DEFEND", &["security", "threat", "attack", "vulnerability", "incident", "firewall", "token", "credential", "breach", "malware", "risk", "attack", "exploit", "patch", "secret"]),
-    ("EXCHANGE", &["trade", "buy", "sell", "price", "invoice", "payment", "contract", "order", "vendor", "cost", "billing", "account", "shipping", "delivery", "purchase", "refund"]),
-    ("GOVERN", &["policy", "compliance", "rule", "approval", "regulation", "governance", "budget", "authority", "audit", "control", "law", "company", "permission", "quota"]),
+    (
+        "HEAL",
+        &[
+            "patient",
+            "health",
+            "medical",
+            "recovery",
+            "therapy",
+            "care",
+            "wellbeing",
+            "symptom",
+            "treatment",
+            "injury",
+            "clinic",
+            "mental",
+        ],
+    ),
+    (
+        "CONSTRUCT",
+        &[
+            "build",
+            "code",
+            "deploy",
+            "deployment",
+            "architecture",
+            "software",
+            "system",
+            "pipeline",
+            "release",
+            "repository",
+            "api",
+            "database",
+            "migration",
+            "compile",
+            "test",
+        ],
+    ),
+    (
+        "FABRICATE",
+        &[
+            "manufacturing",
+            "production",
+            "machine",
+            "part",
+            "assembly",
+            "line",
+            "material",
+            "factory",
+            "pump",
+            "seal",
+            "inventory",
+            "equipment",
+            "fabricate",
+            "weld",
+        ],
+    ),
+    (
+        "BOND",
+        &[
+            "customer",
+            "client",
+            "relationship",
+            "team",
+            "people",
+            "trust",
+            "community",
+            "partner",
+            "stakeholder",
+            "user",
+            "feedback",
+            "onboarding",
+            "colleague",
+        ],
+    ),
+    (
+        "STUDY",
+        &[
+            "research",
+            "study",
+            "learn",
+            "knowledge",
+            "paper",
+            "data",
+            "analysis",
+            "experiment",
+            "question",
+            "source",
+            "documentation",
+            "evidence",
+            "literature",
+        ],
+    ),
+    (
+        "DEFEND",
+        &[
+            "security",
+            "threat",
+            "attack",
+            "vulnerability",
+            "incident",
+            "firewall",
+            "token",
+            "credential",
+            "breach",
+            "malware",
+            "risk",
+            "attack",
+            "exploit",
+            "patch",
+            "secret",
+        ],
+    ),
+    (
+        "EXCHANGE",
+        &[
+            "trade", "buy", "sell", "price", "invoice", "payment", "contract", "order", "vendor",
+            "cost", "billing", "account", "shipping", "delivery", "purchase", "refund",
+        ],
+    ),
+    (
+        "GOVERN",
+        &[
+            "policy",
+            "compliance",
+            "rule",
+            "approval",
+            "regulation",
+            "governance",
+            "budget",
+            "authority",
+            "audit",
+            "control",
+            "law",
+            "company",
+            "permission",
+            "quota",
+        ],
+    ),
 ];
 
 /// Mode cues: task verbs. These are the words agents actually use when they
 /// ask for work, and they are much more stable than cell-level embeddings.
 const MODE_LEXICON: &[(&str, &[&str])] = &[
-    ("LIFT", &["raise", "increase", "expand", "scale", "upgrade", "boost", "grow", "quota", "limit"]),
-    ("REST", &["pause", "freeze", "stop", "halt", "suspend", "wait", "rest", "break", "delay", "defer", "recovery day"]),
-    ("WALK", &["walk", "tour", "visit", "show around", "walkthrough", "inspect", "audit"]),
-    ("WORK", &["run", "process", "execute", "compute", "calculate", "handle", "operate", "apply", "estimate"]),
-    ("CREATE", &["create", "draft", "write", "make", "generate", "design", "compose", "produce", "author"]),
-    ("LEARN", &["learn", "study", "read", "research", "understand", "explore", "absorb"]),
-    ("DESTROY", &["delete", "remove", "revoke", "destroy", "tear down", "dismantle", "purge", "wipe", "kill", "drop", "retire"]),
-    ("SENSE", &["detect", "monitor", "observe", "watch", "scan", "sense", "alert", "measure", "signal"]),
-    ("GUIDE", &["guide", "manual", "playbook", "runbook", "reference", "handbook", "how-to"]),
-    ("PLAY", &["simulate", "practice", "drill", "rehearsal", "sandbox", "roleplay", "experiment"]),
-    ("BRAINSTORM", &["brainstorm", "ideate", "ideas", "names", "options", "possibilities", "slogan"]),
-    ("MAINTAIN", &["maintain", "service", "repair", "replace", "patch", "update", "upgrade", "sustain", "tune", "fix"]),
-    ("MOVE", &["move", "migrate", "transfer", "route", "shift", "relocate", "failover", "hand over"]),
-    ("PLAN", &["plan", "schedule", "roadmap", "strategy", "sequence", "forecast", "outline", "budget"]),
-    ("PERSUADE", &["persuade", "convince", "argue", "pitch", "sell", "advocate", "case for", "influence"]),
-    ("TEACH", &["teach", "train", "tutorial", "educate", "explain", "onboard", "walk through"]),
-    ("DELEGATE", &["delegate", "assign", "hand off", "hand to", "ask the", "refer", "escalate", "outsource"]),
-    ("REFLECT", &["review", "retrospective", "postmortem", "post-mortem", "debrief", "reflect", "feedback", "lessons", "went well"]),
-    ("VERIFY", &["verify", "check", "confirm", "validate", "test", "assert", "prove", "ensure", "reconcile", "match", "measure"]),
+    (
+        "LIFT",
+        &[
+            "raise", "increase", "expand", "scale", "upgrade", "boost", "grow", "quota", "limit",
+        ],
+    ),
+    (
+        "REST",
+        &[
+            "pause",
+            "freeze",
+            "stop",
+            "halt",
+            "suspend",
+            "wait",
+            "rest",
+            "break",
+            "delay",
+            "defer",
+            "recovery day",
+        ],
+    ),
+    (
+        "WALK",
+        &[
+            "walk",
+            "tour",
+            "visit",
+            "show around",
+            "walkthrough",
+            "inspect",
+            "audit",
+        ],
+    ),
+    (
+        "WORK",
+        &[
+            "run",
+            "process",
+            "execute",
+            "compute",
+            "calculate",
+            "handle",
+            "operate",
+            "apply",
+            "estimate",
+        ],
+    ),
+    (
+        "CREATE",
+        &[
+            "create", "draft", "write", "make", "generate", "design", "compose", "produce",
+            "author",
+        ],
+    ),
+    (
+        "LEARN",
+        &[
+            "learn",
+            "study",
+            "read",
+            "research",
+            "understand",
+            "explore",
+            "absorb",
+        ],
+    ),
+    (
+        "DESTROY",
+        &[
+            "delete",
+            "remove",
+            "revoke",
+            "destroy",
+            "tear down",
+            "dismantle",
+            "purge",
+            "wipe",
+            "kill",
+            "drop",
+            "retire",
+        ],
+    ),
+    (
+        "SENSE",
+        &[
+            "detect", "monitor", "observe", "watch", "scan", "sense", "alert", "measure", "signal",
+        ],
+    ),
+    (
+        "GUIDE",
+        &[
+            "guide",
+            "manual",
+            "playbook",
+            "runbook",
+            "reference",
+            "handbook",
+            "how-to",
+        ],
+    ),
+    (
+        "PLAY",
+        &[
+            "simulate",
+            "practice",
+            "drill",
+            "rehearsal",
+            "sandbox",
+            "roleplay",
+            "experiment",
+        ],
+    ),
+    (
+        "BRAINSTORM",
+        &[
+            "brainstorm",
+            "ideate",
+            "ideas",
+            "names",
+            "options",
+            "possibilities",
+            "slogan",
+        ],
+    ),
+    (
+        "MAINTAIN",
+        &[
+            "maintain", "service", "repair", "replace", "patch", "update", "upgrade", "sustain",
+            "tune", "fix",
+        ],
+    ),
+    (
+        "MOVE",
+        &[
+            "move",
+            "migrate",
+            "transfer",
+            "route",
+            "shift",
+            "relocate",
+            "failover",
+            "hand over",
+        ],
+    ),
+    (
+        "PLAN",
+        &[
+            "plan", "schedule", "roadmap", "strategy", "sequence", "forecast", "outline", "budget",
+        ],
+    ),
+    (
+        "PERSUADE",
+        &[
+            "persuade",
+            "convince",
+            "argue",
+            "pitch",
+            "sell",
+            "advocate",
+            "case for",
+            "influence",
+        ],
+    ),
+    (
+        "TEACH",
+        &[
+            "teach",
+            "train",
+            "tutorial",
+            "educate",
+            "explain",
+            "onboard",
+            "walk through",
+        ],
+    ),
+    (
+        "DELEGATE",
+        &[
+            "delegate",
+            "assign",
+            "hand off",
+            "hand to",
+            "ask the",
+            "refer",
+            "escalate",
+            "outsource",
+        ],
+    ),
+    (
+        "REFLECT",
+        &[
+            "review",
+            "retrospective",
+            "postmortem",
+            "post-mortem",
+            "debrief",
+            "reflect",
+            "feedback",
+            "lessons",
+            "went well",
+        ],
+    ),
+    (
+        "VERIFY",
+        &[
+            "verify",
+            "check",
+            "confirm",
+            "validate",
+            "test",
+            "assert",
+            "prove",
+            "ensure",
+            "reconcile",
+            "match",
+            "measure",
+        ],
+    ),
 ];
 
 fn term_hits(query: &str, terms: &[&str]) -> usize {
@@ -692,8 +1022,8 @@ impl CellClassifier {
                 } else {
                     1.0
                 };
-                let score = (alpha * ds + beta * ms + (1.0 - alpha - beta) * cell_score)
-                    * pop_weight;
+                let score =
+                    (alpha * ds + beta * ms + (1.0 - alpha - beta) * cell_score) * pop_weight;
                 CellScore {
                     domain: cell.domain.clone(),
                     mode: cell.mode.clone(),
@@ -791,8 +1121,8 @@ impl CellClassifier {
 
     /// Embed `text` and classify it in one call.
     pub fn classify_text(&self, text: &str, embedder: &dyn VectorEmbed) -> Vec<CellScore> {
-        let prefix = std::env::var("PHYSIS_QUERY_PREFIX")
-            .unwrap_or_else(|_| "Instruction: ".to_string());
+        let prefix =
+            std::env::var("PHYSIS_QUERY_PREFIX").unwrap_or_else(|_| "Instruction: ".to_string());
         let query = if prefix.is_empty() {
             text.to_string()
         } else {

@@ -312,3 +312,214 @@ mod tests {
         assert!(importer_for(Path::new("data.csv")).is_none());
     }
 }
+
+// ── Dynamical-trace ingestion (dependency-free adapters) ─────────────────
+//
+// A "trace" is a time-ordered sequence of observations/states — the
+// substrate-agnostic form Lenia/CQFT-style evolution takes once simulation
+// stays external. These helpers normalize caller-supplied records into forms
+// `becoming` (occurrences), temporal replay, and dream/history analysis can
+// consume. No simulator, no field equations, no model downloads.
+
+use serde::{Deserialize, Serialize};
+
+/// One point in a time-ordered trace.
+///
+/// `t` is an ordering key (sequence index, unix millis, or any monotonic
+/// scalar the caller chooses) — `becoming::Occurrence::at` is i64. Provide at
+/// least one of `embedding` or `text` for semantic use; `embedding` wins when
+/// both are present and an embedder is also supplied.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TracePoint {
+    /// Ordering key (monotonic within a trace for order-aware analysis).
+    #[serde(default)]
+    pub t: i64,
+    #[serde(default)]
+    pub text: Option<String>,
+    #[serde(default)]
+    pub embedding: Option<Vec<f32>>,
+    #[serde(default)]
+    pub subject: Option<String>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub label: Option<String>,
+}
+
+impl TracePoint {
+    pub fn at(t: i64) -> Self {
+        Self {
+            t,
+            ..Self::default()
+        }
+    }
+}
+
+/// A parsed, time-ordered trace (sorted by `t`, stable by original index).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DynamicalTrace {
+    pub points: Vec<TracePoint>,
+}
+
+impl DynamicalTrace {
+    /// Parse a JSON array of [`TracePoint`]s.
+    pub fn from_json_array(json: &str) -> anyhow::Result<Self> {
+        let mut points: Vec<TracePoint> = serde_json::from_str(json)?;
+        stabilize_order(&mut points);
+        Ok(Self { points })
+    }
+
+    /// Parse JSON Lines / NDJSON (one [`TracePoint`] per non-empty line).
+    /// Malformed lines are skipped (loss-tolerant, like other history importers).
+    pub fn from_jsonl(input: &str) -> Vec<TracePoint> {
+        let mut out = Vec::new();
+        for line in input.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            if let Ok(p) = serde_json::from_str::<TracePoint>(line) {
+                out.push(p);
+            }
+        }
+        stabilize_order(&mut out);
+        out
+    }
+
+    /// Convert to [`crate::becoming::Occurrence`]s, using `embedding` when
+    /// present or `embedder` over `text` when supplied. Points with neither a
+    /// usable embedding nor embeddable text are skipped. Order is preserved.
+    pub fn to_occurrences(
+        &self,
+        embedder: Option<&dyn crate::embed::VectorEmbed>,
+    ) -> Vec<crate::becoming::Occurrence> {
+        points_to_occurrences(&self.points, embedder)
+    }
+
+    /// Convert to [`crate::vault::VaultDoc`]s for map/retrieval-style analysis.
+    /// Points without textual content are rendered from subject/label/t.
+    pub fn to_vault_docs(&self, prefix: &str) -> Vec<crate::vault::VaultDoc> {
+        self.points
+            .iter()
+            .enumerate()
+            .map(|(i, p)| {
+                let title = p
+                    .label
+                    .clone()
+                    .or_else(|| p.subject.clone())
+                    .unwrap_or_else(|| format!("t={}", p.t));
+                let mut body = String::new();
+                if let Some(ref txt) = p.text {
+                    body.push_str(txt);
+                } else {
+                    body.push_str(&format!("trace point t={} subject={:?}", p.t, p.subject));
+                }
+                if let Some(ref src) = p.source {
+                    body.push_str(&format!("\nsource: {src}"));
+                }
+                crate::vault::VaultDoc {
+                    source: format!("{prefix}:{i}"),
+                    title,
+                    body,
+                    headings: vec![],
+                }
+            })
+            .collect()
+    }
+}
+
+fn stabilize_order(points: &mut Vec<TracePoint>) {
+    // Stable sort by t preserves caller order for ties (important for
+    // deterministic order-aware/replay analysis).
+    points.sort_by_key(|p| p.t);
+}
+
+/// Convert trace points to `becoming::Occurrence`s (skips points with no vector).
+pub fn points_to_occurrences(
+    points: &[TracePoint],
+    embedder: Option<&dyn crate::embed::VectorEmbed>,
+) -> Vec<crate::becoming::Occurrence> {
+    let mut out = Vec::new();
+    for p in points {
+        let ctx = if let Some(ref emb) = p.embedding {
+            if emb.is_empty() {
+                None
+            } else {
+                Some(emb.clone())
+            }
+        } else if let (Some(ref txt), Some(e)) = (&p.text, embedder) {
+            let v = e.embed(txt);
+            if v.is_empty() {
+                None
+            } else {
+                Some(v)
+            }
+        } else {
+            None
+        };
+        if let Some(context) = ctx {
+            out.push(crate::becoming::Occurrence { at: p.t, context });
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod trace_tests {
+    use super::*;
+    use crate::embed::RandomProjectionEmbedder;
+
+    #[test]
+    fn json_array_trace_is_time_ordered_and_deterministic() {
+        let json = r#"[
+            {"t": 3, "text": "gamma", "subject": "s"},
+            {"t": 1, "text": "alpha", "subject": "s"},
+            {"t": 2, "text": "beta", "subject": "s"}
+        ]"#;
+        let tr = DynamicalTrace::from_json_array(json).unwrap();
+        assert_eq!(tr.points.len(), 3);
+        assert_eq!(tr.points[0].t, 1);
+        assert_eq!(tr.points[1].t, 2);
+        assert_eq!(tr.points[2].t, 3);
+        let emb = RandomProjectionEmbedder::new(32);
+        let occ = tr.to_occurrences(Some(&emb));
+        assert_eq!(occ.len(), 3);
+        assert_eq!(occ[0].at, 1);
+        assert_eq!(occ[2].at, 3);
+    }
+
+    #[test]
+    fn jsonl_trace_skips_malformed_and_keeps_embeddings() {
+        let input = "{\"t\":2,\"embedding\":[1.0,0.0,0.0]}\nnot json\n{\"t\":1,\"embedding\":[0.0,1.0,0.0]}\n";
+        let pts = DynamicalTrace::from_jsonl(input);
+        assert_eq!(pts.len(), 2);
+        assert_eq!(pts[0].t, 1, "must be sorted by t");
+        let tr = DynamicalTrace { points: pts };
+        let occ = tr.to_occurrences(None);
+        assert_eq!(occ.len(), 2);
+        assert_eq!(occ[0].context, vec![0.0, 1.0, 0.0]);
+    }
+
+    #[test]
+    fn trace_to_vault_docs_is_loss_tolerant() {
+        let tr = DynamicalTrace {
+            points: vec![
+                TracePoint {
+                    t: 5,
+                    text: Some("hello world".into()),
+                    label: Some("msg".into()),
+                    ..Default::default()
+                },
+                TracePoint {
+                    t: 6,
+                    subject: Some("sensor-x".into()),
+                    ..Default::default()
+                },
+            ],
+        };
+        let docs = tr.to_vault_docs("trace");
+        assert_eq!(docs.len(), 2);
+        assert!(docs[0].body.contains("hello world"));
+        assert!(docs[1].title.contains("sensor-x") || docs[1].body.contains("sensor-x"));
+    }
+}

@@ -47,7 +47,11 @@ use serde::{Deserialize, Serialize};
 /// Something already believed that bears on what is about to be done.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bearing {
+    /// Short display id (prefix of the hypothesis id).
     pub id: String,
+    /// Full hypothesis id (for support/affected snapshot lookup). Empty in older records.
+    #[serde(default)]
+    pub hypothesis_id: String,
     pub status: String,
     pub statement: String,
     pub relevance: f32,
@@ -83,6 +87,50 @@ pub struct Acted {
 impl Acted {
     pub fn warnings(&self) -> Vec<&Bearing> {
         self.bearing.iter().filter(|b| b.is_warning()).collect()
+    }
+
+    /// Deterministic "why supported / affected now" snapshots for all
+    /// bearings, in relevance order. Read-only diagnostic (no verdict/
+    /// certification); bearings with no resolvable hypothesis id (e.g. legacy
+    /// records) yield `None`.
+    pub fn support_snapshots(
+        &self,
+        core: &crate::core::PhysisCore,
+        recent_event_limit: usize,
+    ) -> Vec<(Bearing, Option<crate::support::SupportSnapshot>)> {
+        self.bearing
+            .iter()
+            .map(|b| {
+                let snap = if b.hypothesis_id.is_empty() {
+                    None
+                } else {
+                    core.support_snapshot(&b.hypothesis_id, recent_event_limit)
+                };
+                (b.clone(), snap)
+            })
+            .collect()
+    }
+
+    /// Deterministic "why supported / affected now" snapshots for warning
+    /// bearings (claims already contradicted/failed or with unscored predictions).
+    /// Read-only diagnostic (no verdict/certification); bearings with no
+    /// resolvable hypothesis id (e.g. legacy records) yield `None`.
+    pub fn warning_support_snapshots(
+        &self,
+        core: &crate::core::PhysisCore,
+        recent_event_limit: usize,
+    ) -> Vec<(Bearing, Option<crate::support::SupportSnapshot>)> {
+        self.warnings()
+            .into_iter()
+            .map(|b| {
+                let snap = if b.hypothesis_id.is_empty() {
+                    None
+                } else {
+                    core.support_snapshot(&b.hypothesis_id, recent_event_limit)
+                };
+                (b.clone(), snap)
+            })
+            .collect()
     }
 
     pub fn render(&self) -> String {
@@ -130,6 +178,50 @@ impl Acted {
     }
 }
 
+/// Record an acted command/outcome into the core epistemic audit as append-only
+/// observation events (intent + outcome). This is a record of what was
+/// attempted/observed, not a claim of verified truth, certification, or domain
+/// success beyond the captured exit/duration/stderr tail.
+///
+/// Returns the ids of the recorded audit events (2 when both recorded).
+pub fn record_acted_in_audit(core: &mut crate::core::PhysisCore, acted: &Acted) -> Vec<String> {
+    let mut ids = Vec::with_capacity(2);
+
+    let intent = crate::epistemic::EpistemicEvent::new(
+        crate::epistemic::EpistemicEventType::ObservationIngested,
+        format!("action:{}", acted.command),
+        format!("action intent: {}", acted.command),
+    )
+    .with_source("act");
+    ids.push(intent.id.clone());
+    core.record_epistemic_event(intent);
+
+    let mut outcome_desc = format!(
+        "action outcome: exit {} · {}ms · {} line(s) out",
+        acted
+            .exit_code
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| "signal".into()),
+        acted.duration_ms,
+        acted.stdout_lines
+    );
+    if !acted.stderr_tail.trim().is_empty() {
+        outcome_desc.push_str(&format!(" · stderr: {}", acted.stderr_tail.trim()));
+    }
+    let mut outcome = crate::epistemic::EpistemicEvent::new(
+        crate::epistemic::EpistemicEventType::ObservationIngested,
+        format!("action:{}", acted.command),
+        outcome_desc,
+    )
+    .with_source("act");
+    // record runtime as metric (ms) for observability; not a truth verdict
+    outcome.metric_value = Some(acted.duration_ms as f32);
+    ids.push(outcome.id.clone());
+    core.record_epistemic_event(outcome);
+
+    ids
+}
+
 /// Claims bearing on `command`, most relevant first.
 pub fn bearing_on(
     core: &crate::core::PhysisCore,
@@ -143,6 +235,7 @@ pub fn bearing_on(
         .values()
         .map(|h| Bearing {
             id: h.id.chars().take(8).collect(),
+            hypothesis_id: h.id.clone(),
             status: format!("{:?}", h.status),
             statement: h.statement.clone(),
             relevance: crate::models::cosine_sim(&q, &h.embedding),
@@ -252,6 +345,7 @@ mod tests {
     fn a_refuted_claim_is_a_warning_and_a_candidate_is_not() {
         let refuted = Bearing {
             id: "aaaaaaaa".into(),
+            hypothesis_id: "aaaaaaaa-full".into(),
             status: "Contradicted".into(),
             statement: "this approach fails".into(),
             relevance: 0.9,
@@ -259,6 +353,7 @@ mod tests {
         };
         let candidate = Bearing {
             id: "bbbbbbbb".into(),
+            hypothesis_id: "bbbbbbbb-full".into(),
             status: "Candidate".into(),
             statement: "might work".into(),
             relevance: 0.9,
@@ -297,6 +392,9 @@ mod tests {
             "the related claim must rank first, got {:?}",
             b[0].statement
         );
+        assert!(!b[0].hypothesis_id.is_empty());
+        // full id enables support/affected "why supported now" lookup
+        assert!(core.support_snapshot(&b[0].hypothesis_id, 5).is_some());
     }
 
     /// Warnings are a filter over bearing, not a separate list that can drift.
@@ -311,6 +409,7 @@ mod tests {
             bearing: vec![
                 Bearing {
                     id: "a".into(),
+                    hypothesis_id: "a-full".into(),
                     status: "Contradicted".into(),
                     statement: "s".into(),
                     relevance: 0.5,
@@ -318,6 +417,7 @@ mod tests {
                 },
                 Bearing {
                     id: "b".into(),
+                    hypothesis_id: "b-full".into(),
                     status: "Supported".into(),
                     statement: "t".into(),
                     relevance: 0.4,
@@ -329,5 +429,116 @@ mod tests {
         assert_eq!(a.warnings().len(), 1);
         assert!(a.render().contains("ALREADY ESTABLISHED"));
         assert!(a.render().contains("recorded as observation(s) #1, #2"));
+    }
+
+    /// Warning bearings can be resolved to deterministic "why supported now"
+    /// snapshots (read-only diagnostic) via their full hypothesis ids, and all
+    /// bearings can be resolved in relevance order (legacy/unresolvable -> None).
+    #[test]
+    fn bearing_support_snapshots_resolve_hypotheses() {
+        let e = RandomProjectionEmbedder::new(128);
+        let mut core = crate::core::PhysisCore::new();
+        let mut contradicted = Hypothesis::new(
+            "cargo test fails on this crate",
+            e.embed("cargo test fails"),
+        );
+        contradicted.add_supporting_evidence(Evidence::supports("ci", "failed run"));
+        contradicted.status = crate::hypothesis::HypothesisStatus::Contradicted;
+        let hid = core.register_hypothesis(contradicted);
+        let mut ok = Hypothesis::new("the kitchen needs painting", e.embed("kitchen painting"));
+        ok.add_supporting_evidence(Evidence::supports("note", "walls chipped"));
+        core.register_hypothesis(ok);
+
+        let bearing = bearing_on(&core, "cargo test", &e, 2);
+        let acted = Acted {
+            command: "cargo test".into(),
+            exit_code: Some(1),
+            duration_ms: 10,
+            stdout_lines: 0,
+            stderr_tail: String::new(),
+            bearing: bearing.clone(),
+            observed: vec![],
+        };
+
+        let warn_snaps = acted.warning_support_snapshots(&core, 5);
+        assert_eq!(warn_snaps.len(), 1);
+        assert_eq!(warn_snaps[0].0.hypothesis_id, hid);
+        let snap = warn_snaps[0]
+            .1
+            .as_ref()
+            .expect("snapshot for known warning");
+        assert_eq!(snap.hypothesis_id, hid);
+        assert!(snap.contradiction_pressure);
+
+        let all = acted.support_snapshots(&core, 5);
+        assert_eq!(all.len(), bearing.len());
+        assert!(all
+            .iter()
+            .any(|(b, s)| b.hypothesis_id == hid && s.is_some()));
+        for (b, s) in &all {
+            if !b.hypothesis_id.is_empty() {
+                assert!(
+                    s.is_some(),
+                    "known bearing must resolve: {}",
+                    b.hypothesis_id
+                );
+            }
+        }
+
+        let mut legacy_bearing = bearing[0].clone();
+        legacy_bearing.hypothesis_id.clear();
+        let acted_legacy = Acted {
+            bearing: vec![legacy_bearing],
+            ..acted
+        };
+        let legacy = acted_legacy.support_snapshots(&core, 5);
+        assert_eq!(legacy.len(), 1);
+        assert!(legacy[0].1.is_none());
+    }
+
+    /// Full hypothesis id is carried for support/why-supported lookups while
+    /// older serialized bearings (without it) remain readable.
+    #[test]
+    fn bearing_keeps_full_hypothesis_id_and_deserializes_legacy_shape() {
+        let e = RandomProjectionEmbedder::new(64);
+        let mut core = crate::core::PhysisCore::new();
+        let mut h = Hypothesis::new("cargo test fails", e.embed("cargo test fails"));
+        h.add_supporting_evidence(Evidence::supports("ci", "failed"));
+        let hid = core.register_hypothesis(h);
+        let b = bearing_on(&core, "cargo test", &e, 1);
+        assert_eq!(b[0].hypothesis_id, hid);
+
+        let legacy = r#"{"id":"abcdefgh","status":"Candidate","statement":"s","relevance":0.5,"open_predictions":0}"#;
+        let de: Bearing = serde_json::from_str(legacy).unwrap();
+        assert_eq!(de.id, "abcdefgh");
+        assert!(de.hypothesis_id.is_empty());
+    }
+
+    /// Recording an acted outcome into core audit is append-only and
+    /// observational (no hypotheses/edges/contradictions created).
+    #[test]
+    fn record_acted_in_audit_appends_observation_events() {
+        let mut core = crate::core::PhysisCore::new();
+        let before = core.epistemic_audit.events.len();
+        let a = Acted {
+            command: "echo hi".into(),
+            exit_code: Some(0),
+            duration_ms: 7,
+            stdout_lines: 1,
+            stderr_tail: String::new(),
+            bearing: vec![],
+            observed: vec![1, 2],
+        };
+        let ids = record_acted_in_audit(&mut core, &a);
+        assert_eq!(ids.len(), 2);
+        assert_eq!(core.epistemic_audit.events.len(), before + 2);
+        assert!(core.hypotheses.is_empty());
+        assert!(core.edges.is_empty());
+        assert!(core.contradictions.is_empty());
+        assert!(core
+            .epistemic_audit
+            .events
+            .iter()
+            .all(|e| e.event_type == crate::epistemic::EpistemicEventType::ObservationIngested));
     }
 }

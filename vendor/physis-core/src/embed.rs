@@ -279,16 +279,14 @@ fn onnx_candidates() -> Vec<(
     &'static str,
 )> {
     use crate::embed_onnx::PoolingStrategy::{Cls, Mean};
-    let env_pooling = || {
-        match std::env::var("PHYSIS_POOLING")
-            .unwrap_or_default()
-            .trim()
-            .to_ascii_lowercase()
-            .as_str()
-        {
-            "cls" => Cls,
-            _ => Mean,
-        }
+    let env_pooling = || match std::env::var("PHYSIS_POOLING")
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "cls" => Cls,
+        _ => Mean,
     };
     if let Ok(dir) = std::env::var("PHYSIS_MODEL_DIR") {
         let dir = dir.trim().to_string();
@@ -300,7 +298,12 @@ fn onnx_candidates() -> Vec<(
             return vec![(dir, dim, env_pooling(), "onnx-explicit")];
         }
     }
-    let mut candidates: Vec<(String, usize, crate::embed_onnx::PoolingStrategy, &'static str)> = Vec::new();
+    let mut candidates: Vec<(
+        String,
+        usize,
+        crate::embed_onnx::PoolingStrategy,
+        &'static str,
+    )> = Vec::new();
     // A per-user model installed once serves every checkout.
     if let Ok(home) = std::env::var("HOME") {
         let home = home.trim();
@@ -323,7 +326,12 @@ fn onnx_candidates() -> Vec<(
             ));
         }
     }
-    candidates.push(("./models/bge-base-en-v1.5".into(), 768, env_pooling(), "bge-base"));
+    candidates.push((
+        "./models/bge-base-en-v1.5".into(),
+        768,
+        env_pooling(),
+        "bge-base",
+    ));
     candidates.push(("./models/minilm".into(), 384, env_pooling(), "minilm"));
     candidates.push(("./models".into(), 384, env_pooling(), "minilm"));
     candidates

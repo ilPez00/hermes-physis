@@ -559,7 +559,11 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     store::ensure_data_dir()?;
     match cli.command {
-        Command::Classify { text, no_expand, json } => run_classify(&text, no_expand, json),
+        Command::Classify {
+            text,
+            no_expand,
+            json,
+        } => run_classify(&text, no_expand, json),
         Command::Ontology => run_ontology(),
         Command::BenchSemiotic { fixture, json } => cmd_bench_semiotic(&fixture, json),
         Command::Grid { json, cells } => run_grid(json, cells),
@@ -739,11 +743,11 @@ fn build_classifier(
 /// Words worth keeping in a learned entry's label/hints.
 fn significant_words(text: &str, limit: usize) -> Vec<String> {
     const STOP: &[&str] = &[
-        "the", "and", "for", "with", "from", "this", "that", "into", "your", "you",
-        "are", "was", "were", "has", "have", "had", "not", "but", "all", "any",
-        "can", "will", "would", "should", "could", "about", "when", "then", "than",
-        "them", "they", "its", "our", "out", "use", "using", "make", "made", "get",
-        "how", "what", "why", "where", "which", "who", "does", "did", "doing",
+        "the", "and", "for", "with", "from", "this", "that", "into", "your", "you", "are", "was",
+        "were", "has", "have", "had", "not", "but", "all", "any", "can", "will", "would", "should",
+        "could", "about", "when", "then", "than", "them", "they", "its", "our", "out", "use",
+        "using", "make", "made", "get", "how", "what", "why", "where", "which", "who", "does",
+        "did", "doing",
     ];
     let mut out: Vec<String> = Vec::new();
     for word in text
@@ -1089,7 +1093,9 @@ fn run_grid(as_json: bool, include_cells: bool) -> anyhow::Result<()> {
         grid.shape[0], grid.shape[1], grid.total_cells, grid.populated_cells, grid.entries
     );
     if grid.is_expanded() {
-        println!("Expanded beyond the classic 5×14: the axes are whatever the loaded ontologies define.");
+        println!(
+            "Expanded beyond the classic 5×14: the axes are whatever the loaded ontologies define."
+        );
     }
     println!("Domains: {}", grid.domains.join(", "));
     println!("Modes: {}", grid.modes.join(", "));
@@ -2983,7 +2989,13 @@ fn cmd_bench_semiotic(fixture: &std::path::Path, as_json: bool) -> anyhow::Resul
         }
     }
 
-    let pct = |x: usize| if n == 0 { 0.0 } else { 100.0 * x as f32 / n as f32 };
+    let pct = |x: usize| {
+        if n == 0 {
+            0.0
+        } else {
+            100.0 * x as f32 / n as f32
+        }
+    };
     let mean_margin = if margins.is_empty() {
         0.0
     } else {
@@ -3016,8 +3028,14 @@ fn cmd_bench_semiotic(fixture: &std::path::Path, as_json: bool) -> anyhow::Resul
     );
     println!("  top-1 cell accuracy: {:.1}% ({top1}/{n})", pct(top1));
     println!("  top-3 cell accuracy: {:.1}% ({top3}/{n})", pct(top3));
-    println!("  domain accuracy:     {:.1}% ({domain_ok}/{n})", pct(domain_ok));
-    println!("  mode accuracy:       {:.1}% ({mode_ok}/{n})", pct(mode_ok));
+    println!(
+        "  domain accuracy:     {:.1}% ({domain_ok}/{n})",
+        pct(domain_ok)
+    );
+    println!(
+        "  mode accuracy:       {:.1}% ({mode_ok}/{n})",
+        pct(mode_ok)
+    );
     println!("  ties (margin<0.02): {ties}/{n}   mean margin: {mean_margin:.3}");
     println!("  embedder: {kind} ({}d)", embedder.dimension());
     if !misses.is_empty() {

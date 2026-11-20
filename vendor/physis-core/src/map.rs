@@ -653,10 +653,22 @@ mod tests {
         .unwrap();
         let docs = load_corpus(tmp.path()).unwrap();
         let paths: Vec<&str> = docs.iter().map(|d| d.0.as_str()).collect();
-        assert!(paths.iter().any(|p| p.ends_with("auth.py")), "python included: {paths:?}");
-        assert!(paths.iter().any(|p| p.ends_with("lib.rs")), "rust included: {paths:?}");
-        assert!(!paths.iter().any(|p| p.ends_with("blob.bin")), "binary excluded");
-        assert!(!paths.iter().any(|p| p.contains("target/")), "build dir skipped");
+        assert!(
+            paths.iter().any(|p| p.ends_with("auth.py")),
+            "python included: {paths:?}"
+        );
+        assert!(
+            paths.iter().any(|p| p.ends_with("lib.rs")),
+            "rust included: {paths:?}"
+        );
+        assert!(
+            !paths.iter().any(|p| p.ends_with("blob.bin")),
+            "binary excluded"
+        );
+        assert!(
+            !paths.iter().any(|p| p.contains("target/")),
+            "build dir skipped"
+        );
     }
 }
 
@@ -731,7 +743,11 @@ fn split_document(path: &str, body: &str, max_tokens: usize) -> Vec<(String, Str
             // whitespace so it can still contribute.
             let mut buf = String::new();
             for word in line.split_whitespace() {
-                let cand = if buf.is_empty() { word.to_string() } else { format!("{buf} {word}") };
+                let cand = if buf.is_empty() {
+                    word.to_string()
+                } else {
+                    format!("{buf} {word}")
+                };
                 if !buf.is_empty() && crate::rag::count_tokens(&cand) > max_tokens {
                     let n = pieces.len() + 1;
                     pieces.push((format!("{path}#part{n}"), std::mem::take(&mut buf)));
