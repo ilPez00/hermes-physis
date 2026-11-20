@@ -299,6 +299,60 @@ pub fn assessed_outcome_counts(assessed: &[crate::gate::AssessedIntake]) -> Simp
     c
 }
 
+/// Per-kind outcome tallies for typed gate outcomes (dispatch/assessment
+/// results). Deterministic fixture accounting (counts/proxies only, never a
+/// verdict): relation/equivalence/lesson/grounding/claim buckets.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GateOutcomeCountsByKind {
+    pub relation: SimpleOutcomeCounts,
+    pub equivalence: SimpleOutcomeCounts,
+    pub lesson: SimpleOutcomeCounts,
+    pub grounding: SimpleOutcomeCounts,
+    /// Conservative top-level claim outcomes (Entity/Retrieval/Opaque payloads).
+    pub claim: SimpleOutcomeCounts,
+}
+
+fn bump(counts: &mut SimpleOutcomeCounts, decision: GateDecision) {
+    match decision {
+        GateDecision::AcceptCandidate => counts.accept += 1,
+        GateDecision::Defer => counts.defer += 1,
+        GateDecision::Reject => counts.reject += 1,
+        GateDecision::Abstain => counts.abstain += 1,
+    }
+}
+
+/// Tally decisions over typed gate outcomes, broken down by outcome kind.
+pub fn gate_outcomes_by_kind(outcomes: &[GateOutcome]) -> GateOutcomeCountsByKind {
+    let mut out = GateOutcomeCountsByKind::default();
+    for o in outcomes {
+        match o {
+            GateOutcome::Relation(r) => bump(&mut out.relation, r.decision),
+            GateOutcome::Equivalence(r) => bump(&mut out.equivalence, r.decision),
+            GateOutcome::Lesson(r) => bump(&mut out.lesson, r.decision),
+            GateOutcome::Grounding(r) => bump(&mut out.grounding, r.decision),
+            GateOutcome::Claim(r) => bump(&mut out.claim, r.decision),
+        }
+    }
+    out
+}
+
+/// Tally decisions over assessed intakes, broken down by gate outcome kind.
+pub fn assessed_outcomes_by_kind(
+    assessed: &[crate::gate::AssessedIntake],
+) -> GateOutcomeCountsByKind {
+    let mut out = GateOutcomeCountsByKind::default();
+    for a in assessed {
+        match &a.outcome {
+            GateOutcome::Relation(r) => bump(&mut out.relation, r.decision),
+            GateOutcome::Equivalence(r) => bump(&mut out.equivalence, r.decision),
+            GateOutcome::Lesson(r) => bump(&mut out.lesson, r.decision),
+            GateOutcome::Grounding(r) => bump(&mut out.grounding, r.decision),
+            GateOutcome::Claim(r) => bump(&mut out.claim, r.decision),
+        }
+    }
+    out
+}
+
 /// Count contradiction candidates surfaced by assessed equivalence outcomes.
 ///
 /// A contradiction candidate indicates conflict detected by the resolution gate
@@ -644,5 +698,94 @@ mod tests {
         assert_eq!(c.accept, 1); // mapped to known label -> candidate proposal
         assert_eq!(c.defer, 1); // unmapped -> discovery/coverage defer
         assert_eq!(c.reject, 1); // empty concept
+    }
+
+    #[test]
+    fn gate_outcomes_by_kind_tallies_mixed_dispatch_and_assessed() {
+        use crate::ingest::{EntityMention, GroundedConcept};
+        let core = crate::core::PhysisCore::new();
+        let rel = ProposedRelation {
+            subject: "a".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "b".into(),
+            fact: None,
+        };
+        let r = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        let eq = EquivalenceProposal {
+            left: "n1".into(),
+            right: "n2".into(),
+            similarity: Some(0.9),
+            rationale: None,
+        };
+        let er = gate::gate_equivalence(&core, &claim(ClaimPayload::Equivalence(eq.clone())), &eq);
+        let lesson = ConsolidatedLesson {
+            statement: "x".into(),
+            prediction: None,
+            episodes: vec![],
+        };
+        let lr = gate::gate_lesson(&core, &claim(ClaimPayload::Lesson(lesson.clone())), &lesson);
+        let known = vec!["MEMORY".to_string()];
+        let gr = gate::assess_grounding(
+            &claim(ClaimPayload::Grounding(GroundedConcept {
+                concept: "cache".into(),
+                cell: Some("MEMORY".into()),
+                mapped_type: None,
+            })),
+            &GroundedConcept {
+                concept: "cache".into(),
+                cell: Some("MEMORY".into()),
+                mapped_type: None,
+            },
+            &known,
+        );
+        let cr = gate::gate_claim(&claim(ClaimPayload::Entity(EntityMention {
+            label: "e".into(),
+            refers_to: None,
+            concept: None,
+        })));
+        let outcomes = vec![
+            GateOutcome::Relation(r),
+            GateOutcome::Equivalence(er),
+            GateOutcome::Lesson(lr),
+            GateOutcome::Grounding(gr),
+            GateOutcome::Claim(cr),
+        ];
+        let by = gate_outcomes_by_kind(&outcomes);
+        assert_eq!(by.relation.accept, 1);
+        assert_eq!(by.equivalence.abstain, 1);
+        assert_eq!(by.lesson.defer, 1);
+        assert_eq!(by.grounding.accept, 1);
+        assert_eq!(by.claim.accept, 1);
+
+        // assessed intake path produces the same per-kind structure
+        let mut core2 = crate::core::PhysisCore::new();
+        let claims = vec![
+            claim(ClaimPayload::Relation(ProposedRelation {
+                subject: "a".into(),
+                predicate: "depends_on".into(),
+                relation_type: Some(RelationType::DependsOn),
+                object: "b".into(),
+                fact: None,
+            })),
+            claim(ClaimPayload::Entity(EntityMention {
+                label: "e".into(),
+                refers_to: None,
+                concept: None,
+            })),
+        ];
+        let assessed = crate::gate::assess_claims_with_intake(
+            &mut core2,
+            &claims,
+            &[],
+            "obs",
+            chrono::Utc::now(),
+        );
+        let aby = assessed_outcomes_by_kind(&assessed);
+        assert_eq!(aby.relation.accept, 1);
+        assert_eq!(aby.claim.accept, 1);
+        assert_eq!(aby.equivalence, SimpleOutcomeCounts::default());
+        assert_eq!(aby.lesson, SimpleOutcomeCounts::default());
+        assert_eq!(aby.grounding, SimpleOutcomeCounts::default());
     }
 }

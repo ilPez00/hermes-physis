@@ -394,9 +394,10 @@ pub use support::{explain_support_snapshot, SupportSnapshot};
 // Deterministic observer/candidate evaluation stubs (in-crate, no IO/network)
 pub use observer_eval::{
     accepted_equivalence_pair_keys, accepted_relation_keys, assessed_contradiction_count,
-    assessed_outcome_counts, canonical_pair_key, compare_compiles, context_recall_proxy,
-    gate_outcome_counts, grounding_outcomes, lesson_outcomes, observer_selected_count,
-    observer_selection_ratio, pair_precision_recall_f1, precision_recall_f1, relation_outcomes,
-    resolution_contradiction_yield, resolution_outcomes, stable_accepted_lessons, utilization,
-    CompileComparison, ResolutionOutcomeCounts, SimpleOutcomeCounts,
+    assessed_outcome_counts, assessed_outcomes_by_kind, canonical_pair_key, compare_compiles,
+    context_recall_proxy, gate_outcome_counts, gate_outcomes_by_kind, grounding_outcomes,
+    lesson_outcomes, observer_selected_count, observer_selection_ratio, pair_precision_recall_f1,
+    precision_recall_f1, relation_outcomes, resolution_contradiction_yield, resolution_outcomes,
+    stable_accepted_lessons, utilization, CompileComparison, GateOutcomeCountsByKind,
+    ResolutionOutcomeCounts, SimpleOutcomeCounts,
 };
