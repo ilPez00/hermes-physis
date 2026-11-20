@@ -844,6 +844,53 @@ is replaced every quarter while the invoice reconciliation runs";
     // nothing), Fixed passes the guess through, None reserves nothing. The
     // node-search path calls this same helper — drift here would mean the
     // two fusion paths reserve different amounts for identical claims.
+    // The reserve must price what the caller actually spends, not what the
+    // docs-mode path spends. Code mode's packet candidate costs the bare
+    // snippet; docs mode's block carries the attribution header. One shared
+    // helper, caller-supplied pricer — the measured drift (auto over-reserving
+    // code mode by the header) is closed by construction.
+    #[test]
+    fn observer_reserve_tokens_prices_what_the_caller_spends() {
+        let embedder = RandomProjectionEmbedder::new(64);
+        let claims = vec![retrieval_claim(
+            "obj:relay-procedure",
+            "relay calibration bench harness reference meter",
+            0.9,
+        )];
+        let block_pricer = |c: &crate::ingest::CandidateClaimPacket, s: &str| {
+            crate::rag::count_tokens(&observer_block(c, s))
+        };
+        let snippet_pricer =
+            |_c: &crate::ingest::CandidateClaimPacket, s: &str| crate::rag::count_tokens(s);
+        let snippet = "relay calibration bench harness reference meter";
+        let block = observer_reserve_tokens(
+            &embedder,
+            "relay calibration bench harness",
+            &claims,
+            0.9,
+            ObserverReserve::Auto,
+            block_pricer,
+        );
+        let bare = observer_reserve_tokens(
+            &embedder,
+            "relay calibration bench harness",
+            &claims,
+            0.9,
+            ObserverReserve::Auto,
+            snippet_pricer,
+        );
+        assert_eq!(
+            block,
+            crate::rag::count_tokens(&observer_block(&claims[0], snippet)),
+            "block pricer prices the docs-mode block"
+        );
+        assert_eq!(bare, crate::rag::count_tokens(snippet));
+        assert!(
+            block > bare,
+            "the attribution header costs tokens; the pricers must differ"
+        );
+    }
+
     #[test]
     fn observer_reserve_tokens_prices_accepted_blocks_only() {
         let embedder = RandomProjectionEmbedder::new(64);
@@ -855,12 +902,16 @@ is replaced every quarter while the invoice reconciliation runs";
             ),
             retrieval_claim("obj:noise-menu", "cafeteria lunch menu rotates daily", 0.1),
         ];
+        let block_pricer = |c: &crate::ingest::CandidateClaimPacket, s: &str| {
+            crate::rag::count_tokens(&observer_block(c, s))
+        };
         let auto = observer_reserve_tokens(
             &embedder,
             "relay calibration bench harness",
             &claims,
             0.9,
             ObserverReserve::Auto,
+            block_pricer,
         );
         assert!(auto > 0, "auto prices the accepted block");
         let block_only = observer_reserve_tokens(
@@ -869,6 +920,7 @@ is replaced every quarter while the invoice reconciliation runs";
             &claims[..1],
             0.9,
             ObserverReserve::Auto,
+            block_pricer,
         );
         assert_eq!(
             auto, block_only,
@@ -880,7 +932,8 @@ is replaced every quarter while the invoice reconciliation runs";
                 "relay calibration",
                 &claims,
                 0.9,
-                ObserverReserve::None
+                ObserverReserve::None,
+                block_pricer,
             ),
             0
         );
@@ -890,7 +943,8 @@ is replaced every quarter while the invoice reconciliation runs";
                 "relay calibration",
                 &claims,
                 0.9,
-                ObserverReserve::Fixed(7)
+                ObserverReserve::Fixed(7),
+                block_pricer,
             ),
             7
         );
@@ -1187,13 +1241,17 @@ fn observer_block(claim: &crate::ingest::CandidateClaimPacket, snippet: &str) ->
 /// the trade is exactly as large as the observer content actually needs.
 /// Shared by every fusion path so the docs-mode and packet-level callers
 /// cannot drift apart.
-pub fn observer_reserve_tokens(
+pub fn observer_reserve_tokens<F>(
     embedder: &dyn crate::embed::VectorEmbed,
     query: &str,
     observer_claims: &[crate::ingest::CandidateClaimPacket],
     observer_floor: f32,
     observer_reserve: ObserverReserve,
-) -> usize {
+    block_tokens_for: F,
+) -> usize
+where
+    F: Fn(&crate::ingest::CandidateClaimPacket, &str) -> usize,
+{
     if observer_claims.is_empty() {
         return 0;
     }
@@ -1217,7 +1275,7 @@ pub fn observer_reserve_tokens(
                         observer_floor,
                     );
                     if gate.decision == crate::gate::GateDecision::AcceptCandidate {
-                        Some(crate::rag::count_tokens(&observer_block(claim, snippet)))
+                        Some(block_tokens_for(claim, snippet))
                     } else {
                         None
                     }
@@ -1283,6 +1341,7 @@ pub fn compile_context_with_observer(
         observer_claims,
         observer_floor,
         observer_reserve,
+        |claim, snippet| crate::rag::count_tokens(&observer_block(claim, snippet)),
     );
     let engine_budget = if reserve_tokens == 0 {
         effective

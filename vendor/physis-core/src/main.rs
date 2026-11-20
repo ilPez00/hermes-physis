@@ -1446,6 +1446,12 @@ fn run_node_search(
                 &load_observer_claims(claims_path)?,
                 floor,
                 reserve,
+                // Code mode's packet candidate costs the bare snippet — the
+                // attribution prefix is added at print time, outside the
+                // packet's token accounting. Pricing the docs-mode block here
+                // would over-reserve by the header (measured drift, now
+                // closed by construction).
+                |_claim, snippet| count_tokens(snippet),
             );
             budget.saturating_sub(reserve_tokens).max(1)
         }
