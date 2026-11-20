@@ -788,4 +788,148 @@ mod tests {
         assert_eq!(aby.lesson, SimpleOutcomeCounts::default());
         assert_eq!(aby.grounding, SimpleOutcomeCounts::default());
     }
+
+    /// A retrieval-hit claim from an observer, attributed to a named extractor
+    /// with a real source uri, carrying `object_id`/`snippet`.
+    fn retrieval_claim(object_id: &str, snippet: &str, score: f32) -> CandidateClaimPacket {
+        use crate::embed::VectorEmbed as _;
+        use crate::ingest::RetrievalHit;
+        claim(ClaimPayload::Retrieval(RetrievalHit {
+            object_id: object_id.into(),
+            score,
+            strategy: Some("vec".into()),
+            snippet: Some(snippet.into()),
+        }))
+    }
+
+    /// The ablation the crate contract demands before fusion may be trusted:
+    /// the *real* pipeline (RagCorpus → TokenFixedRetriever → compile),
+    /// core-only baseline vs observer-fused packet under the same budget,
+    /// compared with [`compare_compiles`]. The observer knows one relevant
+    /// object the local corpus never named — the one case fusion can help.
+    #[test]
+    fn fusion_ablation_over_real_retrieval_observer_adds_recall() {
+        use crate::rag::{RagCorpus, TokenFixedRetriever};
+        use crate::RandomProjectionEmbedder;
+
+        let embedder = RandomProjectionEmbedder::new(64);
+        let docs = [
+            "the spindle bearing lubrication schedule is monthly",
+            "relay calibration requires the bench harness and a reference meter",
+            "shift handover notes are filed at the end of each week",
+            "the coolant pump filter is replaced every quarter",
+        ];
+        let texts: Vec<String> = docs.iter().map(|d| d.to_string()).collect();
+        let corpus = RagCorpus::build(&texts, &embedder);
+        let query_emb = embedder.embed("relay calibration bench harness");
+        let retrieval = TokenFixedRetriever::new(400, 4).retrieve(&query_emb, &corpus);
+        assert!(!retrieval.chunks.is_empty(), "the corpus must retrieve");
+
+        // The observer surfaces a relay-procedure object the corpus never named.
+        let claims = vec![retrieval_claim(
+            "obj:relay-procedure",
+            "relay calibration: bench harness, reference meter, two-pass verification",
+            0.9,
+        )];
+        let tokens_for = |c: &CandidateClaimPacket, h: &crate::ingest::RetrievalHit| {
+            let _ = c;
+            crate::rag::count_tokens(h.snippet.as_deref().unwrap_or(""))
+        };
+
+        let base = crate::compile::compile_from_retrieval(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            EmbedderInfo::default(),
+        );
+        let fused = crate::compile::compile_from_retrieval_with_observer_claims(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            &claims,
+            EmbedderInfo::default(),
+            tokens_for,
+        );
+
+        // Same budget, both within it — the comparison is construction-matched.
+        assert_eq!(base.stats.budget, fused.stats.budget);
+        assert!(base.stats.selected_tokens <= base.stats.budget);
+        assert!(fused.stats.selected_tokens <= fused.stats.budget);
+
+        // Ample budget: fusion adds the observer object and keeps every engine
+        // selection. Losing an engine chunk to an observer claim would be a
+        // displacement, and this fixture forbids it.
+        let base_ids: HashSet<&str> = base.selected.iter().map(|s| s.id.as_str()).collect();
+        let fused_ids: HashSet<&str> = fused.selected.iter().map(|s| s.id.as_str()).collect();
+        assert!(base_ids.is_subset(&fused_ids), "engine selections must survive fusion");
+        assert_eq!(observer_selected_count(&fused), 1);
+        assert_eq!(observer_selected_count(&base), 0);
+
+        // Measured recall over a relevant set the baseline cannot fully cover.
+        let mut relevant: HashSet<String> = base_ids.iter().map(|s| s.to_string()).collect();
+        relevant.insert("obj:relay-procedure".to_string());
+        let cmp = compare_compiles(&base, &fused, Some(&relevant));
+        assert_eq!(cmp.baseline_observer_selected, 0);
+        assert_eq!(cmp.fused_observer_selected, 1);
+        assert_eq!(cmp.recall_proxy_baseline, Some(2.0 / 3.0));
+        assert_eq!(cmp.recall_proxy_fused, Some(1.0));
+        assert_eq!(cmp.recall_proxy_delta, Some(1.0 / 3.0));
+    }
+
+    /// The conservative half of the same contract: when the budget cannot fit
+    /// the observer's contribution, fusion must not displace engine evidence —
+    /// the fused packet selects exactly what the baseline selected, and the
+    /// recall delta is zero, not negative.
+    #[test]
+    fn fusion_is_conservative_when_the_budget_cannot_fit_the_observer() {
+        use crate::rag::{RagCorpus, TokenFixedRetriever};
+        use crate::RandomProjectionEmbedder;
+
+        let embedder = RandomProjectionEmbedder::new(64);
+        let texts = vec!["alpha".to_string(), "beta".to_string()];
+        let corpus = RagCorpus::build(&texts, &embedder);
+        let query_emb = embedder.embed("alpha");
+        // Two one-token docs, budget exactly their total: the engine fills it.
+        let retrieval = TokenFixedRetriever::new(2, 2).retrieve(&query_emb, &corpus);
+        assert_eq!(retrieval.chunks.len(), 2);
+        assert_eq!(retrieval.total_tokens, 2);
+
+        let claims = vec![retrieval_claim("obj:hidden", "hidden relay note", 0.9)];
+        let tokens_for = |c: &CandidateClaimPacket, h: &crate::ingest::RetrievalHit| {
+            let _ = c;
+            crate::rag::count_tokens(h.snippet.as_deref().unwrap_or(""))
+        };
+
+        let base = crate::compile::compile_from_retrieval(
+            "alpha",
+            &retrieval,
+            &["engine"],
+            EmbedderInfo::default(),
+        );
+        let fused = crate::compile::compile_from_retrieval_with_observer_claims(
+            "alpha",
+            &retrieval,
+            &["engine"],
+            &claims,
+            EmbedderInfo::default(),
+            tokens_for,
+        );
+
+        let base_ids: HashSet<String> =
+            base.selected.iter().map(|s| s.id.clone()).collect();
+        let fused_ids: HashSet<String> =
+            fused.selected.iter().map(|s| s.id.clone()).collect();
+        assert_eq!(base_ids, fused_ids, "a full budget must select identically");
+        assert_eq!(observer_selected_count(&fused), 0);
+        assert!(fused
+            .dropped
+            .iter()
+            .any(|d| d.id == "obj:hidden" && d.reason == crate::compile::DropReason::OverBudget));
+
+        let mut relevant: HashSet<String> = base_ids.clone();
+        relevant.insert("obj:hidden".to_string());
+        let cmp = compare_compiles(&base, &fused, Some(&relevant));
+        assert_eq!(cmp.recall_proxy_baseline, cmp.recall_proxy_fused);
+        assert_eq!(cmp.recall_proxy_delta, Some(0.0));
+    }
 }
