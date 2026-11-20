@@ -861,12 +861,17 @@ def _context_docs_argv(
         if not 0.0 <= floor_val <= 1.0:
             raise ValueError("observer_floor must be between 0.0 and 1.0")
     if reserve is not None:
-        try:
-            reserve_val = int(reserve)
-        except (TypeError, ValueError):
-            raise ValueError("observer_reserve must be a non-negative integer") from None
-        if reserve_val < 0:
-            raise ValueError("observer_reserve must be a non-negative integer")
+        if isinstance(reserve, str) and reserve.strip().lower() == "auto":
+            pass  # engine sizes the reserve from the gated-in claims
+        else:
+            try:
+                reserve_val = int(reserve)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "observer_reserve must be a non-negative integer or 'auto'"
+                ) from None
+            if reserve_val < 0:
+                raise ValueError("observer_reserve must be a non-negative integer or 'auto'")
     if claims:
         import tempfile
 
@@ -881,7 +886,7 @@ def _context_docs_argv(
     if floor is not None:
         argv += ["--observer-floor", str(float(floor))]
     if reserve is not None:
-        argv += ["--observer-reserve", str(int(reserve))]
+        argv += ["--observer-reserve", "auto" if str(reserve).lower() == "auto" else str(int(reserve))]
     return argv
 
 
@@ -1035,12 +1040,17 @@ def _node_search_argv(task: str, budget: int, merged: dict[str, Any]) -> list[st
         if not 0.0 <= floor_val <= 1.0:
             raise ValueError("observer_floor must be between 0.0 and 1.0")
     if reserve is not None:
-        try:
-            reserve_val = int(reserve)
-        except (TypeError, ValueError):
-            raise ValueError("observer_reserve must be a non-negative integer") from None
-        if reserve_val < 0:
-            raise ValueError("observer_reserve must be a non-negative integer")
+        if isinstance(reserve, str) and reserve.strip().lower() == "auto":
+            pass  # engine sizes the reserve from the gated-in claims
+        else:
+            try:
+                reserve_val = int(reserve)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "observer_reserve must be a non-negative integer or 'auto'"
+                ) from None
+            if reserve_val < 0:
+                raise ValueError("observer_reserve must be a non-negative integer or 'auto'")
     if claims:
         fd, claims_path = tempfile.mkstemp(prefix="physis-observer-claims-", suffix=".json")
         try:
@@ -1053,7 +1063,7 @@ def _node_search_argv(task: str, budget: int, merged: dict[str, Any]) -> list[st
     if floor is not None:
         argv += ["--observer-floor", str(float(floor))]
     if reserve is not None:
-        argv += ["--observer-reserve", str(int(reserve))]
+        argv += ["--observer-reserve", "auto" if str(reserve).lower() == "auto" else str(int(reserve))]
     return argv
 
 

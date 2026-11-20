@@ -99,7 +99,9 @@ CONTEXT = {
                     "a real trade — corpus coverage is exchanged for observer "
                     "knowledge (measured: held-out queries became answerable, a "
                     "corpus-covered control query lost its answer at reserve 250). "
-                    "Default 0 = no reserve."
+                    "Pass 'auto' to size the reserve from the gated-in claims "
+                    "themselves (measured: keeps engine content an over-guessing "
+                    "fixed reserve loses). Default: none."
                 ),
             },
         },

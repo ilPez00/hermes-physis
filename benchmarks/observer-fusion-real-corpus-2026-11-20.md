@@ -78,3 +78,37 @@ with margin ≥ 0.14. (Thinner than the synthetic fixture's gap, but clean.)
 
 Fixture numbers from this run are recorded above; they are measurements of
 this corpus and these queries, not production claims about any other corpus.
+
+## Follow-up measurement: auto reserve (same corpus, same day)
+
+Fixed reserves force the caller to guess the block size. `--observer-reserve
+auto` sizes the reserve from the gated-in claims themselves (pre-gate: the gate
+is pure and needs only embeddings, both available before retrieval; reserve =
+sum of accepted block tokens + the join-overhead bound).
+
+A measurement defect surfaced and was fixed first: the engine's chunk
+accounting and the assembled packet's token count can disagree by one token per
+join when a chunk boundary splits a word (measured +2 on this corpus — the
+pre-gate priced a 104-token block, the append stage found 1098 used against a
+1096 engine budget and deferred it as "over budget: 104 tokens, 1098 used").
+Auto now reserves the block plus `top_k - 1`, the measured bound on that seam.
+The seam itself is pre-existing (baseline packets can also exceed their nominal
+budget by up to top_k-1 tokens) and is recorded for a later unit.
+
+Results with auto reserve, budget 1200, bge-small, floor 0.6 (default):
+
+| query | baseline phrase | fused phrase | observer_selected | noise admitted | tokens |
+|---|---|---|---|---|---|
+| gate-ambient-state (held-out) | absent | **present** | 1 | 0 | 1195 → 1195 |
+| symbolic-composition (held-out) | absent | **present** | 1 | 0 | 1190 → 1157 |
+| language-organs (held-out) | absent | **present** | 1 | 0 | 1196 → 1191 |
+| quarry-migration (control) | present | **present** | 0 | 0 | 1171 → 1171 |
+
+All three held-out queries answerable, zero noise admitted — and the control
+query keeps its answer, which fixed-250 lost. On this corpus auto strictly
+dominates the fixed reserve: the trade is exactly as large as the observer
+content needs. Red-first: `auto_reserve_sizes_the_trade_exactly_and_avoids_
+starving_the_engine` pins that auto keeps engine content an over-guessing
+Fixed(40) starves; can-fail verified (auto zeroed → test fails). Verdict
+update: the reserve knob is now usable without guessing, but default-off
+still stands — auto still changes the packet in both directions by design.

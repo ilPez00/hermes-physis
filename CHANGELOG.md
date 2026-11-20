@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **observer reserve, auto-sized** (`3735f67` follow-up): `--observer-reserve auto` sizes the headroom from the gated-in claims themselves (pre-gate + join-overhead bound), measured on the real corpus: all three held-out queries answerable AND the corpus-covered control query keeps its answer (fixed-250 lost it). Plugin accepts `observer_reserve: "auto"` or an integer. A measurement defect was found and fixed on the way: chunk accounting vs assembled-packet count can disagree by one token per join when a chunk boundary splits a word (measured +2); auto reserves the `top_k-1` bound. The seam is pre-existing and recorded for a later unit.
+
 Observer fusion stays opt-in — measured, not assumed.
 
 - **The ablation the fusion contract demanded now runs.**

@@ -737,7 +737,7 @@ mod tests {
             400,
             &claims,
             0.9,
-            0,
+            ObserverReserve::None,
         )
         .unwrap();
 
@@ -801,7 +801,7 @@ is replaced every quarter while the invoice reconciliation runs";
             40,
             &claims,
             0.9,
-            0,
+            ObserverReserve::None,
         )
         .unwrap();
         assert_eq!(
@@ -816,7 +816,7 @@ is replaced every quarter while the invoice reconciliation runs";
             40,
             &claims,
             0.9,
-            20,
+            ObserverReserve::Fixed(20),
         )
         .unwrap();
         assert_eq!(
@@ -831,6 +831,73 @@ is replaced every quarter while the invoice reconciliation runs";
         // under 64 is floored to 64 before retrieval), and the observer block
         // rode in on reserved headroom, not on displaced engine text.
         assert!(reserved.physis_tokens <= 64);
+    }
+
+    // Auto reserve sizes the trade from the gated-in claims themselves.
+    // Measured value over a guessed fixed reserve: the caller cannot know the
+    // block size beforehand; over-reserving starves the engine (Fixed(40)
+    // drops the engine budget to 24, below the 32-token chunk — the engine
+    // loses content it could have kept), while Auto reserves exactly the
+    // accepted block and keeps both.
+    #[test]
+    fn auto_reserve_sizes_the_trade_exactly_and_avoids_starving_the_engine() {
+        let embedder = RandomProjectionEmbedder::new(64);
+        let long_doc = "relay calibration requires the bench harness and a reference meter \
+two pass verification catches swapped contacts and the reference meter readings \
+are logged each run for the calibration record";
+        let other_doc = "shift handover notes are filed weekly and the coolant pump filter \
+is replaced every quarter while the invoice reconciliation runs";
+        let docs = vec![
+            ("relay.md".to_string(), long_doc.to_string()),
+            ("other.md".to_string(), other_doc.to_string()),
+        ];
+        let claims = vec![
+            retrieval_claim(
+                "obj:relay-procedure",
+                "relay calibration bench harness reference meter",
+                0.9,
+            ),
+            retrieval_claim("obj:noise-menu", "cafeteria lunch menu rotates daily", 0.1),
+        ];
+
+        let auto = compile_context_with_observer(
+            &docs,
+            &embedder,
+            "relay calibration bench harness",
+            40,
+            &claims,
+            0.9,
+            ObserverReserve::Auto,
+        )
+        .unwrap();
+        assert_eq!(auto.observer_selected, 1, "auto: observer content fits");
+        assert!(auto
+            .physis_context
+            .contains("observer: obj:relay-procedure"));
+        // Auto keeps the engine content an over-guessing fixed reserve loses.
+        assert!(
+            auto.physis_context
+                .contains("bench harness and a reference meter"),
+            "auto must not starve the engine"
+        );
+
+        let over = compile_context_with_observer(
+            &docs,
+            &embedder,
+            "relay calibration bench harness",
+            40,
+            &claims,
+            0.9,
+            ObserverReserve::Fixed(40),
+        )
+        .unwrap();
+        assert_eq!(over.observer_selected, 1);
+        assert!(
+            !over
+                .physis_context
+                .contains("bench harness and a reference meter"),
+            "over-reserving starves the engine (measured)"
+        );
     }
 
     #[test]
@@ -861,7 +928,7 @@ is replaced every quarter while the invoice reconciliation runs";
             20,
             &claims,
             0.9,
-            0,
+            ObserverReserve::None,
         )
         .unwrap();
         assert_eq!(report.observer_selected, 0);
@@ -993,7 +1060,15 @@ pub fn compile_context(
     query: &str,
     budget: usize,
 ) -> anyhow::Result<ContextReport> {
-    compile_context_with_observer(docs, embedder, query, budget, &[], 0.0, 0)
+    compile_context_with_observer(
+        docs,
+        embedder,
+        query,
+        budget,
+        &[],
+        0.0,
+        ObserverReserve::None,
+    )
 }
 
 /// What happened to one observer retrieval hit during gated context fusion.
@@ -1019,6 +1094,35 @@ pub struct ObserverGateReceipt {
 /// displaces engine-selected text. Every claim produces a receipt, so
 /// exclusions are visible, never silent. With no claims this is exactly
 /// [`compile_context`].
+/// How much packet headroom to reserve for observer content.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObserverReserve {
+    /// No headroom: engine retrieval gets the full effective budget. Fusion
+    /// then only fires when the engine leaves slack (measured: never on rich
+    /// corpora).
+    None,
+    /// Fixed headroom, caller-chosen. A real trade of corpus coverage for
+    /// observer knowledge — over-reserving starves the engine.
+    Fixed(usize),
+    /// Headroom sized from the gated-in claims themselves: the sum of the
+    /// accepted blocks' token counts, so the trade is exactly as large as the
+    /// observer content actually needs — no more, no less.
+    Auto,
+}
+
+fn observer_block(claim: &crate::ingest::CandidateClaimPacket, snippet: &str) -> String {
+    format!(
+        "\n\n--- observer: {} ({}) ---\n{}",
+        match &claim.payload {
+            crate::ingest::ClaimPayload::Retrieval(hit) => hit.object_id.clone(),
+            _ => claim.id.clone(),
+        },
+        claim.extractor.id,
+        snippet.trim()
+    )
+}
+
 pub fn compile_context_with_observer(
     docs: &[(String, String)],
     embedder: &dyn crate::embed::VectorEmbed,
@@ -1026,7 +1130,7 @@ pub fn compile_context_with_observer(
     budget: usize,
     observer_claims: &[crate::ingest::CandidateClaimPacket],
     observer_floor: f32,
-    observer_reserve: usize,
+    observer_reserve: ObserverReserve,
 ) -> anyhow::Result<ContextReport> {
     anyhow::ensure!(!docs.is_empty(), "no documents to compile context from");
     // Retrieval packs whole chunks, so a document must be split to fit the
@@ -1067,12 +1171,54 @@ pub fn compile_context_with_observer(
     // capped lower — an explicit trade of engine tokens for observer tokens
     // (measured on real corpora: a greedy budget-capped retriever otherwise
     // fills ANY budget, leaving zero slack and making fusion inert).
-    let engine_budget = if observer_claims.is_empty() || observer_reserve == 0 {
-        budget.max(64)
-    } else {
-        budget.max(64).saturating_sub(observer_reserve).max(1)
-    };
+    let effective = budget.max(64);
     let top_k = chunked.len().clamp(3, 8);
+    let reserve_tokens = if observer_claims.is_empty() {
+        0
+    } else {
+        match observer_reserve {
+            ObserverReserve::None => 0,
+            ObserverReserve::Fixed(n) => n,
+            ObserverReserve::Auto => {
+                // Pre-gate: the gate is pure and needs only embeddings, both
+                // available before retrieval. Reserve exactly what the
+                // accepted blocks will cost.
+                let q_emb = embedder.embed(query);
+                observer_claims
+                    .iter()
+                    .filter_map(|claim| {
+                        let crate::ingest::ClaimPayload::Retrieval(hit) = &claim.payload else {
+                            return None;
+                        };
+                        let snippet = hit.snippet.as_deref().unwrap_or("");
+                        let gate = crate::gate::gate_retrieval_hit(
+                            &q_emb,
+                            &embedder.embed(snippet),
+                            claim,
+                            hit,
+                            observer_floor,
+                        );
+                        if gate.decision == crate::gate::GateDecision::AcceptCandidate {
+                            Some(crate::rag::count_tokens(&observer_block(claim, snippet)))
+                        } else {
+                            None
+                        }
+                    })
+                    .sum::<usize>()
+                    // The engine's chunk accounting and the assembled packet's
+                    // count can disagree by one token per join when a chunk
+                    // boundary splits a word (measured: +2 on the real
+                    // corpus). Reserve the measured bound so the block the
+                    // pre-gate priced is the block the append stage fits.
+                    + top_k.saturating_sub(1)
+            }
+        }
+    };
+    let engine_budget = if reserve_tokens == 0 {
+        effective
+    } else {
+        effective.saturating_sub(reserve_tokens).max(1)
+    };
     let (_res, mut physis_context) =
         crate::rag::retrieve_from_texts(&texts, query, embedder, engine_budget, top_k);
     let mut used = crate::rag::count_tokens(&physis_context);
@@ -1109,12 +1255,7 @@ pub fn compile_context_with_observer(
             reasons: gate.reasons,
         };
         if gate.decision == crate::gate::GateDecision::AcceptCandidate {
-            let block = format!(
-                "\n\n--- observer: {} ({}) ---\n{}",
-                hit.object_id,
-                claim.extractor.id,
-                snippet.trim()
-            );
+            let block = observer_block(claim, snippet);
             let block_tokens = crate::rag::count_tokens(&block);
             if used + block_tokens <= budget.max(64) {
                 physis_context.push_str(&block);

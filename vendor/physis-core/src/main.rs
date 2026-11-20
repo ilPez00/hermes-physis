@@ -385,9 +385,12 @@ enum Command {
         /// Tokens of packet headroom reserved for observer content: the engine
         /// retrieval is capped at budget-minus-reserve. Measured on real
         /// corpora: a greedy budget-capped retriever otherwise fills any
-        /// budget, leaving zero slack and making fusion inert. 0 = no reserve.
-        #[arg(long, default_value_t = 0)]
-        observer_reserve: usize,
+        /// budget, leaving zero slack and making fusion inert. A number sets a
+        /// fixed reserve; "auto" sizes it from the gated-in claims themselves
+        /// (the trade is exactly as large as the observer content needs).
+        /// Omitted = no reserve.
+        #[arg(long)]
+        observer_reserve: Option<String>,
         #[arg(long)]
         json: bool,
     },
@@ -3078,7 +3081,7 @@ fn cmd_context(
     budget: usize,
     observer_claims: Option<&Path>,
     observer_floor: Option<f32>,
-    observer_reserve: usize,
+    observer_reserve: Option<String>,
     json: bool,
 ) -> anyhow::Result<()> {
     use physis_core::map::compile_context_with_observer;
@@ -3094,15 +3097,15 @@ fn cmd_context(
         Some(path) => load_observer_claims(path)?,
         None => Vec::new(),
     };
-    let report = compile_context_with_observer(
-        &docs,
-        &embedder,
-        query,
-        budget,
-        &claims,
-        floor,
-        observer_reserve,
-    )?;
+    let reserve = match observer_reserve.as_deref() {
+        None | Some("") => physis_core::map::ObserverReserve::None,
+        Some("auto") => physis_core::map::ObserverReserve::Auto,
+        Some(n) => physis_core::map::ObserverReserve::Fixed(n.parse::<usize>().map_err(|e| {
+            anyhow::anyhow!("--observer-reserve must be 'auto' or a token count: {e}")
+        })?),
+    };
+    let report =
+        compile_context_with_observer(&docs, &embedder, query, budget, &claims, floor, reserve)?;
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
