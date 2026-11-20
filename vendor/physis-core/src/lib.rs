@@ -136,7 +136,9 @@
 //!
 //! Observer-derived retrieval hits may be fused into receipt-carrying context
 //! compilation ([`CompiledContext`]) as attributed, **unverified** candidates that
-//! Physis selects/drops under a hard budget; fusion is ablatable and should be
+//! Physis selects/drops under a hard budget — ranked strictly below
+//! engine-verified evidence, so an advisory score can fill slack but never
+//! displace a verified chunk; fusion is ablatable and should be
 //! enabled only on measured wins over core-only baselines. No Cognee graph
 //! database is used as Physis state. Deterministic in-crate eval stubs
 //! ([`compare_compiles`], outcome tallies/proxies) support fixture-based

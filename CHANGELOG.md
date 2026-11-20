@@ -18,18 +18,28 @@ Observer fusion stays opt-in — measured, not assumed.
   conservative cases; a first mutation attempt (removing the redundant
   `observer_sourced` re-forcing in `compile_fused`) did not fire —
   attribution is doubly enforced via `candidates_from_retrieval_claims`.
-- **The unsolved seam, measured:** with partial slack, an observer's
-  advisory score (0.99) outranks verified engine evidence and displaces
-  the weakest relevant engine chunk — recall falls 1.0 → 2/3
-  (`partial_slack_lets_an_advisory_score_displace_engine_evidence`).
-  Observer confidence is documented as advisory, not authority, but the
-  compile path does not yet enforce that; the test is a named tripwire —
-  when a score cap or observer demotion lands, update it to assert the cap.
-- **Verdict: default-off is correct.** Fusion wins exactly when engine
-  coverage is sparse, costs noise admission when slack is ample, and can
-  lose recall to advisory scores under partial slack. Until observer
-  candidates carry a capped/demoted rank, callers must gate fusion
-  themselves — which is what the existing "off by default" contract says.
+- **The unsolved seam, measured — then closed.** With partial slack, an
+  observer's advisory score (0.99) outranked verified engine evidence and
+  displaced the weakest relevant engine chunk — recall fell 1.0 → 2/3
+  (measured in `partial_slack_lets_an_advisory_score_displace_engine_evidence`).
+  `compile_context` now tiers its ranking: observer-sourced candidates rank
+  strictly below engine-verified evidence (an advisory score is not
+  authority), so fusion is a pure superset — observers fill slack only, and
+  the fused packet always contains the baseline packet. Red-first: the
+  no-displacement test failed against the old ordering; neutralizing the
+  tier in a can-fail mutation makes it fail again. The old tripwire test is
+  superseded by the contract tests; the pre-existing
+  `budget_and_receipts_are_deterministic` expectation was updated to the
+  tier contract (an observer score-tie no longer wins against engine
+  evidence).
+- **Verdict: default-off stands, for a different reason.** The recall
+  argument is gone — fusion can no longer lose recall, and unused budget
+  slack is the only thing observer items consume. What remains is
+  epistemic: an ample-slack packet picks up unverified observer content
+  (noise included, measured) with no relevance filter before the budget.
+  Until observer candidates carry a relevance/quality gate, callers who
+  cannot tolerate unverified content in the packet keep fusion off; callers
+  who can, get strictly-more-recall packets for free.
 
 Skill: the operating manual now teaches selectivity and the reuse boundary.
 

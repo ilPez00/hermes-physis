@@ -163,9 +163,11 @@ impl Default for CompileOptions {
 
 /// Compile candidates into a receipt-carrying packet under a hard budget.
 ///
-/// Deterministic: candidates are sorted by score desc, then tokens asc, then id
-/// asc; selection is a greedy first-fit in that order with duplicate-id removal.
-/// No external state, no model calls.
+/// Deterministic: candidates are sorted by observer tier first (engine-verified
+/// before observer-sourced — an advisory score is not authority and must never
+/// displace verified evidence), then score desc, tokens asc, id asc; selection
+/// is a greedy first-fit in that order with duplicate-id removal. No external
+/// state, no model calls.
 pub fn compile_context(
     query: impl Into<String>,
     mut candidates: Vec<CompileCandidate>,
@@ -173,11 +175,17 @@ pub fn compile_context(
     embedder: EmbedderInfo,
 ) -> CompiledContext {
     let query = query.into();
-    // Stable ranking.
+    // Stable ranking. Observer-sourced candidates are unverified by
+    // construction; their advisory scores rank only among themselves, below
+    // every engine-verified candidate.
     candidates.sort_by(|a, b| {
-        b.score
-            .partial_cmp(&a.score)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        a.observer_sourced
+            .cmp(&b.observer_sourced)
+            .then(
+                b.score
+                    .partial_cmp(&a.score)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
             .then(a.tokens.cmp(&b.tokens))
             .then(a.id.cmp(&b.id))
     });
@@ -469,11 +477,14 @@ mod tests {
                 semantic: false,
             },
         );
-        // a (score tie, fewer tokens) then b; c dropped over budget
-        assert_eq!(out.selected_ids(), vec!["a", "b"]);
+        // Engine tier first: b (verified, 10 tokens) then a (observer, 5)
+        // fills the slack; c dropped over budget. An advisory score no longer
+        // wins a tie against engine evidence.
+        assert_eq!(out.selected_ids(), vec!["b", "a"]);
         assert_eq!(out.stats.selected_tokens, 15);
-        assert!(out.selected[0].observer_sourced);
-        assert!(out.selected[0]
+        assert!(!out.selected[0].observer_sourced);
+        assert!(out.selected[1].observer_sourced);
+        assert!(out.selected[1]
             .reasons
             .iter()
             .any(|r| r.contains("observer_sourced")));

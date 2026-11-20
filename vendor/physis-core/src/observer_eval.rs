@@ -1071,18 +1071,15 @@ mod tests {
         assert!(utilization(&fused) > utilization(&base));
     }
 
-    /// Regime 3, the unsolved seam: with partial slack, an observer's advisory
-    /// score (0.99) outranks verified engine evidence and displaces the
-    /// weakest relevant engine chunk — recall goes DOWN. Observer confidence
-    /// is documented as advisory, not authority; the compile path does not yet
-    /// enforce that. This test records the measured failure mode; when a score
-    /// cap or observer demotion lands, update it to assert the cap.
+    /// The contract the displacement tripwire exposed: an observer's advisory
+    /// score must never outrank verified engine evidence. Under partial slack
+    /// the observer item may only fill what the engine did not take — here the
+    /// slack (1 token) cannot fit the snippet, so the fused packet must select
+    /// exactly what the baseline selected and lose nothing.
     #[test]
-    fn partial_slack_lets_an_advisory_score_displace_engine_evidence() {
+    fn advisory_observer_scores_must_not_displace_engine_evidence() {
         use crate::rag::{RetrievalResult, RetrievedChunk};
 
-        // Hand-built retrieval for exact token arithmetic: three relevant
-        // engine chunks (9 tokens) against a budget of 10 — one token of slack.
         let chunk = |id: usize, score: f32| RetrievedChunk {
             id,
             text: format!("doc {id} relay calibration evidence"),
@@ -1115,35 +1112,79 @@ mod tests {
             tokens_for,
         );
 
-        // Precondition: the fixture really has partial slack smaller than the
-        // observer snippet, so displacement is the only possible outcome.
-        assert_eq!(retrieval.budget - retrieval.total_tokens, 1);
-        assert_eq!(observer_selected_count(&fused), 1);
-
-        // The displacement, measured: the weakest relevant engine chunk lost
-        // its slot to the advisory score, and recall fell.
         let base_ids: HashSet<&str> = base.selected.iter().map(|s| s.id.as_str()).collect();
         let fused_ids: HashSet<&str> = fused.selected.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(base_ids.len(), 3);
-        assert_eq!(fused_ids.len(), 3);
-        let lost: Vec<&str> = base_ids.difference(&fused_ids).copied().collect();
-        assert_eq!(lost.len(), 1, "exactly one engine chunk must be displaced");
+        assert_eq!(
+            base_ids, fused_ids,
+            "no engine chunk may lose its slot to an advisory score"
+        );
+        assert_eq!(observer_selected_count(&fused), 0);
         assert!(fused
             .dropped
             .iter()
-            .any(|d| d.reason == crate::compile::DropReason::OverBudget));
+            .any(|d| d.id == "obj:shiny" && d.reason == crate::compile::DropReason::OverBudget));
 
         let relevant: HashSet<String> = base_ids.iter().map(|s| s.to_string()).collect();
         let cmp = compare_compiles(&base, &fused, Some(&relevant));
         assert_eq!(cmp.recall_proxy_baseline, Some(1.0));
-        let fused_recall = cmp.recall_proxy_fused.unwrap();
-        assert!(
-            (fused_recall - 2.0 / 3.0).abs() < 1e-6,
-            "fused recall was {fused_recall}"
+        assert_eq!(cmp.recall_proxy_fused, Some(1.0));
+        assert_eq!(cmp.recall_proxy_delta, Some(0.0));
+    }
+
+    /// The other half of the same contract: when slack CAN fit the observer
+    /// item, fusion is a pure superset — the observer fills leftover budget
+    /// after every engine chunk is placed, and recall only rises.
+    #[test]
+    fn observer_fills_slack_without_displacing() {
+        use crate::rag::{RetrievalResult, RetrievedChunk};
+
+        let chunk = |id: usize, score: f32| RetrievedChunk {
+            id,
+            text: format!("doc {id} relay calibration evidence"),
+            score,
+            tokens: 3,
+        };
+        let retrieval = RetrievalResult {
+            chunks: vec![chunk(0, 0.9), chunk(1, 0.8), chunk(2, 0.7)],
+            total_tokens: 9,
+            budget: 13,
+            truncated: false,
+        };
+        let claims = vec![retrieval_claim(
+            "obj:slack-fill",
+            "one two three four",
+            0.99,
+        )];
+        let tokens_for = |c: &CandidateClaimPacket, h: &crate::ingest::RetrievalHit| {
+            let _ = c;
+            crate::rag::count_tokens(h.snippet.as_deref().unwrap_or(""))
+        };
+        let base = crate::compile::compile_from_retrieval(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            EmbedderInfo::default(),
         );
-        assert!(
-            cmp.recall_proxy_delta.unwrap() < 0.0,
-            "advisory score must not be able to lower recall silently"
+        let fused = crate::compile::compile_from_retrieval_with_observer_claims(
+            "relay calibration",
+            &retrieval,
+            &["engine"],
+            &claims,
+            EmbedderInfo::default(),
+            tokens_for,
         );
+
+        let base_ids: HashSet<&str> = base.selected.iter().map(|s| s.id.as_str()).collect();
+        let fused_ids: HashSet<&str> = fused.selected.iter().map(|s| s.id.as_str()).collect();
+        assert!(base_ids.is_subset(&fused_ids));
+        assert_eq!(observer_selected_count(&fused), 1);
+
+        let mut relevant: HashSet<String> = base_ids.iter().map(|s| s.to_string()).collect();
+        relevant.insert("obj:slack-fill".to_string());
+        let cmp = compare_compiles(&base, &fused, Some(&relevant));
+        assert_eq!(cmp.recall_proxy_baseline, Some(3.0 / 4.0));
+        assert_eq!(cmp.recall_proxy_fused, Some(1.0));
+        assert!(cmp.recall_proxy_delta.unwrap() > 0.0);
     }
 }
