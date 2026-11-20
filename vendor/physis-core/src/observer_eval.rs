@@ -368,6 +368,7 @@ pub fn assessed_contradiction_count(assessed: &[crate::gate::AssessedIntake]) ->
 mod tests {
     use super::*;
     use crate::compile::{compile_context, CompileCandidate, CompileOptions, EmbedderInfo};
+    use crate::embed::VectorEmbed;
     use crate::gate::{self, GateOutcome};
     use crate::ingest::{
         CandidateClaimPacket, ClaimPayload, ClaimSource, ConsolidatedLesson, EquivalenceProposal,
@@ -792,7 +793,6 @@ mod tests {
     /// A retrieval-hit claim from an observer, attributed to a named extractor
     /// with a real source uri, carrying `object_id`/`snippet`.
     fn retrieval_claim(object_id: &str, snippet: &str, score: f32) -> CandidateClaimPacket {
-        use crate::embed::VectorEmbed as _;
         use crate::ingest::RetrievalHit;
         claim(ClaimPayload::Retrieval(RetrievalHit {
             object_id: object_id.into(),
@@ -861,7 +861,10 @@ mod tests {
         // displacement, and this fixture forbids it.
         let base_ids: HashSet<&str> = base.selected.iter().map(|s| s.id.as_str()).collect();
         let fused_ids: HashSet<&str> = fused.selected.iter().map(|s| s.id.as_str()).collect();
-        assert!(base_ids.is_subset(&fused_ids), "engine selections must survive fusion");
+        assert!(
+            base_ids.is_subset(&fused_ids),
+            "engine selections must survive fusion"
+        );
         assert_eq!(observer_selected_count(&fused), 1);
         assert_eq!(observer_selected_count(&base), 0);
 
@@ -871,9 +874,14 @@ mod tests {
         let cmp = compare_compiles(&base, &fused, Some(&relevant));
         assert_eq!(cmp.baseline_observer_selected, 0);
         assert_eq!(cmp.fused_observer_selected, 1);
-        assert_eq!(cmp.recall_proxy_baseline, Some(2.0 / 3.0));
+        // The relevant set is every engine selection plus the observer-only
+        // object, so the baseline sits at n/(n+1) and fusion closes the gap.
+        let n = base_ids.len() as f32;
+        assert_eq!(cmp.recall_proxy_baseline, Some(n / (n + 1.0)));
         assert_eq!(cmp.recall_proxy_fused, Some(1.0));
-        assert_eq!(cmp.recall_proxy_delta, Some(1.0 / 3.0));
+        // f32 subtraction rounds: 1.0 - 0.8 is 0.19999999, not 0.2.
+        let delta = cmp.recall_proxy_delta.unwrap();
+        assert!((delta - 1.0 / (n + 1.0)).abs() < 1e-6, "delta was {delta}");
     }
 
     /// The conservative half of the same contract: when the budget cannot fit
@@ -915,10 +923,8 @@ mod tests {
             tokens_for,
         );
 
-        let base_ids: HashSet<String> =
-            base.selected.iter().map(|s| s.id.clone()).collect();
-        let fused_ids: HashSet<String> =
-            fused.selected.iter().map(|s| s.id.clone()).collect();
+        let base_ids: HashSet<String> = base.selected.iter().map(|s| s.id.clone()).collect();
+        let fused_ids: HashSet<String> = fused.selected.iter().map(|s| s.id.clone()).collect();
         assert_eq!(base_ids, fused_ids, "a full budget must select identically");
         assert_eq!(observer_selected_count(&fused), 0);
         assert!(fused
