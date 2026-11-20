@@ -331,6 +331,95 @@ pub struct ClaimGateSummary {
     pub reasons: Vec<String>,
 }
 
+/// Assessment of an observer retrieval-hit claim for context fusion.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetrievalHitGateResult {
+    pub decision: GateDecision,
+    /// Query↔snippet cosine similarity when measurable, else `None`.
+    pub relevance: Option<f32>,
+    pub reasons: Vec<String>,
+}
+
+/// Gate an observer retrieval-hit claim against the query before fusion.
+///
+/// Deterministic and abstention-first: provenance and attribution are checked
+/// first (defer/reject with named causes), then the query↔snippet cosine
+/// similarity is compared against `min_score` — below the floor defers (the
+/// observer may know something, but this packet is not the place for it).
+/// The embeddings are supplied by the caller (the gate stays pure); the
+/// advisory score is recorded, never trusted: it cannot raise the decision.
+/// The floor's meaning is embedder-dependent: with a semantic embedder it
+/// separates topical relevance; with a lexical or random-projection embedder
+/// it separates only coarse token overlap (same-language text clusters high).
+/// Nothing here asserts truth — acceptance only means "may enter the packet
+/// as an attributed, unverified candidate".
+pub fn gate_retrieval_hit(
+    query_emb: &[f32],
+    snippet_emb: &[f32],
+    claim: &CandidateClaimPacket,
+    hit: &crate::ingest::RetrievalHit,
+    min_score: f32,
+) -> RetrievalHitGateResult {
+    let mut reasons = Vec::new();
+    if claim.extractor.id.trim().is_empty() {
+        return RetrievalHitGateResult {
+            decision: GateDecision::Defer,
+            relevance: None,
+            reasons: vec!["missing extractor id".into()],
+        };
+    }
+    if claim.source.uri.is_empty() && claim.raw_ref.is_none() {
+        return RetrievalHitGateResult {
+            decision: GateDecision::Defer,
+            relevance: None,
+            reasons: vec!["missing provenance anchor".into()],
+        };
+    }
+    if hit.object_id.trim().is_empty() {
+        return RetrievalHitGateResult {
+            decision: GateDecision::Reject,
+            relevance: None,
+            reasons: vec!["retrieval hit has no object id (cannot attribute)".into()],
+        };
+    }
+    if hit.score < 0.0 || hit.score > 1.0 {
+        return RetrievalHitGateResult {
+            decision: GateDecision::Reject,
+            relevance: None,
+            reasons: vec![format!("advisory score out of range: {}", hit.score)],
+        };
+    }
+    let snippet = hit.snippet.as_deref().unwrap_or("").trim();
+    if snippet.is_empty() {
+        return RetrievalHitGateResult {
+            decision: GateDecision::Defer,
+            relevance: None,
+            reasons: vec!["no snippet to check relevance against".into()],
+        };
+    }
+    let relevance = crate::models::cosine_sim(query_emb, snippet_emb);
+    if relevance < min_score {
+        reasons.push(format!(
+            "relevance {relevance:.3} below floor {min_score:.3}"
+        ));
+        reasons.push(
+            "deferred: the observer may know something, this packet is not the place for it".into(),
+        );
+        return RetrievalHitGateResult {
+            decision: GateDecision::Defer,
+            relevance: Some(relevance),
+            reasons,
+        };
+    }
+    reasons.push(format!("relevance={relevance:.3} >= floor {min_score:.3}"));
+    reasons.push("extractor confidence is advisory, not authority".into());
+    RetrievalHitGateResult {
+        decision: GateDecision::AcceptCandidate,
+        relevance: Some(relevance),
+        reasons,
+    }
+}
+
 /// Conservative top-level gate: a claim with no payload support/provenance is
 /// deferred/abstained; confidence alone never accepts.
 pub fn gate_claim(claim: &CandidateClaimPacket) -> ClaimGateSummary {
@@ -524,11 +613,113 @@ pub fn assess_claims_with_intake(
 mod tests {
     use super::*;
     use crate::core::PhysisCore;
+    use crate::embed::VectorEmbed;
     use crate::ingest::{
         ClaimPayload, ClaimSource, ConsolidatedLesson, EntityMention, EquivalenceProposal,
-        ExtractorInfo, ProposedRelation,
+        ExtractorInfo, ProposedRelation, RetrievalHit,
     };
     use crate::relation::RelationType;
+
+    #[test]
+    fn a_relevant_well_provenanced_hit_is_accepted_with_its_relevance_recorded() {
+        let embedder = crate::RandomProjectionEmbedder::new(64);
+        let hit = RetrievalHit {
+            object_id: "obj:relay".into(),
+            score: 0.9,
+            strategy: Some("vec".into()),
+            snippet: Some("relay calibration requires the bench harness".into()),
+        };
+        let claim = base_claim(ClaimPayload::Retrieval(hit.clone()));
+        let q = embedder.embed("relay calibration bench harness");
+        let s = embedder.embed(hit.snippet.as_deref().unwrap());
+        let r = gate_retrieval_hit(&q, &s, &claim, &hit, 0.9);
+        assert_eq!(r.decision, GateDecision::AcceptCandidate);
+        let rel = r.relevance.unwrap();
+        assert!((0.9..1.0).contains(&rel), "relevance was {rel}");
+        assert!(r.reasons.iter().any(|x| x.contains("advisory")));
+    }
+
+    #[test]
+    fn an_irrelevant_hit_defers_with_the_floor_named() {
+        let embedder = crate::RandomProjectionEmbedder::new(64);
+        let hit = RetrievalHit {
+            object_id: "obj:menu".into(),
+            score: 0.9,
+            strategy: None,
+            snippet: Some("the cafeteria lunch menu rotates daily".into()),
+        };
+        let claim = base_claim(ClaimPayload::Retrieval(hit.clone()));
+        let q = embedder.embed("relay calibration bench harness");
+        let s = embedder.embed(hit.snippet.as_deref().unwrap());
+        // Measured with this embedder: the relay query scores 0.934 against a
+        // relevant snippet and 0.892 against this unrelated one — a floor of
+        // 0.9 separates them. The floor's meaning is embedder-dependent; with
+        // a non-semantic embedder only coarse separation is possible.
+        let r = gate_retrieval_hit(&q, &s, &claim, &hit, 0.9);
+        assert_eq!(r.decision, GateDecision::Defer);
+        let rel = r.relevance.unwrap();
+        assert!((rel - 0.892).abs() < 0.01, "relevance was {rel}");
+        assert!(r
+            .reasons
+            .iter()
+            .any(|x| x.contains("below floor") && x.contains("0.900")));
+    }
+
+    #[test]
+    fn malformed_hits_reject_with_named_causes() {
+        let embedder = crate::RandomProjectionEmbedder::new(64);
+        let q = embedder.embed("relay calibration");
+        let s = embedder.embed("some snippet");
+
+        let no_id = RetrievalHit {
+            object_id: "  ".into(),
+            score: 0.5,
+            strategy: None,
+            snippet: Some("some snippet".into()),
+        };
+        let r = gate_retrieval_hit(
+            &q,
+            &s,
+            &base_claim(ClaimPayload::Retrieval(no_id.clone())),
+            &no_id,
+            0.1,
+        );
+        assert_eq!(r.decision, GateDecision::Reject);
+        assert!(r.reasons.iter().any(|x| x.contains("no object id")));
+
+        let bad_score = RetrievalHit {
+            object_id: "obj:x".into(),
+            score: 1.5,
+            strategy: None,
+            snippet: Some("some snippet".into()),
+        };
+        let r = gate_retrieval_hit(
+            &q,
+            &s,
+            &base_claim(ClaimPayload::Retrieval(bad_score.clone())),
+            &bad_score,
+            0.1,
+        );
+        assert_eq!(r.decision, GateDecision::Reject);
+        assert!(r.reasons.iter().any(|x| x.contains("out of range")));
+
+        let no_snippet = RetrievalHit {
+            object_id: "obj:x".into(),
+            score: 0.5,
+            strategy: None,
+            snippet: None,
+        };
+        let r = gate_retrieval_hit(
+            &q,
+            &s,
+            &base_claim(ClaimPayload::Retrieval(no_snippet.clone())),
+            &no_snippet,
+            0.1,
+        );
+        assert_eq!(r.decision, GateDecision::Defer);
+        assert!(r.relevance.is_none());
+        assert!(r.reasons.iter().any(|x| x.contains("no snippet")));
+    }
 
     fn base_claim(payload: ClaimPayload) -> CandidateClaimPacket {
         CandidateClaimPacket {

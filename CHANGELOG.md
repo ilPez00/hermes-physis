@@ -32,14 +32,40 @@ Observer fusion stays opt-in — measured, not assumed.
   `budget_and_receipts_are_deterministic` expectation was updated to the
   tier contract (an observer score-tie no longer wins against engine
   evidence).
+- **The noise-admission cost now has a measured answer: the retrieval-hit
+  relevance gate.** Retrieval hits fell into the catch-all `gate_claim`
+  (provenance only — zero relevance signal), and the fusion path never
+  consulted gates at all. `gate_retrieval_hit` (in `gate.rs`) gates an
+  observer retrieval hit against the query: provenance/attribution first
+  (defer/reject with named causes), then query↔snippet cosine similarity
+  against a caller-supplied floor — below the floor defers ("the observer
+  may know something; this packet is not the place for it"), and the
+  advisory score is recorded but can never raise the decision.
+  `compile_from_retrieval_with_gated_observer_claims` is the fusion path
+  that uses it: only accepted hits become candidates (still attributed,
+  still ranked below engine evidence), and the gate results are returned
+  alongside the packet so exclusions are visible, never silent.
+  Measured on the dense-corpus fixture: the additive object (~0.93
+  relevance) is admitted, both noise hits (0.892/0.858) are deferred with
+  the floor named, observer_selected falls 3 → 1, and the recall win
+  (+1/7) survives without the noise riding along. Can-fail verified:
+  bypassing the gate makes the test fail (3 selected, not 1).
+  **Embedder-dependence, measured and documented:** with the crate's
+  random-projection embedder, same-language text clusters in a narrow band
+  (relevant 0.934/0.917 vs topical noise 0.892/0.858), so an absolute floor
+  separates only coarse overlap; with a semantic embedder (minilm via the
+  `embed-onnx` feature) the floor separates topical relevance. The floor is
+  a caller policy parameter for exactly this reason.
 - **Verdict: default-off stands, for a different reason.** The recall
   argument is gone — fusion can no longer lose recall, and unused budget
   slack is the only thing observer items consume. What remains is
   epistemic: an ample-slack packet picks up unverified observer content
   (noise included, measured) with no relevance filter before the budget.
-  Until observer candidates carry a relevance/quality gate, callers who
-  cannot tolerate unverified content in the packet keep fusion off; callers
-  who can, get strictly-more-recall packets for free.
+  The gated fusion path is the relevance filter, but it requires an
+  embedder and a floor policy, so it is opt-in by construction. Callers
+  who cannot tolerate unverified content keep fusion off; callers who can
+  choose between ungated fusion (strictly more recall, noise included)
+  and gated fusion (relevance-filtered, embedder required).
 
 Skill: the operating manual now teaches selectivity and the reuse boundary.
 

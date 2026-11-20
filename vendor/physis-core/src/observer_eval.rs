@@ -1071,6 +1071,97 @@ mod tests {
         assert!(utilization(&fused) > utilization(&base));
     }
 
+    /// The gated fusion path answers the noise-admission cost measured in
+    /// regime 2: each observer retrieval hit is gated against the query by
+    /// cosine relevance before it can become a candidate. Measured with this
+    /// embedder, the additive object scores ~0.93 against the query and the
+    /// noise hits 0.892/0.858 — a floor of 0.9 admits the additive object and
+    /// defers both noise hits with named causes. The recall win survives; the
+    /// noise does not ride along. Gate exclusions are returned, never silent.
+    #[test]
+    fn gated_fusion_admits_the_relevant_hit_and_defers_noise_with_named_causes() {
+        use crate::rag::{RagCorpus, TokenFixedRetriever};
+        use crate::RandomProjectionEmbedder;
+
+        let embedder = RandomProjectionEmbedder::new(64);
+        let docs = [
+            "relay calibration requires the bench harness and a reference meter",
+            "relay calibration two pass verification catches swapped contacts",
+            "spindle bearing lubrication schedule is monthly",
+            "coolant pump filter replacement every quarter",
+            "shift handover notes filed weekly",
+            "invoice reconciliation runs on the first business day",
+        ];
+        let texts: Vec<String> = docs.iter().map(|d| d.to_string()).collect();
+        let corpus = RagCorpus::build(&texts, &embedder);
+        let query = "relay calibration bench harness";
+        let query_emb = embedder.embed(query);
+        let retrieval = TokenFixedRetriever::new(400, 6).retrieve(&query_emb, &corpus);
+        assert!(retrieval.chunks.len() >= 2, "both relay docs must retrieve");
+
+        let claims = vec![
+            retrieval_claim(
+                "obj:relay-procedure",
+                "relay calibration: bench harness, reference meter, two-pass verification",
+                0.9,
+            ),
+            retrieval_claim("obj:noise-menu", "cafeteria lunch menu rotates daily", 0.1),
+            retrieval_claim(
+                "obj:noise-weather",
+                "the courtyard fountain runs from nine to five",
+                0.1,
+            ),
+        ];
+        let base = crate::compile::compile_from_retrieval(
+            query,
+            &retrieval,
+            &["engine"],
+            EmbedderInfo::default(),
+        );
+        let (fused, gated) = crate::compile::compile_from_retrieval_with_gated_observer_claims(
+            query,
+            &retrieval,
+            &["engine"],
+            &claims,
+            &embedder,
+            0.9,
+        );
+
+        // Gate receipts: exactly one accept (the additive object), two defers
+        // with the floor named in the reasons.
+        assert_eq!(gated.len(), 3);
+        assert_eq!(
+            gated[0].decision,
+            crate::gate::GateDecision::AcceptCandidate
+        );
+        for g in &gated[1..] {
+            assert_eq!(g.decision, crate::gate::GateDecision::Defer);
+            assert!(g.reasons.iter().any(|r| r.contains("below floor")));
+            assert!(g.relevance.unwrap() < 0.9);
+        }
+
+        // The packet: only the gated-in observer item, noise excluded — the
+        // recall win survives without the noise riding along.
+        assert_eq!(observer_selected_count(&fused), 1);
+        let fused_ids: HashSet<&str> = fused.selected.iter().map(|s| s.id.as_str()).collect();
+        assert!(fused_ids.contains("obj:relay-procedure"));
+        assert!(!fused_ids.contains("obj:noise-menu"));
+        assert!(!fused_ids.contains("obj:noise-weather"));
+
+        let base_ids: HashSet<String> = base.selected.iter().map(|s| s.id.clone()).collect();
+        let mut relevant = base_ids.clone();
+        relevant.insert("obj:relay-procedure".to_string());
+        let cmp = compare_compiles(&base, &fused, Some(&relevant));
+        // The baseline cannot see the observer-only object: recall 6/7. The
+        // gated fusion closes the gap (7/7) without the noise riding along.
+        let n = base_ids.len() as f32;
+        assert_eq!(cmp.recall_proxy_baseline, Some(n / (n + 1.0)));
+        assert_eq!(cmp.recall_proxy_fused, Some(1.0));
+        let delta = cmp.recall_proxy_delta.unwrap();
+        assert!((delta - 1.0 / (n + 1.0)).abs() < 1e-6, "delta was {delta}");
+        assert!(fused_ids.is_superset(&base_ids.iter().map(|s| s.as_str()).collect()));
+    }
+
     /// The contract the displacement tripwire exposed: an observer's advisory
     /// score must never outrank verified engine evidence. Under partial slack
     /// the observer item may only fill what the engine did not take — here the

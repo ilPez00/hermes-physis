@@ -371,16 +371,17 @@ pub use observer::{
 // Verification/promotion gates for observer claims (abstention-first, no auto-merge/truth)
 pub use gate::{
     assess_claim, assess_claims_with_intake, assess_grounding, gate_claim, gate_equivalence,
-    gate_lesson, gate_relation, AssessedIntake, ClaimGateSummary, GateDecision, GateOutcome,
-    GroundingGateResult, LessonGateResult, RelationGateResult, ResolutionGateResult,
+    gate_lesson, gate_relation, gate_retrieval_hit, AssessedIntake, ClaimGateSummary, GateDecision,
+    GateOutcome, GroundingGateResult, LessonGateResult, RelationGateResult, ResolutionGateResult,
+    RetrievalHitGateResult,
 };
 
 // Receipt-carrying context compilation (deterministic, budgeted)
 pub use compile::{
     candidates_from_retrieval_claims, compile_context, compile_from_retrieval,
-    compile_from_retrieval_with_observer_claims, compile_fused, CompileCandidate, CompileOptions,
-    CompileStats, CompiledContext, DropReason, DropReceipt, EmbedderInfo as CompileEmbedderInfo,
-    SelectionReceipt,
+    compile_from_retrieval_with_gated_observer_claims, compile_from_retrieval_with_observer_claims,
+    compile_fused, CompileCandidate, CompileOptions, CompileStats, CompiledContext, DropReason,
+    DropReceipt, EmbedderInfo as CompileEmbedderInfo, SelectionReceipt,
 };
 
 // Action/mutation preview, affected-set (DependOn/TMS) explanation, and staged commit helpers

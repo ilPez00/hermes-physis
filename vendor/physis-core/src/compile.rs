@@ -409,6 +409,62 @@ where
     )
 }
 
+/// Compile engine retrieval results fused with **gated** observer retrieval-hit
+/// claims.
+///
+/// Each claim's snippet is embedded and gated against the query
+/// ([`crate::gate::gate_retrieval_hit`]): only `AcceptCandidate` outcomes become
+/// packet candidates; defers/rejects are returned alongside the packet so the
+/// exclusion is visible, never silent. This is the fusion path that answers the
+/// noise-admission cost measured in the ablation — unverified observer content
+/// still enters (attributed, ranked below engine evidence), but only content
+/// relevant to the query at or above `min_score`.
+pub fn compile_from_retrieval_with_gated_observer_claims(
+    query: impl Into<String>,
+    retrieval: &crate::rag::RetrievalResult,
+    engine_strategies: &[&str],
+    observer_claims: &[crate::ingest::CandidateClaimPacket],
+    embedder: &dyn crate::embed::VectorEmbed,
+    min_score: f32,
+) -> (CompiledContext, Vec<crate::gate::RetrievalHitGateResult>) {
+    let query = query.into();
+    let query_emb = embedder.embed(&query);
+    let mut gated = Vec::with_capacity(observer_claims.len());
+    let mut admitted = Vec::new();
+    for claim in observer_claims {
+        if let crate::ingest::ClaimPayload::Retrieval(hit) = &claim.payload {
+            let snippet = hit.snippet.as_deref().unwrap_or("");
+            let snippet_emb = embedder.embed(snippet);
+            let result =
+                crate::gate::gate_retrieval_hit(&query_emb, &snippet_emb, claim, hit, min_score);
+            gated.push(result);
+        } else {
+            gated.push(crate::gate::RetrievalHitGateResult {
+                decision: crate::gate::GateDecision::Defer,
+                relevance: None,
+                reasons: vec![format!(
+                    "not a retrieval hit: {}",
+                    claim.payload.kind_label()
+                )],
+            });
+        }
+    }
+    for (claim, result) in observer_claims.iter().zip(&gated) {
+        if result.decision == crate::gate::GateDecision::AcceptCandidate {
+            admitted.push(claim.clone());
+        }
+    }
+    let packet = compile_from_retrieval_with_observer_claims(
+        query,
+        retrieval,
+        engine_strategies,
+        &admitted,
+        EmbedderInfo::default(),
+        |_c, h| crate::rag::count_tokens(h.snippet.as_deref().unwrap_or("")),
+    );
+    (packet, gated)
+}
+
 /// Convenience: compile directly from RAG retrieval results, attributing the
 /// given strategies. RAG chunks are engine-local (not observer-sourced).
 pub fn compile_from_retrieval(
