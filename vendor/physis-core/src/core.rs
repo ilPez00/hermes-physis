@@ -787,6 +787,9 @@ impl PhysisCore {
     /// Observe via `observer`, then stage+record append-only intake and gate
     /// assessment, commit, and atomically persist to `path`. Observer extraction
     /// runs before staging; no proposals are registered/certified/merged.
+    // The signature mirrors the staged pipeline (path, observer, inputs, labels,
+    // options, reason); collapsing it would hide the pipeline's shape.
+    #[allow(clippy::too_many_arguments)]
     pub fn observe_and_assess_and_persist(
         &mut self,
         path: impl AsRef<std::path::Path>,
@@ -2558,7 +2561,7 @@ mod envelope_workflow_tests {
         assert_eq!(core2.edges.len(), 0);
         assert_eq!(core2.contradictions.len(), 0);
         // intake recorded as part of assessment
-        assert!(core2.epistemic_audit.events.len() >= before_ev2 + 1);
+        assert!(core2.epistemic_audit.events.len() > before_ev2);
 
         // in-memory staged transact variants (audited commit event, no persistence)
         let mut core3 = PhysisCore::new();

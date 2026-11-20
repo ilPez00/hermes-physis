@@ -139,8 +139,8 @@ fn recurrence_evidence(
     for ev in events {
         let t = ev.assertion_time();
         let offset = (t - window_start).num_seconds().clamp(0, window_secs - 1);
-        let idx = ((offset as i64 * total_bins as i64) / window_secs)
-            .clamp(0, (total_bins - 1) as i64) as usize;
+        let idx =
+            ((offset * total_bins as i64) / window_secs).clamp(0, (total_bins - 1) as i64) as usize;
         bins[idx] = true;
     }
     let active_bins = bins.iter().filter(|b| **b).count();

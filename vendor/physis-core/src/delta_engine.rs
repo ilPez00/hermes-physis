@@ -642,6 +642,7 @@ pub fn retract_evidence_with_cascade(
 // ── Core Propagation ─────────────────────────────────────────────────────
 
 /// Classify a coherence delta.
+#[cfg(test)]
 fn classify_delta(delta: f32) -> &'static str {
     classify_delta_with(delta, DEGRADATION_THRESHOLD)
 }
@@ -664,6 +665,10 @@ pub fn classify_delta_with(delta: f32, degradation_threshold: f32) -> &'static s
 /// The impact factor for a node at depth d is `source_sim × γ^d`.
 /// Propagation stops when depth exceeds `params.max_propagation_depth` or
 /// impact falls below `params.min_impact`.
+// Private recursive helper: the arguments are the walk state (visited/affected/
+// cutoffs) plus the fixed propagation parameters; a context struct would only
+// obscure the recursion.
+#[allow(clippy::too_many_arguments)]
 fn dfs_collect(
     current_id: &str,
     adjacency: &HashMap<String, Vec<String>>,

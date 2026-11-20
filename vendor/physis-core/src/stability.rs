@@ -438,7 +438,7 @@ mod tests {
         let nodes = vec![node("n1", vec![1.0, 0.0, 0.0])];
         let h = hyp("h1", vec!["n1"]);
         let base_fit = h.fitness;
-        let report = evidence_ablation(&nodes, &[h.clone()], &[], "h1");
+        let report = evidence_ablation(&nodes, std::slice::from_ref(&h), &[], "h1");
         assert_eq!(report.scenarios.len(), 2, "one per source");
         // Base hypothesis untouched.
         assert_eq!(h.fitness, base_fit);
@@ -463,9 +463,9 @@ mod tests {
         });
         let r1 = assess_robustness(
             &nodes,
-            &[h.clone()],
+            std::slice::from_ref(&h),
             &[],
-            &[sc.clone()],
+            std::slice::from_ref(&sc),
             Some(&["h1".into()]),
         );
         let r2 = assess_robustness(&nodes, &[h], &[], &[sc], Some(&["h1".into()]));

@@ -1545,6 +1545,18 @@ pub trait DecisionOracle<O: DecisionLabel>: Send + Sync {
     }
 }
 
+fn label_space_digest(decision_type: &str, labels: &[String]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    h.update(decision_type.as_bytes());
+    h.update(b"\x1f");
+    for l in labels {
+        h.update(l.as_bytes());
+        h.update(b"\x1f");
+    }
+    format!("{decision_type}#{:x}", h.finalize())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1658,7 +1670,7 @@ mod tests {
 
     #[test]
     fn cell_key_matches_the_crate_wide_format() {
-        assert_eq!(cell_key("HEAL", "REST"), format!("HEAL\u{0}REST"));
+        assert_eq!(cell_key("HEAL", "REST"), "HEAL\u{0}REST".to_string());
         let w = WorldSlice::new("w1", "t").with_cell("HEAL", "REST");
         assert_eq!(w.cell_key().as_deref(), Some("HEAL\u{0}REST"));
     }
@@ -1765,16 +1777,4 @@ mod tests {
         assert!(!spec.admits(&outside));
         assert!(!spec.text_view && !spec.embedding_view);
     }
-}
-
-fn label_space_digest(decision_type: &str, labels: &[String]) -> String {
-    use sha2::{Digest, Sha256};
-    let mut h = Sha256::new();
-    h.update(decision_type.as_bytes());
-    h.update(b"\x1f");
-    for l in labels {
-        h.update(l.as_bytes());
-        h.update(b"\x1f");
-    }
-    format!("{decision_type}#{:x}", h.finalize())
 }

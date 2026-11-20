@@ -77,7 +77,7 @@ impl MapReport {
     pub fn hero_lines(&self) -> Vec<String> {
         vec![
             format!("{} DOCUMENTS", self.docs),
-            format!("↓ PHYSIS"),
+            "↓ PHYSIS".to_string(),
             format!("{} RECURRING PATTERNS", self.repeats.len()),
             format!("{} SIGNIFICANT DIFFERENCES", self.differences.len()),
             format!("{} CONTRADICTION CANDIDATES", self.contradictions.len()),
@@ -738,7 +738,7 @@ fn split_document(path: &str, body: &str, max_tokens: usize) -> Vec<(String, Str
             let n = pieces.len() + 1;
             pieces.push((format!("{path}#part{n}"), std::mem::take(&mut current)));
         }
-        if crate::rag::count_tokens(&line) > max_tokens {
+        if crate::rag::count_tokens(line) > max_tokens {
             // A single enormous line (minified JS, one-line JSON): cut on
             // whitespace so it can still contribute.
             let mut buf = String::new();

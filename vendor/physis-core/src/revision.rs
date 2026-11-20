@@ -187,7 +187,7 @@ mod tests {
             core.epistemic_audit.events.len(),
             working_events_before_commit + 1
         );
-        assert!(core.epistemic_audit.events.len() >= before_events + 1);
+        assert!(core.epistemic_audit.events.len() > before_events);
         assert!(receipt.audit_event_id.is_some());
         assert_eq!(
             core.epistemic_audit.events.last().map(|e| e.id.as_str()),

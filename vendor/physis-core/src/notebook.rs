@@ -583,7 +583,7 @@ mod tests {
         let e = RandomProjectionEmbedder::new(64);
         // A corpus engineered to cycle: the continuation leads back into the
         // context that produced it.
-        let docs = vec![(
+        let docs = [(
             "loop.md".to_string(),
             "the machine must not stop above it the machine must not stop above it".to_string(),
         )];
@@ -605,7 +605,7 @@ mod tests {
     #[test]
     fn drafting_always_terminates_within_max_tokens() {
         let e = RandomProjectionEmbedder::new(64);
-        let docs = vec![("r.md".to_string(), "a b a b a b a b a b".to_string())];
+        let docs = [("r.md".to_string(), "a b a b a b a b a b".to_string())];
         let texts: Vec<String> = docs.iter().map(|(_, b)| b.clone()).collect();
         let (result, _) = crate::rag::retrieve_from_texts(&texts, "a b", &e, 400, 3);
         let d = draft(&result, "a b", 1000, 0.0).unwrap();

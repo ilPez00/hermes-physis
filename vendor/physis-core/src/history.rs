@@ -428,7 +428,7 @@ impl DynamicalTrace {
     }
 }
 
-fn stabilize_order(points: &mut Vec<TracePoint>) {
+fn stabilize_order(points: &mut [TracePoint]) {
     // Stable sort by t preserves caller order for ties (important for
     // deterministic order-aware/replay analysis).
     points.sort_by_key(|p| p.t);

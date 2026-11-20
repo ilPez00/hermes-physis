@@ -268,7 +268,11 @@ fn short_err(s: &str) -> String {
 }
 
 fn fam_names() -> Vec<String> {
-    vec![format!("maint"), format!("finance"), format!("deploy")]
+    vec![
+        "maint".to_string(),
+        "finance".to_string(),
+        "deploy".to_string(),
+    ]
 }
 
 fn family_key(name: &str) -> String {
