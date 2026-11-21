@@ -446,3 +446,27 @@ Then open a SHA-bump PR against NousResearch/hermes-agent updating
 
 Plugin: MIT. Bundled engines: Apache-2.0 (their LICENSE/NOTICE files are
 preserved in `vendor/`). See `THIRD_PARTY_NOTICES.md`.
+
+## Commit + push to air's USB storage — always
+
+Work in this repo is not saved until it is in **three** places, not two: a
+commit on the local branch, that commit on `origin` (GitHub `ilPez00`), **and a
+`git bundle` on air's USB stick** (`/dev/sdb1`, 29.8 G exfat, mounted on air at
+`/mnt/sdb1`). The stick is the off-machine copy that survives a dead node and a
+dead NAS; `origin` alone is not enough.
+
+`fleet-sync` does this — run it at the end of any session that touched files,
+and after any multi-file edit wave:
+
+```bash
+fleet-sync            # commit + push + bundle to the NAS and to air's stick
+```
+
+When the stick is mounted on air, the bundle is pushed there by the same run
+(tier `air-usb`). When it is not mounted, that tier is **skipped with a log
+line — never faked, never filled onto `/` instead**. Do not substitute a tarball
+of the working tree: the portable, restorable, verifiable artifact is
+`git bundle create <repo>.bundle --all`, and `git clone <repo>.bundle` must
+restore it.
+
+Details and the rest of the storage tiers: `~/.config/agents/SYNC.md`.
