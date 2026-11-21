@@ -253,3 +253,41 @@ gate's receipts make every decision visible, so retuning stays cheap.
 Verdict update: default-off still stands; the semantic default is 0.65, and
 the shipping configuration (semantic + 0.65 + auto reserve) is the only
 measured configuration with zero noise admissions across all sweeps.
+
+## n=13: the ROC is shallow — the default moves to the zero-contamination point
+
+Six further held-out queries (physis-cc, gui-navigation, impossibllm-rescope,
+invariant-coverage, defect-remediation, economic-relevance) broaden the sample
+to 13 relevant / 28 noise. The measured ROC over all samples:
+
+| floor | relevant admitted | false-admits (noise text in packet) |
+|---|---|---|
+| 0.60 | 12/13 | 3 |
+| 0.65 | 10/13 | 1 |
+| **0.66** | **9/13** | **0** |
+| 0.70 | 5/13 | 0 |
+
+Bands: relevant 0.5543–0.7774, noise 0.3954–0.6522. The overlap is now wide
+and structural, not a thin-gap artifact: **no floor gives both high recall and
+zero contamination.** The 0.65 false-admit is instructive — noise-nas at
+0.6522 on the invariants query ("inventory, change tracking, evidence
+tooling" against "invariants report coverage") is a domain-adjacent HARD
+NEGATIVE, not embedder noise. Production observer claims come from the same
+ecosystem, so hard negatives are the realistic case, not an artifact of the
+noise set mentioning Physis.
+
+Response: the semantic default moves 0.65 → **0.66**, the measured
+zero-contamination point. Re-verified via the deployed binary's default path:
+9/13 held-out answerable, zero noise admitted, zero noise text. The four
+deferrals (0.5543, 0.6052, 0.6185, 0.6536) are all visible receipts.
+
+Final verdict for the relevance gate, replacing the earlier "0.6/0.65 is
+measured-placed" claims: **the gate is a recall-vs-contamination trade with a
+shallow ROC on real text.** The shipping default picks zero contamination and
+pays in recall; callers wanting more recall pass `--observer-floor` and own
+the measured risk (each step down the table buys ~1-3 relevant queries at the
+cost of real noise text in packets). Candidate future unit (not built): a
+relative signal — e.g. requiring a claim to beat the engine's own best chunk
+score — might separate answer-versus-adjacent better than an absolute
+cosine floor; the current measurement is the baseline such a change must
+beat.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Semantic observer floor -> 0.66, the measured zero-contamination point**: broadening to 13 held-out queries / 28 noise samples shows the relevance ROC on real text is SHALLOW (relevant 0.5543-0.7774, noise to 0.6522 — domain-adjacent hard negatives). No floor gives both high recall and zero contamination: 0.60 = 12/13 relevant + 3 noise; 0.66 = 9/13 + 0. The default now buys zero contamination and pays in recall; callers tune --observer-floor to move along the measured curve.
+
 - **Semantic observer floor 0.6 -> 0.65**: broadening the real corpus from 3 to 7 held-out queries revealed the relevant and noise bands OVERLAP at 0.6 — a noise claim (0.6385) was admitted with its text verbatim in a packet. 0.65 sits in the measured zero-noise gap (0.6385, 0.6536]: 6/7 held-out queries answerable, zero noise; the one deferral is the safe direction. Third fixture-calibrated margin this session that real-corpus measurement overturned.
 
 - **RP embedder fusion is now opt-in** (default floor 0.9 -> 0.99): measured on the real corpus, random-projection relevance overlaps noise completely (relevant 0.84-0.94, noise 0.84-0.92) — the old default admitted real noise (0.9016) while deferring real relevant content (0.8848). A path that cannot keep its gate's promise ships disabled. The semantic default stays 0.6 (validated on fixtures and the real corpus). Callers opt in with --observer-floor.

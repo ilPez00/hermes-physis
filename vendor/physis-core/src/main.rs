@@ -141,7 +141,7 @@ enum Command {
         observer_claims: Option<PathBuf>,
         /// Relevance floor for observer retrieval hits; when omitted, defaults
         /// by embedder kind (0.99 random-projection — fusion opt-in, see
-        /// default_observer_floor; 0.65 semantic).
+        /// default_observer_floor; 0.66 semantic).
         #[arg(long)]
         observer_floor: Option<f32>,
         /// Packet headroom reserved for observer content: a number sets a
@@ -385,7 +385,7 @@ enum Command {
         /// Relevance floor for observer retrieval hits (query↔snippet cosine;
         /// meaning is embedder-dependent — see gate_retrieval_hit docs).
         /// When omitted, defaults by embedder kind: 0.99 for random-projection
-        /// (fusion opt-in), 0.65 for a semantic (ONNX) embedder.
+        /// (fusion opt-in), 0.66 for a semantic (ONNX) embedder.
         #[arg(long)]
         observer_floor: Option<f32>,
         /// Tokens of packet headroom reserved for observer content: the engine
@@ -3072,11 +3072,13 @@ fn cmd_ngram_cells(
 /// Default observer relevance floor, by embedder kind — measured, not assumed.
 ///
 /// Semantic embedder (bge-small) separates on fixtures cleanly (relevant
-/// 0.891/0.644 vs noise 0.375–0.445). On the broadened real corpus (7
-/// held-out queries) the bands OVERLAP: relevant 0.6185–0.768, noise up to
-/// 0.6385 — the old 0.6 default admitted real noise on 1 of 7 queries.
-/// Default 0.65 sits in the measured zero-noise gap (0.6385, 0.6536]:
-/// 6/7 answerable, zero noise; the one deferral is the safe direction.
+/// 0.891/0.644 vs noise 0.375–0.445). On the broadened real corpus (13
+/// held-out queries, 28 noise samples) the ROC is SHALLOW: relevant
+/// 0.5543–0.7774, noise up to 0.6522 — domain-adjacent hard negatives the
+/// fixtures never contained. No floor gives both high recall and zero
+/// contamination (0.60: 12/13 relevant, 3 noise; 0.66: 9/13, 0 noise).
+/// Default 0.66 is the zero-contamination point; the recall cost is four
+/// deferred claims, each a visible receipt.
 ///
 /// Random-projection (lexical hash) separates on synthetic fixtures only
 /// (relevant 0.934/0.917 vs noise 0.892/0.858 — hence the old 0.9 default).
@@ -3096,14 +3098,18 @@ fn default_observer_floor(kind: &str) -> f32 {
         // RP is opt-in (the caller passes --observer-floor explicitly).
         0.99
     } else {
-        // Measured on the broadened real corpus (7 held-out queries): the
-        // relevant band is 0.6185-0.768, the noise band reaches 0.6385 —
-        // they OVERLAP at the old 0.6 default, which admitted real noise
-        // (noise text verbatim in a packet) on 1 of 7 queries. 0.65 sits in
-        // the measured zero-noise gap (0.6385, 0.6536]: 6/7 held-out
-        // queries answerable, zero noise; the one deferral is the safe
-        // direction (visible receipt, not silent contamination).
-        0.65
+        // Measured on the broadened real corpus (13 held-out queries, 28
+        // noise samples): the ROC is SHALLOW — relevant 0.5543-0.7774,
+        // noise up to 0.6522 (a domain-adjacent hard negative: "inventory,
+        // change tracking, evidence tooling" against an "invariants report
+        // coverage" query). No floor gives both high recall and zero
+        // contamination: 0.60 admits 12/13 relevant but 3 noise; 0.66
+        // admits 9/13 relevant and 0 noise. Under the gate's asymmetry
+        // (false admit = unverified text in the packet; false defer =
+        // visible receipt), the default sits at the zero-contamination
+        // point: 0.66. Callers wanting more recall pass --observer-floor
+        // and own the measured risk.
+        0.66
     }
 }
 
@@ -3583,16 +3589,17 @@ mod tests {
         // relevant content (0.8848). A path that cannot keep its gate's
         // promise ships disabled: fusion under RP is opt-in.
         assert_eq!(default_observer_floor("random-projection"), 0.99);
-        // Floor sweep on the broadened real corpus (7 held-out queries,
-        // benchmarks/observer-fusion-real-corpus-2026-11-20.md): at 0.6 the
-        // noise band's top (0.6385) cleared the floor and its text landed
-        // verbatim in a packet; the relevant band's floor is 0.6185, so the
-        // bands OVERLAP at 0.6. 0.65 sits in the measured zero-noise gap
-        // (0.6385, 0.6536]: 6/7 held-out queries answerable, zero noise —
-        // the one deferral is the safe direction (a visible receipt, not
-        // silent contamination).
-        assert_eq!(default_observer_floor("onnx-explicit"), 0.65);
-        assert_eq!(default_observer_floor("onnx-minilm"), 0.65);
+        // n=13 correction (benchmarks/observer-fusion-real-corpus-
+        // 2026-11-20.md): at 0.65 a domain-adjacent hard negative
+        // (noise-nas 0.6522 on the invariants query — "inventory, change
+        // tracking, evidence tooling" vs "invariants report coverage") was
+        // ADMITTED with its text verbatim in the packet. The measured ROC
+        // is shallow: 0.66 is the zero-false-admit point (9/13 relevant
+        // admitted, 0/28 noise). Under the gate's asymmetry — a false admit
+        // puts unverified text in the packet, a false defer leaves a visible
+        // receipt — the default belongs at the zero-contamination point.
+        assert_eq!(default_observer_floor("onnx-explicit"), 0.66);
+        assert_eq!(default_observer_floor("onnx-minilm"), 0.66);
     }
 
     #[test]
