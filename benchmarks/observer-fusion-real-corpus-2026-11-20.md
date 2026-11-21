@@ -291,3 +291,34 @@ relative signal — e.g. requiring a claim to beat the engine's own best chunk
 score — might separate answer-versus-adjacent better than an absolute
 cosine floor; the current measurement is the baseline such a change must
 beat.
+
+## Negative result: the relative-signal gate does not beat the absolute floor
+
+The candidate future unit — gate a claim not on an absolute cosine floor but
+relative to the engine's own best chunk score for the same query — is now
+measured, and it does not win. Method: `engine_best_score` added to
+ContextReport (the engine retrieval's top chunk score, now visible in every
+JSON report), then ratio = claim_relevance / engine_best computed for all 13
+held-out queries and 28 noise samples.
+
+| rule | relevant admitted | false-admits |
+|---|---|---|
+| absolute floor 0.60 | 12/13 | 3 |
+| absolute floor 0.66 | 9/13 | 0 |
+| **ratio ≥ 1.05** | **9/13** | **0** |
+| ratio ≥ 1.0 | 10/13 | 2 |
+| floor 0.66 AND ratio ≥ 1.0 | 9/13 | 0 |
+
+The relative rule's best operating point (ratio ≥ 1.05: 9/13, 0 noise) is
+exactly the absolute floor's best (0.66: 9/13, 0 noise), and the conjunction
+adds nothing. The reason is visible in the data: engine_best is nearly
+constant across queries (0.587–0.738 on this corpus), so the ratio is close
+to a monotone transform of the absolute relevance — it carries no separation
+information the absolute floor lacks.
+
+Per the project rule (the machine proposes; the measurement decides), the
+relative gate does not ship. The absolute floor at 0.66 stands as the
+baseline, now with a measured refutation of the obvious alternative rather
+than an open question. If a future embedder makes engine_best vary meaningfully
+across queries (e.g. on corpora with heterogeneous chunk quality), this
+measurement should be repeated before dismissing the idea again.

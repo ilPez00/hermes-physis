@@ -1081,6 +1081,11 @@ pub struct ContextReport {
     /// How many observer snippets actually entered the packet.
     #[serde(default)]
     pub observer_selected: usize,
+    /// The engine retrieval's own best chunk score for this query — the
+    /// reference point a relative observer gate would compare against.
+    /// `#[serde(default)]` keeps old JSON parseable.
+    #[serde(default)]
+    pub engine_best_score: Option<f32>,
 }
 
 impl ContextReport {
@@ -1350,6 +1355,7 @@ pub fn compile_context_with_observer(
     };
     let (_res, mut physis_context) =
         crate::rag::retrieve_from_texts(&texts, query, embedder, engine_budget, top_k);
+    let engine_best = _res.chunks.iter().map(|c| c.score).reduce(f32::max);
     let mut used = crate::rag::count_tokens(&physis_context);
 
     // Gated observer fusion: relevance-gate each retrieval hit against the
@@ -1424,5 +1430,6 @@ pub fn compile_context_with_observer(
         physis_context,
         observer_gated: receipts,
         observer_selected,
+        engine_best_score: engine_best,
     })
 }

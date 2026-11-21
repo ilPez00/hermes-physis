@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Negative result, recorded**: the relative-signal observer gate (claim relevance vs the engine's own best chunk score) was measured against the absolute floor on the real corpus and does not beat it — ratio >= 1.05 gives the identical operating point (9/13 relevant, 0 noise) because engine_best is nearly constant across queries. Does not ship. `ContextReport.engine_best_score` (serde-defaulted) is added as the visibility field the measurement needed.
+
 - **Semantic observer floor -> 0.66, the measured zero-contamination point**: broadening to 13 held-out queries / 28 noise samples shows the relevance ROC on real text is SHALLOW (relevant 0.5543-0.7774, noise to 0.6522 — domain-adjacent hard negatives). No floor gives both high recall and zero contamination: 0.60 = 12/13 relevant + 3 noise; 0.66 = 9/13 + 0. The default now buys zero contamination and pays in recall; callers tune --observer-floor to move along the measured curve.
 
 - **Semantic observer floor 0.6 -> 0.65**: broadening the real corpus from 3 to 7 held-out queries revealed the relevant and noise bands OVERLAP at 0.6 — a noise claim (0.6385) was admitted with its text verbatim in a packet. 0.65 sits in the measured zero-noise gap (0.6385, 0.6536]: 6/7 held-out queries answerable, zero noise; the one deferral is the safe direction. Third fixture-calibrated margin this session that real-corpus measurement overturned.
