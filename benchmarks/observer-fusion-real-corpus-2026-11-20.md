@@ -154,3 +154,39 @@ Readings, all measured:
 Verdict unchanged: default-off stands — but the caller-facing story is now
 complete. `auto` is the measured-recommended setting when fusion is wanted at
 all; fixed reserves exist for callers with an explicit headroom policy.
+
+## Embedder-dependence: the RP floor fails on real text (same corpus, same day)
+
+Every measurement above used the production semantic embedder (bge-small).
+Re-running the identical sweep under the random-projection embedder (the CLI
+default when no model dir is set) breaks the gate's core promise:
+
+| query | relevant | noise | verdict at the old 0.9 RP floor |
+|---|---|---|---|
+| gate-ambient-state | 0.9372 | **0.9016 / 0.9216** | **noise ADMITTED** (noise text in packet) |
+| symbolic-composition | **0.8848 (deferred)** | 0.8683 / 0.8666 | relevant content lost |
+| language-organs | 0.9111 | 0.8918 / 0.8774 | worked by luck |
+| quarry-migration (control) | — | 0.8727 / 0.8362 | — |
+
+The distributions overlap completely — relevant 0.84–0.94, noise 0.84–0.92 —
+so NO floor separates relevant from noise under RP on real text. The 0.9
+default (calibrated on synthetic fixtures, where lexically distant noise
+scores far below relevant text) admitted real noise on one query while
+deferring real relevant content on another. The gate cannot keep its promise
+with this embedder on real text.
+
+Secondary finding: under RP the engine itself degrades on the real corpus —
+the control query's baseline phrase (corpus-covered content) is absent from
+the baseline packet at budget 1200. RP retrieval quality is also
+real-corpus-inadequate.
+
+Response, per the project rule that a path failing its gate ships disabled:
+`default_observer_floor("random-projection")` is now **0.99** — fusion under
+RP is opt-in (the caller must pass `--observer-floor` explicitly and accept
+the measured risk). The semantic default stays 0.6 (validated: clean
+separation on fixtures AND the real corpus). Re-measured under the new
+default: all four queries defer everything, zero noise admitted, zero noise
+text in any packet.
+
+Verdict update: the relevance gate is a **semantic-embedder feature**. Under
+RP it is inert by default, and that is the correct shipping state.

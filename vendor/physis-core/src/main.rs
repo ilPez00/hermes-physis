@@ -140,7 +140,8 @@ enum Command {
         #[arg(long)]
         observer_claims: Option<PathBuf>,
         /// Relevance floor for observer retrieval hits; when omitted, defaults
-        /// by embedder kind (0.9 random-projection, 0.6 semantic).
+        /// by embedder kind (0.99 random-projection — fusion opt-in, see
+        /// default_observer_floor; 0.6 semantic).
         #[arg(long)]
         observer_floor: Option<f32>,
         /// Packet headroom reserved for observer content: a number sets a
@@ -383,7 +384,7 @@ enum Command {
         observer_claims: Option<PathBuf>,
         /// Relevance floor for observer retrieval hits (query↔snippet cosine;
         /// meaning is embedder-dependent — see gate_retrieval_hit docs).
-        /// When omitted, defaults by embedder kind: 0.9 for random-projection,
+        /// When omitted, defaults by embedder kind: 0.99 for random-projection
         /// 0.6 for a semantic (ONNX) embedder.
         #[arg(long)]
         observer_floor: Option<f32>,
@@ -3070,17 +3071,30 @@ fn cmd_ngram_cells(
 
 /// Default observer relevance floor, by embedder kind — measured, not assumed.
 ///
-/// Random-projection (lexical hash): same-language text clusters in a narrow
-/// band — measured against the relay-calibration fixture, a relevant snippet
-/// scores 0.934/0.917 and topical noise 0.892/0.858, so only a high floor
-/// (0.9) separates anything at all. A semantic embedder (bge-small) separates
-/// cleanly: relevant 0.891/0.644, noise 0.375–0.445, so 0.6 admits both
-/// relevant hits with margin and rejects all noise. The caller can always
-/// override with --observer-floor.
+/// Semantic embedder (bge-small) separates cleanly on both fixtures and the
+/// real corpus: fixture relevant 0.891/0.644 vs noise 0.375–0.445; real-corpus
+/// relevant 0.69–0.73 vs noise 0.40–0.55. Default 0.6 admits relevant hits
+/// with margin and rejects all noise.
+///
+/// Random-projection (lexical hash) separates on synthetic fixtures only
+/// (relevant 0.934/0.917 vs noise 0.892/0.858 — hence the old 0.9 default).
+/// On the real corpus the bands OVERLAP — relevant 0.84–0.94, noise
+/// 0.84–0.92 — so no floor separates them, and 0.9 admitted real noise
+/// (0.9016) while deferring real relevant content (0.8848). A path that
+/// cannot keep its gate's promise ships disabled: the RP default (0.99)
+/// makes fusion opt-in. The caller can always override with --observer-floor.
 fn default_observer_floor(kind: &str) -> f32 {
     if kind == "random-projection" {
-        0.9
+        // 0.9 was calibrated on synthetic fixtures, where lexically distant
+        // noise scores far below relevant text. On the real corpus it does
+        // the opposite: relevant 0.84-0.94, noise 0.84-0.92 — the bands
+        // overlap, so NO floor separates them, and 0.9 admitted real noise
+        // (0.9016) while deferring real relevant content (0.8848). A path
+        // that cannot keep its gate's promise ships disabled: fusion under
+        // RP is opt-in (the caller passes --observer-floor explicitly).
+        0.99
     } else {
+        // Validated on the real corpus: relevant 0.69-0.73, noise 0.40-0.55.
         0.6
     }
 }
@@ -3554,7 +3568,13 @@ mod tests {
     fn observer_floor_default_is_embedder_aware() {
         // Measured: RP needs a high floor (narrow band), semantic separates
         // cleanly at 0.6 (relevant ≥ 0.64, noise ≤ 0.45 with bge-small).
-        assert_eq!(default_observer_floor("random-projection"), 0.9);
+        // Real-corpus measurement (benchmarks/observer-fusion-real-corpus-
+        // 2026-11-20.md): RP relevance on real text overlaps noise completely
+        // (relevant 0.84-0.94, noise 0.84-0.92 — no separating floor exists).
+        // The old 0.9 default ADMITTED real noise (0.9016) and DEFERRED real
+        // relevant content (0.8848). A path that cannot keep its gate's
+        // promise ships disabled: fusion under RP is opt-in.
+        assert_eq!(default_observer_floor("random-projection"), 0.99);
         assert_eq!(default_observer_floor("onnx-explicit"), 0.6);
         assert_eq!(default_observer_floor("onnx-minilm"), 0.6);
     }
