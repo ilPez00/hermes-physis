@@ -2355,15 +2355,35 @@ mod tests {
         let eq = crate::ingest::EquivalenceProposal {
             left: "a".into(),
             right: "b".into(),
-            kind: crate::ingest::EquivalenceKind::Candidate,
-            confidence: 0.9,
+            similarity: Some(0.9),
+            rationale: Some("test".into()),
         };
         let mut eq_out =
             gate::gate_equivalence(&core, &claim(ClaimPayload::Equivalence(eq.clone())), &eq);
         eq_out.contradiction = Some(crate::contradiction::Contradiction {
-            left: "a".into(),
-            right: "b".into(),
-            reason: "test".into(),
+            id: "test-ctr".into(),
+            claim_a: crate::contradiction::ContradictionParty {
+                claim: "a".into(),
+                source: "test".into(),
+                authority: 0.5,
+                confidence: 0.5,
+                timestamp: chrono::Utc::now(),
+                embedding: vec![],
+                context: vec![],
+            },
+            claim_b: crate::contradiction::ContradictionParty {
+                claim: "b".into(),
+                source: "test".into(),
+                authority: 0.5,
+                confidence: 0.5,
+                timestamp: chrono::Utc::now(),
+                embedding: vec![],
+                context: vec![],
+            },
+            resolution: crate::contradiction::ResolutionStatus::Unresolved,
+            explanation: Some("test".into()),
+            detected_at: chrono::Utc::now(),
+            temporal: crate::contradiction::TemporalValidity::default(),
         });
         let d = summarize_gate_outcomes(&[GateOutcome::Equivalence(eq_out)]);
         let mut merged = GateAssessmentSummary::default();
