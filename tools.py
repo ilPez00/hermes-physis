@@ -325,7 +325,18 @@ def _model_env(args: dict[str, Any]) -> dict[str, str] | None:
     env: dict[str, str] = {}
     if model_dir:
         env["PHYSIS_MODEL_DIR"] = model_dir
-        env["PHYSIS_MODEL_DIM"] = "384"
+        # Dimension follows the model, not the plugin: a hardcoded 384 made
+        # 768-d models (bge-base) unusable here — the loader fails its
+        # semantic self-test and falls back to random projection. Default
+        # stays 384 (the shipped bge-small) for backward compatibility.
+        dim = args.get("model_dim", 384)
+        try:
+            dim_val = int(dim)
+        except (TypeError, ValueError):
+            raise ValueError("model_dim must be an integer") from None
+        if dim_val <= 0:
+            raise ValueError("model_dim must be a positive integer")
+        env["PHYSIS_MODEL_DIM"] = str(dim_val)
     if not semantic:
         env["PHYSIS_SEMANTIC"] = "0"
     return env or None
@@ -795,6 +806,144 @@ def physis_observe(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     result["repo_root"] = _repo_root(path)
     result["store"] = _index_dir(merged)
     return result
+
+
+def physis_selftest(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """Audit gated observer fusion on a caller corpus.
+
+    Runs `physis-core selftest`: known-answer probes (held-out claim +
+    distinctive phrase + forbidden noise text) against the caller's corpus.
+    A failing audit is a successful tool call carrying a failing report —
+    the caller must see the verdict, not an engine error. Exit 1 also fires
+    on drift when `baseline` points at a previous `--json` report.
+    """
+    merged = _with_defaults(_merge(args, kwargs))
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    if not pool.supports("selftest"):
+        return _unsupported(pool, "selftest")
+
+    corpus = _path(merged)
+    if not Path(corpus).is_dir():
+        return {"ok": False, "error": f"not a directory: {corpus}"}
+    probes = merged.get("probes")
+    if not probes or not str(probes).strip():
+        return {
+            "ok": False,
+            "error": "probes path is required: a JSON file of known-answer probes "
+            '(see the engine\'s benchmarks/observer-fusion/selftest-probes.json)',
+        }
+    probes_path = Path(str(probes))
+    if not probes_path.is_file():
+        return {"ok": False, "error": f"not a file: {probes_path}"}
+
+    argv = ["selftest", "--corpus", corpus, "--probes", str(probes_path), "--json"]
+    budget = merged.get("budget")
+    if budget is not None:
+        argv += ["--budget", str(int(budget))]
+    floor = merged.get("observer_floor")
+    if floor is not None:
+        try:
+            floor_val = float(floor)
+        except (TypeError, ValueError):
+            raise ValueError("observer_floor must be a number") from None
+        if not 0.0 <= floor_val <= 1.0:
+            raise ValueError("observer_floor must be between 0.0 and 1.0")
+        argv += ["--observer-floor", repr(floor_val)]
+    reserve = merged.get("observer_reserve")
+    if reserve is not None:
+        if isinstance(reserve, str) and reserve.strip().lower() == "auto":
+            argv += ["--observer-reserve", "auto"]
+        else:
+            try:
+                reserve_val = int(reserve)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "observer_reserve must be a non-negative integer or 'auto'"
+                ) from None
+            if reserve_val < 0:
+                raise ValueError(
+                    "observer_reserve must be a non-negative integer or 'auto'"
+                )
+            argv += ["--observer-reserve", str(reserve_val)]
+    baseline = merged.get("baseline")
+    if baseline:
+        baseline_path = Path(str(baseline))
+        if not baseline_path.is_file():
+            return {"ok": False, "error": f"not a file: {baseline_path}"}
+        argv += ["--baseline", str(baseline_path)]
+
+    result = _run(pool, argv, merged)
+    payload = _json_payload(result)
+    exit_code = result.get("returncode")
+    report = payload if isinstance(payload, dict) else {}
+    ok = bool(report.get("ok")) and exit_code == 0
+    out = {
+        "ok": ok,
+        "passed": report.get("passed"),
+        "total": report.get("total"),
+        "floor": report.get("floor"),
+        "corpus_documents": report.get("corpus_documents"),
+        "report": report,
+        "exit_code": exit_code,
+        "argv": argv,
+    }
+    if result.get("stderr"):
+        out["stderr"] = result["stderr"]
+    return out
+
+
+def physis_calibrate_floor(args: Any = None, **kwargs: Any) -> dict[str, Any]:
+    """Advisory floor placement from the caller's labelled probes.
+
+    Runs `physis-core calibrate-floor`: relevance bands, noise ceiling, the
+    minimal zero-noise floor and a recommendation at ceiling + 0.008, with
+    the recall cost of each. Always exit 0; the reply is stamped
+    advisory=True — measurements of one corpus and probe set, never
+    directives.
+    """
+    merged = _with_defaults(_merge(args, kwargs))
+    try:
+        pool = _pool_from_args(merged)
+    except EngineError as exc:
+        return _engine_error(exc)
+    if not pool.supports("calibrate-floor"):
+        return _unsupported(pool, "calibrate-floor")
+
+    corpus = _path(merged)
+    if not Path(corpus).is_dir():
+        return {"ok": False, "error": f"not a directory: {corpus}"}
+    probes = merged.get("probes")
+    if not probes or not str(probes).strip():
+        return {
+            "ok": False,
+            "error": "probes path is required: a JSON file of labelled probes "
+            "(claims prefixed obj:... and obj:noise...)",
+        }
+    probes_path = Path(str(probes))
+    if not probes_path.is_file():
+        return {"ok": False, "error": f"not a file: {probes_path}"}
+
+    argv = ["calibrate-floor", "--corpus", corpus, "--probes", str(probes_path), "--json"]
+    budget = merged.get("budget")
+    if budget is not None:
+        argv += ["--budget", str(int(budget))]
+
+    result = _run(pool, argv, merged)
+    payload = _json_payload(result)
+    report = payload if isinstance(payload, dict) else {}
+    out = {
+        "ok": True,
+        "advisory": True,
+        "report": report,
+        "exit_code": result.get("returncode"),
+        "argv": argv,
+    }
+    if result.get("stderr"):
+        out["stderr"] = result["stderr"]
+    return out
 
 
 def physis_snapshot(args: Any = None, **kwargs: Any) -> dict[str, Any]:
@@ -2290,6 +2439,8 @@ HANDLERS = {
     "physis_grid": physis_grid,
     "physis_ingest": physis_ingest,
     "physis_observed": physis_observed,
+    "physis_selftest": physis_selftest,
+    "physis_calibrate_floor": physis_calibrate_floor,
     "replant_run": replant_run,
     "replant_stats": replant_stats,
     "replant_demo": replant_demo,

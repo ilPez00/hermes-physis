@@ -283,6 +283,83 @@ INGEST = {
     },
 }
 
+SELFTEST = {
+    "name": "physis_selftest",
+    "description": (
+        "Audit gated observer fusion on a corpus you control: run "
+        "known-answer probes (held-out claim + distinctive phrase + "
+        "forbidden noise text) through the engine and get a per-probe "
+        "verdict. Exit-style ok=False means the gate deferred a should-pass "
+        "probe, answered a baseline-covered one, or let noise text into a "
+        "packet — treat that as a defect report, not a tool failure. Pass "
+        "baseline (a previous report) to also detect drift. The probes file "
+        "is JSON: {'probes': [{'name', 'expect': 'answer'|'defer', 'query', "
+        "'phrase', 'forbidden', 'claims'}]} — see the engine repo's "
+        "benchmarks/observer-fusion/selftest-probes.json for a worked set."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "corpus": {
+                "type": "string",
+                "description": "Corpus directory to audit (markdown/text documents)",
+            },
+            "probes": {
+                "type": "string",
+                "description": "Path to a probes JSON file (required)",
+            },
+            "budget": {
+                "type": "integer",
+                "description": "Packet token budget (default: engine default)",
+            },
+            "observer_floor": {
+                "type": "number",
+                "description": "Relevance floor override; omit to use the model-aware default",
+            },
+            "observer_reserve": {
+                "description": "Packet headroom for observer content: integer or 'auto'",
+            },
+            "baseline": {
+                "type": "string",
+                "description": "Path to a previous selftest --json report for drift watch",
+            },
+        },
+        "required": ["corpus", "probes"],
+    },
+}
+
+CALIBRATE_FLOOR = {
+    "name": "physis_calibrate_floor",
+    "description": (
+        "Measure where the observer relevance floor should sit for YOUR "
+        "corpus: relevance bands for relevant vs noise claims, the noise "
+        "ceiling, the minimal zero-noise floor and a recommendation with its "
+        "recall cost. The reply is advisory — measurements of one corpus and "
+        "probe set, never directives. Label probes with obj:... / obj:noise... "
+        "object-id prefixes. Use before trusting fusion on a new corpus or a "
+        "new embedder: the shipped defaults are per-model measurements, and "
+        "an unmeasured model falls back to the bge-small point."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "corpus": {
+                "type": "string",
+                "description": "Corpus directory to measure against",
+            },
+            "probes": {
+                "type": "string",
+                "description": "Path to a labelled probes JSON file (required)",
+            },
+            "budget": {
+                "type": "integer",
+                "description": "Packet token budget (default: engine default)",
+            },
+        },
+        "required": ["corpus", "probes"],
+    },
+}
+
 OBSERVED = {
     "name": "physis_observed",
     "description": (
@@ -473,6 +550,8 @@ ALL_SCHEMAS = [
     GRID,
     INGEST,
     OBSERVED,
+    SELFTEST,
+    CALIBRATE_FLOOR,
     REPLANT_STATS,
     REPLANT_DEMO,
     REPLANT_SHOW,

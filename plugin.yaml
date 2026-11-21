@@ -29,6 +29,8 @@ provides_tools:
   - physis_grid
   - physis_ingest
   - physis_observed
+  - physis_selftest
+  - physis_calibrate_floor
   - replant_stats
   - replant_demo
   - replant_show

@@ -1152,3 +1152,123 @@ def test_recipe_lookup_rejects_a_model_supplied_registry(tmp_path):
     result = tools.physis_recipe_lookup({"input": "x", "tools": "/tmp/evil.json", "path": str(tmp_path)})
     assert result["ok"] is False
     assert "operator" in result["error"] or "approve" in result["error"]
+
+
+def _fake_engine_printing(tmp_path, name, payload, marker=None):
+    """A fake engine that dumps argv to ARGV_DUMP and prints payload JSON;
+    when `marker` is set it prints marker and exits 1 iff the caller passed
+    --observer-floor 0.99 (the audit-failure path)."""
+    binary = tmp_path / name
+    lines = [
+        "import json, sys",
+        "argv = sys.argv[1:]",
+        "with open('ARGV_DUMP', 'w') as f:",
+        "    json.dump(argv, f)",
+        f"payload = json.loads({json.dumps(json.dumps(payload))})",
+    ]
+    if marker:
+        lines.append(f"fail = json.loads({json.dumps(json.dumps(marker))})")
+        lines.append(
+            "floor_fail = ('--observer-floor' in argv"
+            " and argv[argv.index('--observer-floor') + 1] == '0.99')"
+        )
+        lines.append("print(json.dumps(fail if floor_fail else payload))")
+        lines.append("sys.exit(1) if floor_fail else None")
+    else:
+        lines.append("print(json.dumps(payload))")
+    binary.write_text("#!/usr/bin/env python3\n" + "\n".join(lines) + "\n")
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    (tmp_path / "p.json").write_text(json.dumps({"probes": []}))
+    return binary
+
+
+SELFTEST_OK = {
+    "corpus_documents": 24,
+    "floor": 0.66,
+    "probes": [
+        {"name": "p1", "expect": "answer", "answered": True,
+         "baseline_absent": True, "noise_absent": True, "passed": True,
+         "engine_best_score": 0.7, "relevances": {"obj:p1": 0.72}},
+    ],
+    "passed": 1,
+    "total": 1,
+    "ok": True,
+}
+
+SELFTEST_FAIL = dict(SELFTEST_OK, ok=False, passed=0)
+
+CALIBRATION = {
+    "corpus_documents": 24,
+    "labelled": 15,
+    "relevant_band": [0.55, 0.86],
+    "noise_band": [0.40, 0.6522],
+    "noise_ceiling": 0.6522,
+    "minimal_zero_noise_floor": 0.6602,
+    "recommended_floor": 0.6602,
+    "recall_at_recommended": "9/13",
+    "separable": True,
+}
+
+
+def test_model_env_dim_passthrough():
+    # Red-first: _model_env hardcodes PHYSIS_MODEL_DIM=384, which makes a
+    # 768-d model (bge-base) unusable through the plugin — the loader fails
+    # the semantic self-test and falls back to random projection.
+    env = tools._model_env({"model_dir": "/models/bge-base-en-v1.5", "model_dim": 768})
+    assert env["PHYSIS_MODEL_DIM"] == "768", env
+    env = tools._model_env({"model_dir": "/models/bge-small"})
+    assert env["PHYSIS_MODEL_DIM"] == "384", env  # default unchanged
+    try:
+        tools._model_env({"model_dir": "/m", "model_dim": "zero"})
+        raised = False
+    except ValueError:
+        raised = True
+    assert raised, "non-integer model_dim must be rejected"
+
+
+def test_selftest_tool_reports_pass(tmp_path):
+    binary = _fake_engine_printing(tmp_path, "fake-engine-selftest", SELFTEST_OK)
+    result = HANDLERS["physis_selftest"](
+        {"engine_bin": str(binary), "corpus": str(tmp_path), "probes": str(tmp_path / "p.json")}
+    )
+    assert result["ok"] is True, result
+    assert result["report"]["ok"] is True
+    assert result["passed"] == 1 and result["total"] == 1
+    argv = result["argv"]
+    assert argv[0] == "selftest"
+    assert "--corpus" in argv and "--probes" in argv and "--json" in argv
+
+
+def test_selftest_tool_reports_fail_as_not_ok(tmp_path):
+    binary = _fake_engine_printing(
+        tmp_path, "fake-engine-selftest-fail", SELFTEST_OK, marker=SELFTEST_FAIL
+    )
+    result = HANDLERS["physis_selftest"](
+        {"engine_bin": str(binary), "corpus": str(tmp_path),
+         "probes": str(tmp_path / "p.json"), "observer_floor": 0.99}
+    )
+    # A failing audit is a successful tool call with a failing verdict: the
+    # caller must see the report, not an engine error.
+    assert result["ok"] is False, result
+    assert result["report"]["ok"] is False
+    assert result["exit_code"] == 1
+    argv = result["argv"]
+    assert argv[argv.index("--observer-floor") + 1] == "0.99"
+
+
+def test_selftest_tool_requires_corpus_and_probes(tmp_path):
+    binary = _fake_engine_printing(tmp_path, "fake-engine-selftest", SELFTEST_OK)
+    result = HANDLERS["physis_selftest"]({"engine_bin": str(binary), "corpus": str(tmp_path)})
+    assert result["ok"] is False
+    assert "probes" in result["error"]
+
+
+def test_calibrate_floor_tool_is_advisory(tmp_path):
+    binary = _fake_engine_printing(tmp_path, "fake-engine-calibrate", CALIBRATION)
+    result = HANDLERS["physis_calibrate_floor"](
+        {"engine_bin": str(binary), "corpus": str(tmp_path), "probes": str(tmp_path / "p.json")}
+    )
+    assert result["ok"] is True, result
+    assert result["advisory"] is True
+    assert result["report"]["noise_ceiling"] == 0.6522
+    assert result["report"]["recommended_floor"] == 0.6602
