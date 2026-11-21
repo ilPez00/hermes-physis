@@ -86,10 +86,13 @@ CONTEXT = {
                     "observer_claims; below the floor the hit is deferred with the "
                     "reason returned. When omitted the engine picks by embedder kind "
                     "(0.99 random-projection — fusion under RP is opt-in because RP "
-                    "relevance cannot separate noise on real text; 0.65 semantic — "
-                    "measured zero-noise gap on 7 held-out real queries; the old 0.6 "
-                    "admitted real noise on 1 of 7) — the floor's meaning is "
-                    "embedder-dependent."
+                    "relevance cannot separate noise on real text; 0.66 semantic — "
+                    "the measured zero-contamination point on 13 held-out real "
+                    "queries: the relevance ROC is shallow (0.60 admits 12/13 "
+                    "relevant but 3 noise; 0.66 admits 9/13 and 0 noise), so the "
+                    "default buys zero noise and pays in recall — raise it via this "
+                    "parameter to move along the measured curve and own the risk) — "
+                    "the floor's meaning is embedder-dependent."
                 ),
             },
             "observer_reserve": {
