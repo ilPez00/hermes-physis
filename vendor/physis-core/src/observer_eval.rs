@@ -2231,4 +2231,60 @@ mod tests {
         let _ = core;
         let _ = C::Other;
     }
+
+    #[test]
+    fn gate_reason_codes_map_deterministically_except_explicit_other() {
+        use crate::gate::GateReasonCode as C;
+        // Keep this list in sync with GateReasonCode; explicit Other is the only
+        // code allowed to map to ReasonCategory::Other (drift sentinel).
+        let codes = [
+            C::MissingProvenance,
+            C::LossyCitation,
+            C::MissingExtractorId,
+            C::RelationEndpointsMissing,
+            C::InvalidEquivalenceEndpoints,
+            C::AdvisoryConfidence,
+            C::AdvisorySimilarity,
+            C::PairAnalysed,
+            C::CandidateEquivalenceAgreement,
+            C::ConflictSurfaced,
+            C::AmbiguousSimilarity,
+            C::EndpointsNotBothKnown,
+            C::NoTestablePrediction,
+            C::TestablePredictionPresent,
+            C::NoCitedEpisodes,
+            C::CitesEpisodes,
+            C::HistoryStabilityFlags,
+            C::ShadowRobustness,
+            C::NoExistingSubjectRobustnessSkipped,
+            C::RelevanceBelowFloor,
+            C::RelevanceAtOrAboveFloor,
+            C::AdvisoryScoreOutOfRange,
+            C::NoObjectId,
+            C::NoSnippet,
+            C::ExtractorConfidenceAdvisory,
+            C::MissingProvenanceAnchor,
+            C::OpaquePayload,
+            C::PayloadKind,
+            C::NoCellMappedType,
+            C::MatchesKnownLabel,
+            C::UnmappedLabel,
+            C::EmptyConcept,
+            C::EmptyLessonStatement,
+            C::Other,
+        ];
+        for c in codes {
+            let cat = reason_category_for_code(c);
+            assert_eq!(cat, reason_category_for_code(c), "deterministic");
+            if c != C::Other {
+                assert_ne!(
+                    cat,
+                    ReasonCategory::Other,
+                    "known code mapped to Other: {c:?}"
+                );
+            } else {
+                assert_eq!(cat, ReasonCategory::Other);
+            }
+        }
+    }
 }
