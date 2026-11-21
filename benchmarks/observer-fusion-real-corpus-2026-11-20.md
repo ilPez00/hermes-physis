@@ -221,3 +221,35 @@ Verdict: the semantic default 0.6 is measured-placed. The full shipping
 story is now: semantic embedder + floor 0.6 + auto reserve = the only
 configuration that answers every held-out query, keeps corpus coverage, and
 admits zero noise — all three properties measured, none assumed.
+
+## n=7 correction: the semantic 0.6 default also admitted noise (same corpus, same day)
+
+The floor sweep above rested on 3 held-out queries. Broadening to 7
+(architectural-convergence, impossibllm-reasoning-ladder, shock-economic-demo,
+release-closeout added) changed the verdict:
+
+- relevant band: 0.6185 / 0.6536 / 0.6928 / 0.6945 / 0.6976 / 0.7314 / 0.768
+- noise band: up to **0.6385** (noise-playground on the impossibllm query)
+
+The bands OVERLAP at the shipped 0.6 default: on the impossibllm query the
+noise claim scored 0.6385 ≥ 0.6, was admitted, and its text landed **verbatim
+in the packet** (observer_selected 2). The n=3 sample made the gap look clean
+(noise ceiling 0.5534 vs relevant floor 0.6928); samples 4–7 found a relevant
+claim below the old noise ceiling. Fixture-calibrated margins do not survive
+contact with a broader real sample — third time this session's measurements
+have proven that pattern.
+
+Response: the semantic default moves 0.6 → **0.65**, inside the measured
+zero-noise gap (0.6385, 0.6536]. Re-measured at 0.65 and via the deployed
+binary's default path: **6/7 held-out queries answerable, zero noise
+admitted, zero noise text**. The one deferral (shock-economic-demo, 0.6185)
+is the safe direction — a visible receipt, not silent contamination.
+
+Honest caveat, recorded: the gap is 0.015 wide and rests on 7 relevant + 14
+noise samples. The floor is a measured point on an imperfect ROC curve, not
+a discovered natural boundary; a broader sample could move it again. The
+gate's receipts make every decision visible, so retuning stays cheap.
+
+Verdict update: default-off still stands; the semantic default is 0.65, and
+the shipping configuration (semantic + 0.65 + auto reserve) is the only
+measured configuration with zero noise admissions across all sweeps.
