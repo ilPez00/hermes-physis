@@ -373,8 +373,8 @@ pub use observer::{
 pub use gate::{
     assess_claim, assess_claims_with_intake, assess_grounding, gate_claim, gate_equivalence,
     gate_lesson, gate_relation, gate_retrieval_hit, AssessedIntake, ClaimGateSummary, GateDecision,
-    GateOutcome, GroundingGateResult, LessonGateResult, RelationGateResult, ResolutionGateResult,
-    RetrievalHitGateResult,
+    GateOutcome, GateReasonCode, GroundingGateResult, LessonGateResult, RelationGateResult,
+    ResolutionGateResult, RetrievalHitGateResult,
 };
 
 // Receipt-carrying context compilation (deterministic, budgeted)

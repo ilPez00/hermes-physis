@@ -446,6 +446,7 @@ pub fn compile_from_retrieval_with_gated_observer_claims(
                     "not a retrieval hit: {}",
                     claim.payload.kind_label()
                 )],
+                reason_codes: vec![crate::gate::GateReasonCode::Other],
             });
         }
     }

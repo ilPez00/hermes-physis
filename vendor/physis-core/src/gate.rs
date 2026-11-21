@@ -42,6 +42,48 @@ pub enum GateDecision {
     Abstain,
 }
 
+/// Stable, machine-readable reason codes for gate decisions (counts/proxies
+/// only, never a verdict). `#[serde(default)]` on result fields keeps old
+/// serialized results parseable. Prefer codes over string matching.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GateReasonCode {
+    MissingProvenance,
+    LossyCitation,
+    MissingExtractorId,
+    RelationEndpointsMissing,
+    InvalidEquivalenceEndpoints,
+    AdvisoryConfidence,
+    AdvisorySimilarity,
+    PairAnalysed,
+    CandidateEquivalenceAgreement,
+    ConflictSurfaced,
+    AmbiguousSimilarity,
+    EndpointsNotBothKnown,
+    NoTestablePrediction,
+    TestablePredictionPresent,
+    NoCitedEpisodes,
+    CitesEpisodes,
+    HistoryStabilityFlags,
+    ShadowRobustness,
+    NoExistingSubjectRobustnessSkipped,
+    RelevanceBelowFloor,
+    RelevanceAtOrAboveFloor,
+    AdvisoryScoreOutOfRange,
+    NoObjectId,
+    NoSnippet,
+    ExtractorConfidenceAdvisory,
+    MissingProvenanceAnchor,
+    OpaquePayload,
+    PayloadKind,
+    NoCellMappedType,
+    MatchesKnownLabel,
+    UnmappedLabel,
+    EmptyConcept,
+    EmptyLessonStatement,
+    Other,
+}
+
 /// Assessment of a proposed relation claim.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelationGateResult {
@@ -49,6 +91,9 @@ pub struct RelationGateResult {
     pub proposed_edge: TypedEdge,
     pub proposed_hypothesis: Hypothesis,
     pub reasons: Vec<String>,
+    /// Stable reason codes (counts/proxies only). `#[serde(default)]` for backcompat.
+    #[serde(default)]
+    pub reason_codes: Vec<GateReasonCode>,
 }
 
 /// Gate a proposed relation: requires provenance/citation and yields a proposed
@@ -58,16 +103,20 @@ pub fn gate_relation(claim: &CandidateClaimPacket, rel: &ProposedRelation) -> Re
     let mut reasons = Vec::new();
     let mut decision = GateDecision::AcceptCandidate;
 
+    let mut reason_codes = Vec::new();
     if claim.source.uri.is_empty() && claim.raw_ref.is_none() {
         decision = GateDecision::Defer;
         reasons.push("missing provenance (no source uri/raw_ref)".into());
+        reason_codes.push(GateReasonCode::MissingProvenance);
     }
     if claim.source.span.is_none() {
         reasons.push("no source span (lossy citation)".into());
+        reason_codes.push(GateReasonCode::LossyCitation);
     }
     if rel.subject.trim().is_empty() || rel.object.trim().is_empty() {
         decision = GateDecision::Reject;
         reasons.push("relation endpoints missing".into());
+        reason_codes.push(GateReasonCode::RelationEndpointsMissing);
     }
     // Confidence is advisory only.
     reasons.push(format!(
@@ -77,11 +126,13 @@ pub fn gate_relation(claim: &CandidateClaimPacket, rel: &ProposedRelation) -> Re
             .map(|c| format!("{:.3}", c))
             .unwrap_or_else(|| "n/a".into())
     ));
+    reason_codes.push(GateReasonCode::AdvisoryConfidence);
     RelationGateResult {
         decision,
         proposed_edge,
         proposed_hypothesis,
         reasons,
+        reason_codes,
     }
 }
 
@@ -99,6 +150,9 @@ pub struct ResolutionGateResult {
     #[serde(default)]
     pub contradiction: Option<Contradiction>,
     pub reasons: Vec<String>,
+    /// Stable reason codes (counts/proxies only). `#[serde(default)]` for backcompat.
+    #[serde(default)]
+    pub reason_codes: Vec<GateReasonCode>,
 }
 
 /// Gate an entity-resolution/equivalence proposal. **Never auto-merges.**
@@ -113,6 +167,7 @@ pub fn gate_equivalence(
     eq: &EquivalenceProposal,
 ) -> ResolutionGateResult {
     let mut reasons = Vec::new();
+    let mut reason_codes = Vec::new();
     let mut alignment = None;
     let mut contradiction = None;
 
@@ -123,6 +178,7 @@ pub fn gate_equivalence(
             alignment: None,
             contradiction: None,
             reasons: vec!["invalid equivalence endpoints".into()],
+            reason_codes: vec![GateReasonCode::InvalidEquivalenceEndpoints],
         };
     }
 
@@ -162,10 +218,12 @@ pub fn gate_equivalence(
             "pair_analysed left={:?} right={:?} mean_gap={:.3} null_gap={:.3}",
             lg, rg, report.mean_gap, report.null_gap
         ));
+        reason_codes.push(GateReasonCode::PairAnalysed);
         alignment = Some(report);
 
         let sim = eq.similarity.unwrap_or(0.0);
         reasons.push(format!("advisory_similarity={:.3}", sim));
+        reason_codes.push(GateReasonCode::AdvisorySimilarity);
         // Conservative: agreement signal + reasonable similarity => candidate link proposal;
         // strong disagreement/conflict => contradiction candidate, not merge.
         if sim >= 0.8 {
@@ -173,9 +231,11 @@ pub fn gate_equivalence(
                 "embedding/advisory agreement suggests candidate equivalence (proposal only)"
                     .into(),
             );
+            reason_codes.push(GateReasonCode::CandidateEquivalenceAgreement);
             GateDecision::AcceptCandidate
         } else if sim > 0.0 && sim < 0.3 {
             reasons.push("low agreement: conflict surfaced, not a merge".into());
+            reason_codes.push(GateReasonCode::ConflictSurfaced);
             let a = ContradictionParty::new(
                 format!("{} == {}", eq.left, eq.right),
                 format!("claim:{}", claim.id),
@@ -189,6 +249,7 @@ pub fn gate_equivalence(
             GateDecision::Reject
         } else {
             reasons.push("ambiguous/unknown similarity: defer resolution".into());
+            reason_codes.push(GateReasonCode::AmbiguousSimilarity);
             GateDecision::Defer
         }
     } else {
@@ -196,6 +257,7 @@ pub fn gate_equivalence(
             "endpoints not both known in core (left_known={}, right_known={})",
             left_known, right_known
         ));
+        reason_codes.push(GateReasonCode::EndpointsNotBothKnown);
         GateDecision::Abstain
     };
 
@@ -205,6 +267,7 @@ pub fn gate_equivalence(
         alignment,
         contradiction,
         reasons,
+        reason_codes,
     }
 }
 
@@ -220,6 +283,9 @@ pub struct LessonGateResult {
     #[serde(default)]
     pub robustness_stable: Option<bool>,
     pub reasons: Vec<String>,
+    /// Stable reason codes (counts/proxies only). `#[serde(default)]` for backcompat.
+    #[serde(default)]
+    pub reason_codes: Vec<GateReasonCode>,
 }
 
 /// Gate a consolidated lesson before it may influence planning.
@@ -233,6 +299,7 @@ pub fn gate_lesson(
     lesson: &ConsolidatedLesson,
 ) -> LessonGateResult {
     let mut reasons = Vec::new();
+    let mut reason_codes = Vec::new();
     let mut decision = GateDecision::AcceptCandidate;
 
     if lesson.statement.trim().is_empty() {
@@ -242,6 +309,7 @@ pub fn gate_lesson(
             stability_flags: vec![],
             robustness_stable: None,
             reasons: vec!["empty lesson statement".into()],
+            reason_codes: vec![GateReasonCode::EmptyLessonStatement],
         };
     }
 
@@ -249,16 +317,20 @@ pub fn gate_lesson(
     if lesson.prediction.is_none() {
         decision = GateDecision::Defer;
         reasons.push("no testable prediction: defer (lesson must be testable)".into());
+        reason_codes.push(GateReasonCode::NoTestablePrediction);
     } else {
         reasons.push("testable prediction present".into());
+        reason_codes.push(GateReasonCode::TestablePredictionPresent);
     }
     if lesson.episodes.is_empty() {
         reasons.push("no cited episodes (weak grounding)".into());
+        reason_codes.push(GateReasonCode::NoCitedEpisodes);
         if decision == GateDecision::AcceptCandidate {
             decision = GateDecision::Defer;
         }
     } else {
         reasons.push(format!("cites {} episode(s)", lesson.episodes.len()));
+        reason_codes.push(GateReasonCode::CitesEpisodes);
     }
 
     // History stability over any existing hypothesis matching the statement anchor.
@@ -304,12 +376,14 @@ pub fn gate_lesson(
         let stable = report.all_stable();
         robustness_stable = Some(stable);
         reasons.push(format!("shadow robustness_stable={}", stable));
+        reason_codes.push(GateReasonCode::ShadowRobustness);
         if !stable {
             decision = GateDecision::Defer;
         }
     } else {
         reasons
             .push("no existing subject in core: robustness probe skipped (proposal-only)".into());
+        reason_codes.push(GateReasonCode::NoExistingSubjectRobustnessSkipped);
     }
 
     // Ensure it stays a candidate (never auto-promoted).
@@ -321,6 +395,7 @@ pub fn gate_lesson(
         stability_flags,
         robustness_stable,
         reasons,
+        reason_codes,
     }
 }
 
@@ -329,6 +404,9 @@ pub fn gate_lesson(
 pub struct ClaimGateSummary {
     pub decision: GateDecision,
     pub reasons: Vec<String>,
+    /// Stable reason codes (counts/proxies only). `#[serde(default)]` for backcompat.
+    #[serde(default)]
+    pub reason_codes: Vec<GateReasonCode>,
 }
 
 /// Assessment of an observer retrieval-hit claim for context fusion.
@@ -338,6 +416,9 @@ pub struct RetrievalHitGateResult {
     /// Query↔snippet cosine similarity when measurable, else `None`.
     pub relevance: Option<f32>,
     pub reasons: Vec<String>,
+    /// Stable reason codes (counts/proxies only). `#[serde(default)]` for backcompat.
+    #[serde(default)]
+    pub reason_codes: Vec<GateReasonCode>,
 }
 
 /// Gate an observer retrieval-hit claim against the query before fusion.
@@ -366,6 +447,7 @@ pub fn gate_retrieval_hit(
             decision: GateDecision::Defer,
             relevance: None,
             reasons: vec!["missing extractor id".into()],
+            reason_codes: vec![GateReasonCode::MissingExtractorId],
         };
     }
     if claim.source.uri.is_empty() && claim.raw_ref.is_none() {
@@ -373,6 +455,7 @@ pub fn gate_retrieval_hit(
             decision: GateDecision::Defer,
             relevance: None,
             reasons: vec!["missing provenance anchor".into()],
+            reason_codes: vec![GateReasonCode::MissingProvenanceAnchor],
         };
     }
     if hit.object_id.trim().is_empty() {
@@ -380,6 +463,7 @@ pub fn gate_retrieval_hit(
             decision: GateDecision::Reject,
             relevance: None,
             reasons: vec!["retrieval hit has no object id (cannot attribute)".into()],
+            reason_codes: vec![GateReasonCode::NoObjectId],
         };
     }
     if hit.score < 0.0 || hit.score > 1.0 {
@@ -387,6 +471,7 @@ pub fn gate_retrieval_hit(
             decision: GateDecision::Reject,
             relevance: None,
             reasons: vec![format!("advisory score out of range: {}", hit.score)],
+            reason_codes: vec![GateReasonCode::AdvisoryScoreOutOfRange],
         };
     }
     let snippet = hit.snippet.as_deref().unwrap_or("").trim();
@@ -395,13 +480,16 @@ pub fn gate_retrieval_hit(
             decision: GateDecision::Defer,
             relevance: None,
             reasons: vec!["no snippet to check relevance against".into()],
+            reason_codes: vec![GateReasonCode::NoSnippet],
         };
     }
     let relevance = crate::models::cosine_sim(query_emb, snippet_emb);
+    let mut reason_codes = Vec::new();
     if relevance < min_score {
         reasons.push(format!(
             "relevance {relevance:.3} below floor {min_score:.3}"
         ));
+        reason_codes.push(GateReasonCode::RelevanceBelowFloor);
         reasons.push(
             "deferred: the observer may know something, this packet is not the place for it".into(),
         );
@@ -409,14 +497,18 @@ pub fn gate_retrieval_hit(
             decision: GateDecision::Defer,
             relevance: Some(relevance),
             reasons,
+            reason_codes,
         };
     }
     reasons.push(format!("relevance={relevance:.3} >= floor {min_score:.3}"));
+    reason_codes.push(GateReasonCode::RelevanceAtOrAboveFloor);
     reasons.push("extractor confidence is advisory, not authority".into());
+    reason_codes.push(GateReasonCode::ExtractorConfidenceAdvisory);
     RetrievalHitGateResult {
         decision: GateDecision::AcceptCandidate,
         relevance: Some(relevance),
         reasons,
+        reason_codes,
     }
 }
 
@@ -424,26 +516,38 @@ pub fn gate_retrieval_hit(
 /// deferred/abstained; confidence alone never accepts.
 pub fn gate_claim(claim: &CandidateClaimPacket) -> ClaimGateSummary {
     let mut reasons = Vec::new();
+    let mut reason_codes = Vec::new();
     let mut decision = GateDecision::AcceptCandidate;
     if claim.extractor.id.trim().is_empty() {
         decision = GateDecision::Defer;
         reasons.push("missing extractor id".into());
+        reason_codes.push(GateReasonCode::MissingExtractorId);
     }
     if claim.source.uri.is_empty() && claim.raw_ref.is_none() {
         decision = GateDecision::Defer;
         reasons.push("missing provenance anchor".into());
+        reason_codes.push(GateReasonCode::MissingProvenanceAnchor);
     }
     match &claim.payload {
         ClaimPayload::Opaque(_) => {
             reasons.push("opaque payload: requires explicit mapping".into());
+            reason_codes.push(GateReasonCode::OpaquePayload);
             if decision == GateDecision::AcceptCandidate {
                 decision = GateDecision::Defer;
             }
         }
-        _ => reasons.push(format!("payload_kind={}", claim.payload.kind_label())),
+        _ => {
+            reasons.push(format!("payload_kind={}", claim.payload.kind_label()));
+            reason_codes.push(GateReasonCode::PayloadKind);
+        }
     }
     reasons.push("extractor confidence is advisory, not authority".into());
-    ClaimGateSummary { decision, reasons }
+    reason_codes.push(GateReasonCode::ExtractorConfidenceAdvisory);
+    ClaimGateSummary {
+        decision,
+        reasons,
+        reason_codes,
+    }
 }
 
 /// Assessment of an ontology-grounding claim.
@@ -453,6 +557,9 @@ pub struct GroundingGateResult {
     /// Proposed hypothesis describing the grounding (candidate, never certified).
     pub proposed_hypothesis: Hypothesis,
     pub reasons: Vec<String>,
+    /// Stable reason codes (counts/proxies only). `#[serde(default)]` for backcompat.
+    #[serde(default)]
+    pub reason_codes: Vec<GateReasonCode>,
 }
 
 /// Assess a grounded-concept claim against known labels/cells.
@@ -484,6 +591,7 @@ pub fn assess_grounding(
             decision: GateDecision::Reject,
             proposed_hypothesis,
             reasons: vec!["empty concept".into()],
+            reason_codes: vec![GateReasonCode::EmptyConcept],
         };
     }
     let target = grounded
@@ -496,6 +604,7 @@ pub fn assess_grounding(
             decision: GateDecision::Defer,
             proposed_hypothesis,
             reasons,
+            reason_codes: vec![GateReasonCode::NoCellMappedType],
         };
     };
     let t_norm = t.to_lowercase();
@@ -506,6 +615,7 @@ pub fn assess_grounding(
             decision: GateDecision::AcceptCandidate,
             proposed_hypothesis,
             reasons,
+            reason_codes: vec![GateReasonCode::MatchesKnownLabel],
         }
     } else {
         reasons.push(format!(
@@ -516,6 +626,7 @@ pub fn assess_grounding(
             decision: GateDecision::Defer,
             proposed_hypothesis,
             reasons,
+            reason_codes: vec![GateReasonCode::UnmappedLabel],
         }
     }
 }
