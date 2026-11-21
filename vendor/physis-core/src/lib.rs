@@ -258,6 +258,7 @@ pub mod quality;
 pub mod rag;
 pub mod relation;
 pub mod revision;
+pub mod selftest;
 pub mod stability;
 pub mod store;
 pub mod support;
@@ -397,11 +398,15 @@ pub use support::{explain_support_snapshot, SupportSnapshot};
 // Deterministic observer/candidate evaluation stubs (in-crate, no IO/network)
 pub use observer_eval::{
     accepted_equivalence_pair_keys, accepted_relation_keys, assessed_contradiction_count,
-    assessed_outcome_counts, assessed_outcomes_by_kind, canonical_pair_key, compare_compiles,
-    context_recall_proxy, gate_outcome_counts, gate_outcomes_by_kind, grounding_outcomes,
-    lesson_outcomes, observer_selected_count, observer_selection_ratio, pair_precision_recall_f1,
+    assessed_outcome_counts, assessed_outcomes_by_kind, assessed_reason_counts_by_kind,
+    build_observer_fixture_report, canonical_pair_key, classify_gate_reason, compare_compiles,
+    context_recall_proxy, gate_outcome_counts, gate_outcome_reason_counts_by_kind,
+    gate_outcomes_by_kind, grounding_outcomes, lesson_outcomes,
+    observer_fixture_report_from_assessed, observer_fixture_report_from_outcomes,
+    observer_selected_count, observer_selection_ratio, pair_precision_recall_f1,
     precision_recall_f1, relation_outcomes, resolution_contradiction_yield, resolution_outcomes,
     stable_accepted_lessons, summarize_assessed, summarize_gate_outcomes, utilization,
-    CompileComparison, GateAssessmentSummary, GateOutcomeCountsByKind, ResolutionOutcomeCounts,
+    CompileComparison, GateAssessmentSummary, GateOutcomeCountsByKind,
+    GateOutcomeReasonCountsByKind, ObserverFixtureReport, ReasonCategory, ResolutionOutcomeCounts,
     SimpleOutcomeCounts,
 };
