@@ -1,6 +1,6 @@
 [package]
 name = "physis-core"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Ontology and classification primitives on an adaptive semiotic grid: deterministic structural mapping (repeats, differences, contradictions), token-fixed RAG, semantic embeddings, interchangeable model/n-gram backends. Offline, no API key."
 license = "Apache-2.0"

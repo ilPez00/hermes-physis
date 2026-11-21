@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 (2026-11-20)
+
+Version bump for the observer-fusion chain: gated observer fusion with
+embedder-aware floors (RP 0.99 opt-in / semantic 0.66 measured), observer
+reserve sizing (None/Fixed/Auto with auto pre-gating), assembled-packet
+budget accounting (`TokenFixedRetriever::with_separator`), per-path reserve
+pricing, `ContextReport.engine_best_score`, and the in-repo measurement
+harness (`benchmarks/observer-fusion/`).
+
 ## Unreleased
 
 - **Negative result, recorded**: the relative-signal observer gate (claim relevance vs the engine's own best chunk score) was measured against the absolute floor on the real corpus and does not beat it — ratio >= 1.05 gives the identical operating point (9/13 relevant, 0 noise) because engine_best is nearly constant across queries. Does not ship. `ContextReport.engine_best_score` (serde-defaulted) is added as the visibility field the measurement needed.

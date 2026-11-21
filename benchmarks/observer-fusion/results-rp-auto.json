@@ -1,0 +1,61 @@
+[
+  {
+    "query": "gate-ambient-state (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:gate-ambient": 0.9372,
+      "obj:noise-nas": 0.9016,
+      "obj:noise-playground": 0.9216
+    },
+    "physis_tokens_base": 1196,
+    "physis_tokens_fused": 1196
+  },
+  {
+    "query": "symbolic-composition (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:symbolic-composition": 0.8848,
+      "obj:noise-nas": 0.8683,
+      "obj:noise-playground": 0.8666
+    },
+    "physis_tokens_base": 1188,
+    "physis_tokens_fused": 1188
+  },
+  {
+    "query": "language-organs (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:language-organs": 0.9111,
+      "obj:noise-nas": 0.8918,
+      "obj:noise-playground": 0.8774
+    },
+    "physis_tokens_base": 1196,
+    "physis_tokens_fused": 1196
+  },
+  {
+    "query": "quarry-migration (control, corpus-covered)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:noise-nas": 0.8727,
+      "obj:noise-playground": 0.8362
+    },
+    "physis_tokens_base": 1193,
+    "physis_tokens_fused": 1193
+  }
+]

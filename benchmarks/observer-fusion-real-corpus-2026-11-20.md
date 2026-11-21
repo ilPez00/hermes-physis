@@ -1,8 +1,20 @@
 # Observer fusion on a real corpus — measured 2026-11-20
 
+> **Current verdict (read this first; the sections below are the audit trail
+> in the order the measurements overturned each other):** the semantic
+> default floor is **0.66** — the margin-aware zero-contamination point,
+> validated at n=22 held-out / 46 noise (14/22 answerable, zero noise text;
+> held across two sample broadenings). The relevance ROC on real text is
+> SHALLOW: no floor gives both high recall and zero contamination. Under RP
+> the gate cannot separate relevant from noise at all, so fusion ships
+> opt-in (floor 0.99). The relative-signal gate (claim vs engine's own best
+> chunk score) was measured and does not beat the absolute floor — rejected
+> in `8e602`. Auto reserve strictly dominates fixed reserves. The harness
+> and recorded results now live in `observer-fusion/` in-repo.
+
 Engine: `physis-core` 0.2.0 (post `0cc7e7c` + reserve), production embedder
 **bge-small** (semantic ONNX, `PHYSIS_MODEL_DIR`), embedder-aware default
-floor (0.6 semantic).
+floor (0.6 semantic — superseded, see verdict above and Result sections).
 
 ## Method
 

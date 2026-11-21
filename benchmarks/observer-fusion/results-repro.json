@@ -1,0 +1,346 @@
+[
+  {
+    "query": "gate-ambient-state (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:gate-ambient": 0.6928,
+      "obj:noise-nas": 0.3971,
+      "obj:noise-playground": 0.4287
+    },
+    "physis_tokens_base": 1195,
+    "physis_tokens_fused": 1195
+  },
+  {
+    "query": "symbolic-composition (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:symbolic-composition": 0.7314,
+      "obj:noise-nas": 0.5356,
+      "obj:noise-playground": 0.5534
+    },
+    "physis_tokens_base": 1190,
+    "physis_tokens_fused": 1157
+  },
+  {
+    "query": "language-organs (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:language-organs": 0.6976,
+      "obj:noise-nas": 0.451,
+      "obj:noise-playground": 0.4928
+    },
+    "physis_tokens_base": 1196,
+    "physis_tokens_fused": 1191
+  },
+  {
+    "query": "architectural-convergence (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:arch-convergence": 0.6945,
+      "obj:noise-nas": 0.569,
+      "obj:noise-playground": 0.5587
+    },
+    "physis_tokens_base": 1196,
+    "physis_tokens_fused": 1187
+  },
+  {
+    "query": "impossibllm-reasoning-ladder (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:cascade-decide": 0.768,
+      "obj:noise-nas": 0.5152,
+      "obj:noise-playground": 0.6385
+    },
+    "physis_tokens_base": 1189,
+    "physis_tokens_fused": 1176
+  },
+  {
+    "query": "shock-economic-demo (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:shock-demo": 0.6185,
+      "obj:noise-nas": 0.4211,
+      "obj:noise-playground": 0.4316
+    },
+    "physis_tokens_base": 1159,
+    "physis_tokens_fused": 1159
+  },
+  {
+    "query": "release-closeout (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:release-closeout": 0.6536,
+      "obj:noise-nas": 0.5686,
+      "obj:noise-playground": 0.4195
+    },
+    "physis_tokens_base": 1187,
+    "physis_tokens_fused": 1187
+  },
+  {
+    "query": "physis-cc (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:physis-cc": 0.6052,
+      "obj:noise-nas": 0.4769,
+      "obj:noise-playground": 0.4231
+    },
+    "physis_tokens_base": 1198,
+    "physis_tokens_fused": 1198
+  },
+  {
+    "query": "gui-navigation (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:gui-navigation": 0.7565,
+      "obj:noise-nas": 0.6263,
+      "obj:noise-playground": 0.5419
+    },
+    "physis_tokens_base": 1138,
+    "physis_tokens_fused": 1173
+  },
+  {
+    "query": "impossibllm-rescope (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:impossibllm-rescope": 0.6672,
+      "obj:noise-nas": 0.4815,
+      "obj:noise-playground": 0.4655
+    },
+    "physis_tokens_base": 1175,
+    "physis_tokens_fused": 1196
+  },
+  {
+    "query": "invariant-coverage (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:invariant-coverage": 0.7774,
+      "obj:noise-nas": 0.6522,
+      "obj:noise-playground": 0.5905
+    },
+    "physis_tokens_base": 1197,
+    "physis_tokens_fused": 1186
+  },
+  {
+    "query": "defect-remediation (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:defect-remediation": 0.5543,
+      "obj:noise-nas": 0.4723,
+      "obj:noise-playground": 0.3954
+    },
+    "physis_tokens_base": 1188,
+    "physis_tokens_fused": 1188
+  },
+  {
+    "query": "economic-relevance (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:economic-relevance": 0.7397,
+      "obj:noise-nas": 0.4518,
+      "obj:noise-playground": 0.4819
+    },
+    "physis_tokens_base": 1186,
+    "physis_tokens_fused": 1183
+  },
+  {
+    "query": "viewspec-lens (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:viewspec-lens": 0.8299,
+      "obj:noise-nas": 0.5348,
+      "obj:noise-playground": 0.5241
+    },
+    "physis_tokens_base": 1198,
+    "physis_tokens_fused": 1175
+  },
+  {
+    "query": "dream-grading (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:dream-grading": 0.6173,
+      "obj:noise-nas": 0.431,
+      "obj:noise-playground": 0.4438
+    },
+    "physis_tokens_base": 1190,
+    "physis_tokens_fused": 1190
+  },
+  {
+    "query": "sovereign-sequence (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:sovereign-sequence": 0.6249,
+      "obj:noise-nas": 0.4547,
+      "obj:noise-playground": 0.431
+    },
+    "physis_tokens_base": 1188,
+    "physis_tokens_fused": 1188
+  },
+  {
+    "query": "praxis-census (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:praxis-census": 0.58,
+      "obj:noise-nas": 0.6044,
+      "obj:noise-playground": 0.5138
+    },
+    "physis_tokens_base": 1189,
+    "physis_tokens_fused": 1189
+  },
+  {
+    "query": "full-review-verified (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:full-review-verified": 0.7243,
+      "obj:noise-nas": 0.5966,
+      "obj:noise-playground": 0.5246
+    },
+    "physis_tokens_base": 1188,
+    "physis_tokens_fused": 1158
+  },
+  {
+    "query": "gui-pulse-bar (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": false,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:gui-pulse-bar": 0.6251,
+      "obj:noise-nas": 0.5141,
+      "obj:noise-playground": 0.3955
+    },
+    "physis_tokens_base": 1197,
+    "physis_tokens_fused": 1197
+  },
+  {
+    "query": "blast-radius-timing (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:blast-radius-timing": 0.7116,
+      "obj:noise-nas": 0.4885,
+      "obj:noise-playground": 0.4593
+    },
+    "physis_tokens_base": 1189,
+    "physis_tokens_fused": 1170
+  },
+  {
+    "query": "semantic-lens-exclusions (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:semantic-lens-exclusions": 0.7634,
+      "obj:noise-nas": 0.5351,
+      "obj:noise-playground": 0.4787
+    },
+    "physis_tokens_base": 1192,
+    "physis_tokens_fused": 1190
+  },
+  {
+    "query": "workbench-receipts (held-out)",
+    "baseline_phrase_present": false,
+    "fused_phrase_present": true,
+    "observer_selected": 1,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:workbench-receipts": 0.7204,
+      "obj:noise-nas": 0.5118,
+      "obj:noise-playground": 0.4905
+    },
+    "physis_tokens_base": 1189,
+    "physis_tokens_fused": 1198
+  },
+  {
+    "query": "quarry-migration (control, corpus-covered)",
+    "baseline_phrase_present": true,
+    "fused_phrase_present": true,
+    "observer_selected": 0,
+    "noise_admitted": false,
+    "noise_text_in_packet": false,
+    "relevances": {
+      "obj:noise-nas": 0.5265,
+      "obj:noise-playground": 0.4174
+    },
+    "physis_tokens_base": 1171,
+    "physis_tokens_fused": 1171
+  }
+]
