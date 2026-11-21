@@ -17,10 +17,15 @@ use crate::gate::{
 /// Count resolution-gate outcomes (accept/defer/reject/abstain).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolutionOutcomeCounts {
+    #[serde(default)]
     pub accept: usize,
+    #[serde(default)]
     pub defer: usize,
+    #[serde(default)]
     pub reject: usize,
+    #[serde(default)]
     pub abstain: usize,
+    #[serde(default)]
     pub contradictions: usize,
 }
 
@@ -44,9 +49,13 @@ pub fn resolution_outcomes(results: &[ResolutionGateResult]) -> ResolutionOutcom
 /// Count relation-gate outcomes.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SimpleOutcomeCounts {
+    #[serde(default)]
     pub accept: usize,
+    #[serde(default)]
     pub defer: usize,
+    #[serde(default)]
     pub reject: usize,
+    #[serde(default)]
     pub abstain: usize,
 }
 
@@ -306,11 +315,16 @@ pub fn assessed_outcome_counts(assessed: &[crate::gate::AssessedIntake]) -> Simp
 /// verdict): relation/equivalence/lesson/grounding/claim buckets.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GateOutcomeCountsByKind {
+    #[serde(default)]
     pub relation: SimpleOutcomeCounts,
+    #[serde(default)]
     pub equivalence: SimpleOutcomeCounts,
+    #[serde(default)]
     pub lesson: SimpleOutcomeCounts,
+    #[serde(default)]
     pub grounding: SimpleOutcomeCounts,
     /// Conservative top-level claim outcomes (Entity/Retrieval/Opaque payloads).
+    #[serde(default)]
     pub claim: SimpleOutcomeCounts,
 }
 
@@ -360,15 +374,26 @@ pub fn assessed_outcomes_by_kind(
 /// consumption/evidence capture.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GateAssessmentSummary {
+    #[serde(default)]
     pub total: usize,
+    #[serde(default)]
     pub accept: usize,
+    #[serde(default)]
     pub defer: usize,
+    #[serde(default)]
     pub reject: usize,
+    #[serde(default)]
     pub abstain: usize,
     /// Contradiction candidates surfaced by equivalence assessments
     /// (proposal-only, never a merge).
+    #[serde(default)]
     pub equivalence_contradictions: usize,
+    #[serde(default)]
     pub by_kind: GateOutcomeCountsByKind,
+    /// Per-kind reason-category tallies (counts/proxies only), when provided.
+    /// Omitted when absent to keep older fixture records parseable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_counts: Option<GateOutcomeReasonCountsByKind>,
 }
 
 fn sum_simple(c: &SimpleOutcomeCounts) -> usize {
@@ -389,16 +414,17 @@ fn gate_outcome_contradiction_count(outcome: &GateOutcome) -> usize {
     }
 }
 
-/// Summarize typed gate outcomes (dispatch results) as counts/proxies only.
-pub fn summarize_gate_outcomes(outcomes: &[GateOutcome]) -> GateAssessmentSummary {
-    let by_kind = gate_outcomes_by_kind(outcomes);
+fn summary_from_kind_totals(
+    by_kind: GateOutcomeCountsByKind,
+    equivalence_contradictions: usize,
+    reason_counts: Option<GateOutcomeReasonCountsByKind>,
+) -> GateAssessmentSummary {
     let mut totals = SimpleOutcomeCounts::default();
     fold_simple(&mut totals, &by_kind.relation);
     fold_simple(&mut totals, &by_kind.equivalence);
     fold_simple(&mut totals, &by_kind.lesson);
     fold_simple(&mut totals, &by_kind.grounding);
     fold_simple(&mut totals, &by_kind.claim);
-    let equivalence_contradictions = outcomes.iter().map(gate_outcome_contradiction_count).sum();
     GateAssessmentSummary {
         total: sum_simple(&totals),
         accept: totals.accept,
@@ -407,28 +433,26 @@ pub fn summarize_gate_outcomes(outcomes: &[GateOutcome]) -> GateAssessmentSummar
         abstain: totals.abstain,
         equivalence_contradictions,
         by_kind,
+        reason_counts,
     }
+}
+
+/// Summarize typed gate outcomes (dispatch results) as counts/proxies only.
+pub fn summarize_gate_outcomes(outcomes: &[GateOutcome]) -> GateAssessmentSummary {
+    summary_from_kind_totals(
+        gate_outcomes_by_kind(outcomes),
+        outcomes.iter().map(gate_outcome_contradiction_count).sum(),
+        Some(gate_outcome_reason_counts_by_kind(outcomes)),
+    )
 }
 
 /// Summarize assessed intakes (intake+outcome pairs) as counts/proxies only.
 pub fn summarize_assessed(assessed: &[crate::gate::AssessedIntake]) -> GateAssessmentSummary {
-    let by_kind = assessed_outcomes_by_kind(assessed);
-    let mut totals = SimpleOutcomeCounts::default();
-    fold_simple(&mut totals, &by_kind.relation);
-    fold_simple(&mut totals, &by_kind.equivalence);
-    fold_simple(&mut totals, &by_kind.lesson);
-    fold_simple(&mut totals, &by_kind.grounding);
-    fold_simple(&mut totals, &by_kind.claim);
-    let equivalence_contradictions = assessed_contradiction_count(assessed);
-    GateAssessmentSummary {
-        total: sum_simple(&totals),
-        accept: totals.accept,
-        defer: totals.defer,
-        reject: totals.reject,
-        abstain: totals.abstain,
-        equivalence_contradictions,
-        by_kind,
-    }
+    summary_from_kind_totals(
+        assessed_outcomes_by_kind(assessed),
+        assessed_contradiction_count(assessed),
+        Some(assessed_reason_counts_by_kind(assessed)),
+    )
 }
 
 /// Count contradiction candidates surfaced by assessed equivalence outcomes.
@@ -547,18 +571,22 @@ fn tally_reasons(map: &mut BTreeMap<ReasonCategory, usize>, reasons: &[String]) 
     }
 }
 
+fn tally_outcome_reasons(counts: &mut GateOutcomeReasonCountsByKind, outcome: &GateOutcome) {
+    match outcome {
+        GateOutcome::Relation(r) => tally_reasons(&mut counts.relation, &r.reasons),
+        GateOutcome::Equivalence(r) => tally_reasons(&mut counts.equivalence, &r.reasons),
+        GateOutcome::Lesson(r) => tally_reasons(&mut counts.lesson, &r.reasons),
+        GateOutcome::Grounding(r) => tally_reasons(&mut counts.grounding, &r.reasons),
+        GateOutcome::Claim(r) => tally_reasons(&mut counts.claim, &r.reasons),
+    }
+}
+
 pub fn gate_outcome_reason_counts_by_kind(
     outcomes: &[GateOutcome],
 ) -> GateOutcomeReasonCountsByKind {
     let mut out = GateOutcomeReasonCountsByKind::default();
     for o in outcomes {
-        match o {
-            GateOutcome::Relation(r) => tally_reasons(&mut out.relation, &r.reasons),
-            GateOutcome::Equivalence(r) => tally_reasons(&mut out.equivalence, &r.reasons),
-            GateOutcome::Lesson(r) => tally_reasons(&mut out.lesson, &r.reasons),
-            GateOutcome::Grounding(r) => tally_reasons(&mut out.grounding, &r.reasons),
-            GateOutcome::Claim(r) => tally_reasons(&mut out.claim, &r.reasons),
-        }
+        tally_outcome_reasons(&mut out, o);
     }
     out
 }
@@ -568,13 +596,7 @@ pub fn assessed_reason_counts_by_kind(
 ) -> GateOutcomeReasonCountsByKind {
     let mut out = GateOutcomeReasonCountsByKind::default();
     for a in assessed {
-        match &a.outcome {
-            GateOutcome::Relation(r) => tally_reasons(&mut out.relation, &r.reasons),
-            GateOutcome::Equivalence(r) => tally_reasons(&mut out.equivalence, &r.reasons),
-            GateOutcome::Lesson(r) => tally_reasons(&mut out.lesson, &r.reasons),
-            GateOutcome::Grounding(r) => tally_reasons(&mut out.grounding, &r.reasons),
-            GateOutcome::Claim(r) => tally_reasons(&mut out.claim, &r.reasons),
-        }
+        tally_outcome_reasons(&mut out, &a.outcome);
     }
     out
 }
@@ -613,14 +635,10 @@ pub fn observer_fixture_report_from_outcomes(
     relevant_ids: Option<&HashSet<String>>,
     outcomes: &[GateOutcome],
 ) -> ObserverFixtureReport {
+    let gate = summarize_gate_outcomes(outcomes);
     ObserverFixtureReport {
-        reason_counts: Some(gate_outcome_reason_counts_by_kind(outcomes)),
-        ..build_observer_fixture_report(
-            baseline,
-            fused,
-            relevant_ids,
-            Some(summarize_gate_outcomes(outcomes)),
-        )
+        reason_counts: gate.reason_counts.clone(),
+        ..build_observer_fixture_report(baseline, fused, relevant_ids, Some(gate))
     }
 }
 
@@ -630,14 +648,10 @@ pub fn observer_fixture_report_from_assessed(
     relevant_ids: Option<&HashSet<String>>,
     assessed: &[crate::gate::AssessedIntake],
 ) -> ObserverFixtureReport {
+    let gate = summarize_assessed(assessed);
     ObserverFixtureReport {
-        reason_counts: Some(assessed_reason_counts_by_kind(assessed)),
-        ..build_observer_fixture_report(
-            baseline,
-            fused,
-            relevant_ids,
-            Some(summarize_assessed(assessed)),
-        )
+        reason_counts: gate.reason_counts.clone(),
+        ..build_observer_fixture_report(baseline, fused, relevant_ids, Some(gate))
     }
 }
 
