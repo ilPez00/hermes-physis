@@ -13,9 +13,9 @@ per-path pricing). Everything here is reproducible from a fresh clone.
   own `observer_gated` receipts.
 - `corpus/` — the 24 engine-visible real physis-next plan docs
   (`2026-09-24` … `2026-10-09`).
-- `selftest-probes.json` — the full 22-probe set with measured
-  expectations (`expect: "answer"` for the 14 queries the shipped default
-  answers, `"defer"` for the 8 it measurably defers). `physis-core
+- `selftest-probes.json` — the full 30-probe set with measured
+  expectations (`expect: "answer"` for the 20 queries the shipped default
+  answers, `"defer"` for the 10 it measurably defers). `physis-core
   selftest` verifies the engine matches this record; `calibrate-floor`
   re-derives the floor placement from it.
 - `results-*.json` — recorded measurements. `results-n22.json` is the n=22

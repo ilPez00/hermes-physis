@@ -364,3 +364,25 @@ up one query for it. The recall trend as the set broadened is also recorded:
 and every deferral is a visible receipt, which is the safe direction.
 
 Verdict: 0.66 stands, now validated on n=22/n=46 rather than assumed.
+
+## n=30: the ceiling holds across a third broadening
+
+Eight further held-out queries (durable-tms, rau-semantics, temporal-defect,
+paired-bench-metric, playground-phase1, hackathon-dating, spaceship-matrix,
+steering-ir-rule) broaden the sample to 30 relevant / 62 noise. At the shipped
+default 0.66: **20/30 answerable (67%, up from 64%), zero noise admitted** —
+the noise ceiling is STILL 0.6522, unmoved across three broadenings (28 → 46 →
+62 noise samples). The ROC shape is unchanged: 0.65 → 22/30 + 1 noise; 0.66 →
+20/30 + 0. Two new measured deferrals (rau-semantics 0.6411, steering-ir-rule
+0.6568).
+
+Verdict: the 0.66 placement now rests on n=30 relevant / 62 noise with zero
+contamination at every sample size measured. Within this embedder and corpus
+family, the placement is as firm as sampling can make it; further broadening
+would refine the recall estimate, not the contamination verdict.
+
+Tooling cross-check: the shipped `selftest-probes.json` now carries all 30
+probes with measured expectations (20 answer / 10 defer); `physis-core
+selftest` passes 30/30 against the deployed binary, and `calibrate-floor` on
+the full set re-derives the entire record (bands 0.5543–0.8630 / ceiling
+0.6522, recommendation 0.6602, recall 20/30) through the shipped tooling.

@@ -16,11 +16,8 @@ import subprocess
 import sys
 
 BUDGET = "1200"
-ENGINE = os.environ.get("PHYSIS_BENCH_ENGINE", "/home/gio/.local/bin/physis-core")
-CORPUS = os.environ.get(
-    "PHYSIS_BENCH_CORPUS",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "corpus"),
-)
+ENGINE = "/home/gio/.local/bin/physis-core"
+CORPUS = "/tmp/real-fusion/corpus"
 import sys as _sys
 if _sys.argv[-1] == "--rp":
     ENV = dict(os.environ)  # no PHYSIS_MODEL_DIR: the CLI uses random-projection
@@ -28,7 +25,7 @@ if _sys.argv[-1] == "--rp":
 else:
     ENV = {
         **os.environ,
-        "PHYSIS_MODEL_DIR": os.environ.get("PHYSIS_BENCH_MODEL_DIR", "/home/gio/dev/hermes-physis/models/bge-small"),
+        "PHYSIS_MODEL_DIR": "/home/gio/dev/hermes-physis/models/bge-small",
         "PHYSIS_MODEL_DIM": "384",
     }
 
@@ -341,6 +338,109 @@ QUERIES = [
             "with lenses sharing one selection and one as-of cursor.",
         ),
         "phrase": "the seq or revision behind it",
+    },
+    {
+        "name": "durable-tms (held-out)",
+        "query": "what does durable truth maintenance analyse retractions with",
+        "claim": claim(
+            "h23",
+            "obj:durable-tms",
+            "Durable truth maintenance v1 is justification-aware retraction "
+            "analysis: a retraction is analysed against the justifications "
+            "that support a belief, not just flipped off, and it is operator "
+            "milestone 3 of the 2026-11-17 directive.",
+        ),
+        "phrase": "justification-aware retraction",
+    },
+    {
+        "name": "rau-semantics (held-out)",
+        "query": "what finding drove the relation admission unification",
+        "claim": claim(
+            "h24",
+            "obj:rau-semantics",
+            "The finding: Physis does not yet apply the same semantic rules "
+            "to every source entering its world model — five direct-insertion "
+            "paths bypass the admission gate that observed input passes "
+            "through.",
+        ),
+        "phrase": "five direct-insertion paths",
+    },
+    {
+        "name": "temporal-defect (held-out)",
+        "query": "what did the temporal entailment defect admit",
+        "claim": claim(
+            "h25",
+            "obj:temporal-defect",
+            "The OWL transitive-closure block admitted every entailed edge as "
+            "TemporalValidity::permanent, and stamp_temporal_validity then "
+            "backfilled that permanence over derived edges that should have "
+            "inherited their own bounds.",
+        ),
+        "phrase": "backfilled that permanence",
+    },
+    {
+        "name": "paired-bench-metric (held-out)",
+        "query": "what does the paired dev benchmark measure per agent-hour",
+        "claim": claim(
+            "h26",
+            "obj:paired-bench-metric",
+            "The paired dev benchmark compares Physis-assisted development "
+            "with conventional development on identical tasks and models, "
+            "measuring correct fixes per agent-hour, token usage, time, "
+            "regressions and interventions.",
+        ),
+        "phrase": "correct fixes per agent-hour",
+    },
+    {
+        "name": "playground-phase1 (held-out)",
+        "query": "what landed in phase one of the world model playground",
+        "claim": claim(
+            "h27",
+            "obj:playground-phase1",
+            "Phase 1 of the world model playground landed the Physis "
+            "branding, the canonical fixture with an official physis-world "
+            "catalogue entry, and the base import adapted into the "
+            "playground repo.",
+        ),
+        "phrase": "canonical fixture with an official",
+    },
+    {
+        "name": "hackathon-dating (held-out)",
+        "query": "why does the hackathon plan schedule engine work against real dates",
+        "claim": claim(
+            "h28",
+            "obj:hackathon-dating",
+            "The hackathon milestones plan treats the operator's external "
+            "hackathon pipeline as engine milestones, so physis-next work is "
+            "scheduled against real dates instead of open-ended someday.",
+        ),
+        "phrase": "instead of open-ended someday",
+    },
+    {
+        "name": "spaceship-matrix (held-out)",
+        "query": "what did the spaceship reverse-engineering produce",
+        "claim": claim(
+            "h29",
+            "obj:spaceship-matrix",
+            "The spaceship reverse-engineering produced an integration "
+            "matrix for interactive world steering, working from a "
+            "read-only MIT-licensed clone with a citation request, not a "
+            "fork.",
+        ),
+        "phrase": "produced an integration",
+    },
+    {
+        "name": "steering-ir-rule (held-out)",
+        "query": "what rule does the steering IR design honor",
+        "claim": claim(
+            "h30",
+            "obj:steering-ir-rule",
+            "The SteeringIR and counterfactual branches design honors one "
+            "rule: no new world model, no second ontology, no second "
+            "persistence layer — everything is a surface over the existing "
+            "fold, store and invariants.",
+        ),
+        "phrase": "no second ontology",
     },
     {
         "name": "quarry-migration (control, corpus-covered)",
