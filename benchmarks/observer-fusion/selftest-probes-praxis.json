@@ -4,7 +4,7 @@
    "name": "nietzschedice-modes",
    "expect": "answer",
    "query": "what are the three modes of the nietzsche dice redesign",
-   "phrase": "local-first philosophical workspace",
+   "phrase": "verbatim excerpts with source attribution",
    "forbidden": [
     "ugreen runtime compatibility",
     "public playground for learning"
