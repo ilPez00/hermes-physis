@@ -13,6 +13,11 @@ per-path pricing). Everything here is reproducible from a fresh clone.
   own `observer_gated` receipts.
 - `corpus/` — the 24 engine-visible real physis-next plan docs
   (`2026-09-24` … `2026-10-09`).
+- `selftest-probes.json` — the full 22-probe set with measured
+  expectations (`expect: "answer"` for the 14 queries the shipped default
+  answers, `"defer"` for the 8 it measurably defers). `physis-core
+  selftest` verifies the engine matches this record; `calibrate-floor`
+  re-derives the floor placement from it.
 - `results-*.json` — recorded measurements. `results-n22.json` is the n=22
   held-out / n=46 noise sweep backing the 0.66 default; `results-repro.json`
   is the re-run that reproduced it 23/23 exactly on 2026-11-20. The
@@ -50,3 +55,20 @@ token counts, phrase checks).
 - `noise_admitted` / `noise_text_in_packet` — a noise claim passed the gate /
   its text is verbatim in the packet. Must be 0 at the shipped default.
 - `relevances` — raw cosine per claim from the floor-0.0 probe (the ROC data).
+
+## Probe schema
+
+```json
+{"probes": [{
+  "name": "...", "expect": "answer" | "defer",
+  "query": "...", "phrase": "must appear in the fused packet",
+  "forbidden": ["noise text that must not appear"],
+  "claims": [ ...standard --observer-claims objects... ]
+}]}
+```
+
+`expect` declares what the shipped configuration is measured to do:
+`answer` probes must be admitted, `defer` probes must be deferred — a
+change either way is drift from the measurement record and fails the
+selftest. The baseline for `--baseline` is any previous `selftest --json`
+output.

@@ -20,9 +20,25 @@ pub struct SelftestProbeFile {
     pub probes: Vec<SelftestProbe>,
 }
 
+/// What the shipped configuration is measured to do with this probe.
+/// `answer`: the gate must admit the claim (phrase in packet). `defer`:
+/// the gate must defer it (phrase absent) — the measured behaviour of the
+/// shipped default for harder queries; a change either way is drift from
+/// the measurement record.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Expect {
+    #[default]
+    Answer,
+    Defer,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SelftestProbe {
     pub name: String,
+    /// What the shipped configuration is measured to do. Default: answer.
+    #[serde(default)]
+    pub expect: Expect,
     pub query: String,
     /// Distinctive phrase from the held-out claim; must appear in the fused
     /// packet and be absent from the baseline packet.
@@ -101,7 +117,12 @@ pub fn run_selftest(
             .forbidden
             .iter()
             .all(|f| !fused_ctx.contains(&f.to_lowercase()));
-        let passed = baseline_absent && answered && forbidden_absent;
+        let passed = baseline_absent
+            && forbidden_absent
+            && match probe.expect {
+                Expect::Answer => answered,
+                Expect::Defer => !answered,
+            };
         reports.push(SelftestProbeReport {
             name: probe.name.clone(),
             baseline_absent,
@@ -353,6 +374,7 @@ mod tests {
     fn fixture_probe() -> SelftestProbe {
         SelftestProbe {
             name: "relay-roster".into(),
+            expect: Expect::Answer,
             query: "relay calibration bench harness".into(),
             phrase: "harness, reference meter, two-pass".into(),
             forbidden: vec!["cafeteria lunch menu".into()],
@@ -517,6 +539,39 @@ mod tests {
         assert_eq!((*rel, *noi), (1, 1));
         let (_, rel, noi) = at(0.66);
         assert_eq!((*rel, *noi), (1, 0));
+    }
+
+    #[test]
+    fn defer_expected_probes_pass_when_the_gate_defers_and_fail_when_it_answers() {
+        let embedder = RandomProjectionEmbedder::new(64);
+        let mut probe = fixture_probe();
+        probe.expect = Expect::Defer;
+        // Floor 0.9: the gate admits the claim — the probe expected a defer,
+        // so this is a failure (behaviour changed from the measurement).
+        let rep = run_selftest(
+            &fixture_docs(),
+            &embedder,
+            std::slice::from_ref(&probe),
+            400,
+            0.9,
+            crate::map::ObserverReserve::Auto,
+        )
+        .unwrap();
+        assert!(!rep.ok, "answered a defer-expected probe: behaviour drift");
+        assert!(!rep.probes[0].passed);
+        // Floor 0.99: the gate defers — matches the expectation.
+        let rep = run_selftest(
+            &fixture_docs(),
+            &embedder,
+            std::slice::from_ref(&probe),
+            400,
+            0.99,
+            crate::map::ObserverReserve::Auto,
+        )
+        .unwrap();
+        assert!(rep.ok, "deferred as expected: matches the measurement");
+        assert!(rep.probes[0].passed);
+        assert!(!rep.probes[0].answered);
     }
 
     #[test]

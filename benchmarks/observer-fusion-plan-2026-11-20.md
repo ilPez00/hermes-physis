@@ -201,6 +201,18 @@ U1–U4 are done (see execution record below).
 - U6 done (`da1a43f`): `calibrate-floor`. E2E cross-check: noise ceiling
   0.6522 (the recorded n22 value) and recommendation 0.6602 — calibration
   independently reproduces the shipped 0.66 from the 5-probe subset.
+- U5.5 done (this commit): probe `expect: answer|defer` — selftest now
+  verifies the engine MATCHES its measurement record rather than only
+  that it answers. The shipped `selftest-probes.json` grew from 5 probes
+  to the full 22 (14 expect-answer, 8 expect-defer from the recorded n22
+  run); selftest passes 22/22 exit 0 against the deployed binary, and
+  `calibrate-floor` on the full set reproduces the entire n22 record
+  (bands 0.5543–0.8299, ceiling 0.6522, recommendation 0.6602, recall
+  14/22) through the shipped tooling. Red-first: the expect test was
+  written against the missing enum (recorded E0063), then implemented;
+  mutation `Defer => answered` → fail → revert → green. Note: the sync
+  bot transiently reverted the probes file mid-verification; the final
+  state is the 22-probe version.
 - U7 done: `ObserverGateReceipt.engine_relative` (advisory, serde-defaulted,
   gate untouched). E2E on the invariants query: relevant claim 1.106 (>1 —
   outscores the engine's own best chunk), noise 0.928/0.840. Process note:
