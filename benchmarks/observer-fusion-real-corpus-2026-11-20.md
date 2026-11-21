@@ -414,3 +414,39 @@ flagged exactly those (base=True on two; the third's phrase merely failed to
 surface), which is the selftest's `baseline_absent` contract working on real
 data. The shipped `selftest-probes-praxis.json` contains only the 5 clean
 probes; the 8-probe raw run is preserved in `results-praxis-family.json`.
+
+## Cross-embedder check: the floor is MODEL-relative — the kind-level default was a defect
+
+Same 30 held-out queries + 62 noise samples, two more semantic embedders
+(`results-n30-bgebase.json`, `results-n30-minilm.json`):
+
+| embedder | relevant band | noise ceiling | zero-noise floor | recall | 0.66 would admit |
+|---|---|---|---|---|---|
+| bge-small (shipped) | 0.5543–0.8630 | 0.6522 | 0.66 | 20/30 | — |
+| bge-base 768-d | 0.6734–0.8965 | **0.7183** | 0.73 | 24/30 | **12/62 noise** |
+| minilm 384-d | 0.3531–0.8200 | **0.7070** | 0.71 | 13/30 | **6/62 noise** |
+
+**The shipped `semantic = 0.66` default was wrong for two of three semantic
+models**: under bge-base it sits BELOW the noise ceiling (bands overlap) and
+admits 12 noise claims; under minilm, 6. The default is now model-aware:
+`default_observer_floor` keys off the model identity carried in the embedder
+kind (`bge-base` → 0.73, `minilm` → 0.71, bge-small/unknown → 0.66), and
+`embed::select` labels explicit `PHYSIS_MODEL_DIR` choices with the
+directory basename (`onnx-explicit:bge-base-en-v1.5`) so an explicit
+bge-base caller gets the measured floor instead of the bge-small one.
+Unknown explicit models keep the bge-small point and are directed to
+`calibrate-floor`.
+
+E2E through the deployed binary, default floor, no explicit `--observer-floor`:
+bge-base 22/30 answered / 0 noise; minilm (minilm-named dir) 12/30 / 0 noise;
+bge-small selftest 30/30 unchanged. Note: an explicit dir whose basename does
+not name the model (e.g. an HF snapshot hash) is intentionally treated as
+unknown → 0.66; name the directory after the model.
+
+Method note: the first two "bge-base" sweep attempts silently ran bge-small —
+the harness env is hardcoded and my earlier re-sync of `measure.py` from /tmp
+overwrote the `PHYSIS_BENCH_MODEL_DIR` parameterization (now restored in both
+copies). The accidental rerun exactly reproduced the n30 record — a free
+reproducibility check. The engine_best drift noted mid-session (0.6879 →
+0.7982 on the control query) moved no gate decision (31/31 verdicts match);
+claim relevances are corpus-independent and identical throughout.

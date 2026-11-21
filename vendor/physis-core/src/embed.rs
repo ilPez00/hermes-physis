@@ -204,7 +204,13 @@ impl VectorEmbed for MemoEmbedder {
 
 /// Which embedder [`select`] actually chose. Returned alongside the embedder so
 /// every caller can *report* what it is running on instead of assuming.
-pub type Selected = (Box<dyn VectorEmbed>, &'static str);
+/// The kind label is the model identity, not a static token: callers pick
+/// per-model defaults from it (see `default_observer_floor`), and an
+/// explicit `PHYSIS_MODEL_DIR` must carry its model name (e.g.
+/// `onnx-explicit:bge-base-en-v1.5`) or a bge-base caller would silently
+/// get the bge-small floor and admit noise. String, because the explicit
+/// label is built from the directory at runtime.
+pub type Selected = (Box<dyn VectorEmbed>, String);
 
 /// Resolve an embedder, newest-honest-first, and say which one won.
 ///
@@ -235,7 +241,7 @@ pub fn select(dim: usize) -> Selected {
     {
         return (
             Box::new(RandomProjectionEmbedder::new(dim)),
-            "random-projection",
+            "random-projection".to_string(),
         );
     }
 
@@ -265,19 +271,16 @@ pub fn select(dim: usize) -> Selected {
 
     (
         Box::new(RandomProjectionEmbedder::new(dim)),
-        "random-projection",
+        "random-projection".to_string(),
     )
 }
 
 /// Candidate ONNX model directories in preference order, with the dimension and
-/// pooling each export needs. `PHYSIS_MODEL_DIR` short-circuits the list.
+/// pooling each export needs. `PHYSIS_MODEL_DIR` short-circuits the list. The
+/// label is the model identity: an explicit dir carries its basename so
+/// per-model defaults (observer floor) can key off it.
 #[cfg(feature = "embed-onnx")]
-fn onnx_candidates() -> Vec<(
-    String,
-    usize,
-    crate::embed_onnx::PoolingStrategy,
-    &'static str,
-)> {
+fn onnx_candidates() -> Vec<(String, usize, crate::embed_onnx::PoolingStrategy, String)> {
     use crate::embed_onnx::PoolingStrategy::{Cls, Mean};
     let env_pooling = || match std::env::var("PHYSIS_POOLING")
         .unwrap_or_default()
@@ -295,15 +298,22 @@ fn onnx_candidates() -> Vec<(
                 .ok()
                 .and_then(|v| v.trim().parse().ok())
                 .unwrap_or(384);
-            return vec![(dir, dim, env_pooling(), "onnx-explicit")];
+            return vec![(
+                dir.clone(),
+                dim,
+                env_pooling(),
+                format!(
+                    "onnx-explicit:{}",
+                    std::path::Path::new(&dir)
+                        .file_name()
+                        .map(|s| s.to_string_lossy())
+                        .unwrap_or_default()
+                ),
+            )];
         }
     }
-    let mut candidates: Vec<(
-        String,
-        usize,
-        crate::embed_onnx::PoolingStrategy,
-        &'static str,
-    )> = Vec::new();
+    let mut candidates: Vec<(String, usize, crate::embed_onnx::PoolingStrategy, String)> =
+        Vec::new();
     // A per-user model installed once serves every checkout.
     if let Ok(home) = std::env::var("HOME") {
         let home = home.trim();
@@ -312,7 +322,7 @@ fn onnx_candidates() -> Vec<(
                 format!("{home}/.physis/models/minilm"),
                 384,
                 env_pooling(),
-                "minilm-home",
+                "minilm-home".to_string(),
             ));
             let xdg = std::env::var("XDG_DATA_HOME")
                 .ok()
@@ -322,7 +332,7 @@ fn onnx_candidates() -> Vec<(
                 format!("{xdg}/physis/models/minilm"),
                 384,
                 env_pooling(),
-                "minilm-xdg",
+                "minilm-xdg".to_string(),
             ));
         }
     }
@@ -330,10 +340,15 @@ fn onnx_candidates() -> Vec<(
         "./models/bge-base-en-v1.5".into(),
         768,
         env_pooling(),
-        "bge-base",
+        "bge-base".to_string(),
     ));
-    candidates.push(("./models/minilm".into(), 384, env_pooling(), "minilm"));
-    candidates.push(("./models".into(), 384, env_pooling(), "minilm"));
+    candidates.push((
+        "./models/minilm".into(),
+        384,
+        env_pooling(),
+        "minilm".to_string(),
+    ));
+    candidates.push(("./models".into(), 384, env_pooling(), "minilm".to_string()));
     candidates
 }
 

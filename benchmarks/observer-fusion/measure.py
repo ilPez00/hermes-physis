@@ -25,7 +25,8 @@ if _sys.argv[-1] == "--rp":
 else:
     ENV = {
         **os.environ,
-        "PHYSIS_MODEL_DIR": "/home/gio/dev/hermes-physis/models/bge-small",
+        "PHYSIS_MODEL_DIR": os.environ.get("PHYSIS_BENCH_MODEL_DIR",
+                                           "/home/gio/dev/hermes-physis/models/bge-small"),
         "PHYSIS_MODEL_DIM": "384",
     }
 

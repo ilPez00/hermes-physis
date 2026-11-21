@@ -56,6 +56,19 @@ token counts, phrase checks).
   its text is verbatim in the packet. Must be 0 at the shipped default.
 - `relevances` — raw cosine per claim from the floor-0.0 probe (the ROC data).
 
+## Cross-embedder measurement
+
+`results-n30-bgebase.json` / `results-n30-minilm.json` — the same 30 held-out
+queries + 62 noise under bge-base (768-d) and minilm (384-d). The semantic
+floor is MODEL-relative: bge-base zero-noise point 0.73, minilm 0.71,
+bge-small 0.66. The CLI default is model-aware (keyed off the embedder kind,
+which now carries the model identity for explicit `PHYSIS_MODEL_DIR` dirs).
+Set a different model via `PHYSIS_BENCH_MODEL_DIR` + `PHYSIS_MODEL_DIM`:
+
+```sh
+PHYSIS_BENCH_MODEL_DIR=/path/to/bge-base-en-v1.5 PHYSIS_MODEL_DIM=768 python3.13 measure.py auto
+```
+
 ## Second corpus family (cross-family check)
 
 `corpus-praxis/` + `selftest-probes-praxis.json` — a heterogeneous corpus

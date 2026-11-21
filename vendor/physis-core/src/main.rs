@@ -140,8 +140,9 @@ enum Command {
         #[arg(long)]
         observer_claims: Option<PathBuf>,
         /// Relevance floor for observer retrieval hits; when omitted, defaults
-        /// by embedder kind (0.99 random-projection — fusion opt-in, see
-        /// default_observer_floor; 0.66 semantic, n=22-validated).
+        /// by model (0.99 random-projection — fusion opt-in; 0.66 bge-small,
+        /// 0.73 bge-base, 0.71 minilm — each measured, see
+        /// default_observer_floor).
         #[arg(long)]
         observer_floor: Option<f32>,
         /// Packet headroom reserved for observer content: a number sets a
@@ -384,8 +385,9 @@ enum Command {
         observer_claims: Option<PathBuf>,
         /// Relevance floor for observer retrieval hits (query↔snippet cosine;
         /// meaning is embedder-dependent — see gate_retrieval_hit docs).
-        /// When omitted, defaults by embedder kind: 0.99 for random-projection
-        /// (fusion opt-in), 0.66 for a semantic (ONNX) embedder.
+        /// When omitted, defaults by model: 0.99 for random-projection
+        /// (fusion opt-in), 0.66 bge-small / 0.73 bge-base / 0.71 minilm for
+        /// a semantic (ONNX) embedder.
         #[arg(long)]
         observer_floor: Option<f32>,
         /// Tokens of packet headroom reserved for observer content: the engine
@@ -838,7 +840,7 @@ fn load_embedder() -> Box<dyn physis_core::embed::VectorEmbed> {
 }
 
 /// The embedder plus the label describing what actually loaded.
-fn load_embedder_kind() -> (Box<dyn physis_core::embed::VectorEmbed>, &'static str) {
+fn load_embedder_kind() -> (Box<dyn physis_core::embed::VectorEmbed>, String) {
     let (e, kind) = physis_core::embed::select(384);
     if kind == "random-projection" {
         eprintln!(
@@ -998,7 +1000,7 @@ fn load_quality() -> QualityTracker {
 fn run_classify(text: &str, no_expand: bool, as_json: bool) -> anyhow::Result<()> {
     let ontology = OntologyLoader::load_all();
     let (embedder, embedder_kind) = load_embedder_kind();
-    let classifier = build_classifier(&ontology, embedder.as_ref(), embedder_kind);
+    let classifier = build_classifier(&ontology, embedder.as_ref(), &embedder_kind);
     let quality = load_quality();
 
     let results = classifier.classify_text(text, &embedder);
@@ -1195,7 +1197,7 @@ fn run_classify(text: &str, no_expand: bool, as_json: bool) -> anyhow::Result<()
 fn run_grid(as_json: bool, include_cells: bool) -> anyhow::Result<()> {
     let ontology = OntologyLoader::load_all();
     let (embedder, kind) = load_embedder_kind();
-    let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
+    let classifier = build_classifier(&ontology, embedder.as_ref(), &kind);
     let grid = physis_core::GridView::from_classifier(&classifier);
 
     if as_json {
@@ -1510,7 +1512,7 @@ fn run_node_search(
     };
     let retrieval_budget = match observer_claims {
         Some(claims_path) => {
-            let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
+            let floor = observer_floor.unwrap_or_else(|| default_observer_floor(&kind));
             let reserve_tokens = physis_core::map::observer_reserve_tokens(
                 embedder.as_ref(),
                 query,
@@ -1564,7 +1566,7 @@ fn run_node_search(
     // below engine evidence (the packet tier), filling only the token budget
     // the engine selection left. Receipts print; exclusions are never silent.
     let claims = load_observer_claims(claims_path)?;
-    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
+    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(&kind));
     let (packet, gated) = physis_core::compile_from_retrieval_with_gated_observer_claims(
         query,
         &result,
@@ -1787,7 +1789,7 @@ fn run_quality(cmd: QualityCmd) -> anyhow::Result<()> {
         QualityCmd::Fail { feedback } => {
             let ontology = OntologyLoader::load_all();
             let (embedder, kind) = load_embedder_kind();
-            let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
+            let classifier = build_classifier(&ontology, embedder.as_ref(), &kind);
             let centroids = classifier.cell_centroids();
             let f = quality.report_failure(&feedback, &centroids, None);
             println!(
@@ -2269,7 +2271,7 @@ fn resolve_hypothesis_id(core: &PhysisCore, needle: &str) -> IdMatch {
 fn run_discover(dir: Option<&std::path::Path>, min_cluster: usize) -> anyhow::Result<()> {
     let (embedder, kind) = load_embedder_kind();
     let ontology = OntologyLoader::load_all();
-    let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
+    let classifier = build_classifier(&ontology, embedder.as_ref(), &kind);
     let mut texts = Vec::new();
 
     if let Some(d) = dir {
@@ -2555,7 +2557,7 @@ fn cmd_ngram(cmd: NGramCmd) -> anyhow::Result<()> {
                 // distribution over misfilings. This was the last site still
                 // constructing its own RandomProjectionEmbedder directly.
                 let (embedder, kind) = load_embedder_kind();
-                let clf = build_classifier(&ontology, embedder.as_ref(), kind);
+                let clf = build_classifier(&ontology, embedder.as_ref(), &kind);
                 ngram_table::build_structural(&docs, cfg, |seg| {
                     let emb = embedder.as_ref().embed(seg);
                     clf.best_entry_sim(&emb)
@@ -2941,7 +2943,7 @@ fn cmd_direction(before: &Path, after: &Path, want: &str, json: bool) -> anyhow:
     let b = std::fs::read_to_string(before)?;
     let a = std::fs::read_to_string(after)?;
     let (embedder, kind) = physis_core::embed::select(384);
-    let v = physis_core::direction::check(&b, &a, dir, embedder.as_ref(), kind)?;
+    let v = physis_core::direction::check(&b, &a, dir, embedder.as_ref(), &kind)?;
     if json {
         println!("{}", serde_json::to_string_pretty(&v)?);
     } else {
@@ -2969,7 +2971,7 @@ fn cmd_chain(
     );
     let (embedder, kind) = load_embedder_kind();
     let ontology = physis_core::ontology::OntologyLoader::load_all();
-    let clf = build_classifier(&ontology, embedder.as_ref(), kind);
+    let clf = build_classifier(&ontology, embedder.as_ref(), &kind);
     // An empty query still needs something to compile context against; the
     // corpus's own first title is a neutral default that keeps the run
     // reproducible instead of erroring on a flag the user did not need.
@@ -2978,7 +2980,7 @@ fn cmd_chain(
     } else {
         query
     };
-    let r = physis_core::chain::run(&docs, q, embedder.as_ref(), &clf, budget, threshold, kind)?;
+    let r = physis_core::chain::run(&docs, q, embedder.as_ref(), &clf, budget, threshold, &kind)?;
     if json {
         println!("{}", serde_json::to_string_pretty(&r)?);
     } else {
@@ -3073,7 +3075,7 @@ fn cmd_ngram_cells(
     );
     let (embedder, kind) = load_embedder_kind();
     let ontology = physis_core::ontology::OntologyLoader::load_all();
-    let clf = build_classifier(&ontology, embedder.as_ref(), kind);
+    let clf = build_classifier(&ontology, embedder.as_ref(), &kind);
 
     // One ordered symbol run per document: these are transitions, and a set
     // would lose exactly the information the tables are for.
@@ -3168,6 +3170,12 @@ fn default_observer_floor(kind: &str) -> f32 {
         // that cannot keep its gate's promise ships disabled: fusion under
         // RP is opt-in (the caller passes --observer-floor explicitly).
         0.99
+    } else if kind.contains("bge-base") {
+        // Measured zero-noise point: ceiling 0.7183 + margin.
+        0.73
+    } else if kind.contains("minilm") {
+        // Measured zero-noise point: ceiling 0.7070 + margin.
+        0.71
     } else {
         // Measured on the broadened real corpus (22 held-out queries, 46
         // noise samples): the ROC is SHALLOW — relevant 0.5543-0.8299,
@@ -3184,6 +3192,21 @@ fn default_observer_floor(kind: &str) -> f32 {
         // defer = visible receipt), the default sits at the
         // margin-aware zero-contamination point. Callers wanting more
         // recall pass --observer-floor and own the measured risk.
+        //
+        // The semantic floor is MODEL-relative, not kind-relative. Same 30
+        // held-out queries + 62 noise samples, three embedders
+        // (results-n30-bgebase.json / results-n30-minilm.json in the
+        // observer-fusion bench):
+        //   bge-small: noise ceiling 0.6522 -> floor 0.66 (20/30, 0 noise)
+        //   bge-base:  noise ceiling 0.7183 -> floor 0.73 (20/30, 0 noise;
+        //              0.66 would ADMIT 12/62 noise claims)
+        //   minilm:    noise ceiling 0.7070 -> floor 0.71 (13/30, 0 noise;
+        //              0.66 would admit 6/62; shallow ROC, weak but working)
+        // A kind-level default would hand bge-base and minilm callers a
+        // floor measured on a different model — exactly the contamination
+        // this gate exists to keep out. Unknown explicit models fall back
+        // to the bge-small point and should be measured with
+        // `calibrate-floor` before trusting fusion.
         0.66
     }
 }
@@ -3350,7 +3373,7 @@ fn cmd_selftest(
         probes_path.display()
     );
     let (embedder, kind) = load_embedder_kind();
-    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
+    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(&kind));
     let reserve = match observer_reserve {
         None | Some("") => ObserverReserve::Auto,
         Some("auto") => ObserverReserve::Auto,
@@ -3444,7 +3467,7 @@ fn cmd_context(
         corpus.display()
     );
     let (embedder, kind) = load_embedder_kind();
-    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
+    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(&kind));
     let claims: Vec<physis_core::ingest::CandidateClaimPacket> = match observer_claims {
         Some(path) => load_observer_claims(path)?,
         None => Vec::new(),
@@ -3499,7 +3522,7 @@ fn cmd_bench_semiotic(fixture: &std::path::Path, as_json: bool) -> anyhow::Resul
 
     let ontology = OntologyLoader::load_all();
     let (embedder, kind) = load_embedder_kind();
-    let classifier = build_classifier(&ontology, embedder.as_ref(), kind);
+    let classifier = build_classifier(&ontology, embedder.as_ref(), &kind);
     let grid = physis_core::GridView::from_classifier(&classifier);
 
     let mut n = 0usize;
@@ -3877,8 +3900,21 @@ mod tests {
         // gate's asymmetry — a false admit puts unverified text in the
         // packet, a false defer leaves a visible receipt — the default
         // belongs at the margin-aware zero-contamination point.
-        assert_eq!(default_observer_floor("onnx-explicit"), 0.66);
-        assert_eq!(default_observer_floor("onnx-minilm"), 0.66);
+        assert_eq!(default_observer_floor("onnx-explicit:bge-small"), 0.66);
+        // Cross-embedder measurement (results-n30-bgebase.json /
+        // results-n30-minilm.json, same 30 held-out queries + 62 noise):
+        // the semantic floor is MODEL-relative, not embedder-kind-relative.
+        // bge-base noise ceiling 0.7183 — 0.66 would admit 12/62 noise
+        // claims; zero-noise point 0.73 recalls 20/30. minilm noise ceiling
+        // 0.7070 — 0.66 would admit 6/62; zero-noise point 0.71 recalls
+        // 13/30 (shallow ROC, like RP but not as total).
+        assert_eq!(default_observer_floor("bge-base"), 0.73);
+        assert_eq!(
+            default_observer_floor("onnx-explicit:bge-base-en-v1.5"),
+            0.73
+        );
+        assert_eq!(default_observer_floor("minilm-home"), 0.71);
+        assert_eq!(default_observer_floor("onnx-minilm"), 0.71);
     }
 
     #[test]

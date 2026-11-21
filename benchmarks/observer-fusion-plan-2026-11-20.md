@@ -82,6 +82,18 @@ Also fixed: the repo copy of measure.py had gone stale at 22 queries (the
 generator read it instead of the live /tmp one) — re-synced; results-n30.json
 committed.
 
+## U10 — Cross-embedder check: model-aware default floor (done 2026-11-20)
+
+Measured bge-base (noise ceiling 0.7183) and minilm (0.7070) on the same 30
+held-out queries + 62 noise: the kind-level `semantic = 0.66` default admits
+12 and 6 noise claims respectively — a defect, not a preference. Shipped:
+`embed::select` labels now carry the model identity (explicit dirs get
+`onnx-explicit:<basename>`), `default_observer_floor` is model-aware
+(bge-base 0.73, minilm 0.71, bge-small/unknown 0.66), red-first unit test
+extended, mutation-verified, e2e 0 noise on all three embedders through the
+deployed binary. Harness `PHYSIS_BENCH_MODEL_DIR` parameterization restored
+(it had been overwritten by the n30 re-sync).
+
 ## U9 — Cross-family generalization check (done 2026-11-20)
 
 Second corpus family (30 heterogeneous praxis_webapp docs, 5 clean held-out
