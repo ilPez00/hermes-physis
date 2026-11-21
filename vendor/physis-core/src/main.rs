@@ -400,6 +400,30 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Run known-answer probes against a corpus and verify the gated
+    /// observer fusion answers what it should and admits no noise. Exits
+    /// nonzero on any failure — usable as a gate in scripts and CI.
+    Selftest {
+        /// Corpus directory (any text file; binaries and build dirs are skipped).
+        #[arg(long)]
+        corpus: PathBuf,
+        /// JSON file of probes: {probes: [{name, query, phrase, forbidden,
+        /// claims}]} — claims in the standard --observer-claims format.
+        #[arg(long)]
+        probes: PathBuf,
+        #[arg(long, default_value_t = 1200)]
+        budget: usize,
+        /// Relevance floor override (default: the embedder-aware shipped
+        /// default — 0.99 random-projection, 0.66 semantic).
+        #[arg(long)]
+        observer_floor: Option<f32>,
+        /// Reserve override (default: auto, the measured-dominant setting).
+        #[arg(long)]
+        observer_reserve: Option<String>,
+        /// Machine-readable full report.
+        #[arg(long)]
+        json: bool,
+    },
     /// One-command offline demo: corpus → map → ngram table → model answer.
     Demo {
         /// Corpus directory (any text file; binaries and build dirs are skipped).
@@ -738,6 +762,21 @@ fn main() -> anyhow::Result<()> {
             observer_claims.as_deref(),
             observer_floor,
             observer_reserve,
+            json,
+        ),
+        Command::Selftest {
+            corpus,
+            probes,
+            budget,
+            observer_floor,
+            observer_reserve,
+            json,
+        } => cmd_selftest(
+            &corpus,
+            &probes,
+            budget,
+            observer_floor,
+            observer_reserve.as_deref(),
             json,
         ),
         Command::Benchmark {
@@ -3151,6 +3190,86 @@ fn print_observer_receipts(
             }
         );
     }
+}
+
+/// Run known-answer probes against a corpus: the engine audits its own
+/// gated observer fusion. Exits nonzero on any probe failure so the
+/// command can gate scripts and CI.
+fn cmd_selftest(
+    corpus: &Path,
+    probes_path: &Path,
+    budget: usize,
+    observer_floor: Option<f32>,
+    observer_reserve: Option<&str>,
+    json: bool,
+) -> anyhow::Result<()> {
+    use physis_core::map::{load_corpus, ObserverReserve};
+    use physis_core::selftest::{run_selftest, SelftestProbeFile};
+    let docs = load_corpus(corpus)?;
+    anyhow::ensure!(
+        !docs.is_empty(),
+        "no corpus documents under {}",
+        corpus.display()
+    );
+    let file: SelftestProbeFile =
+        serde_json::from_reader(std::fs::File::open(probes_path).map_err(|e| {
+            anyhow::anyhow!("cannot read probes file {}: {e}", probes_path.display())
+        })?)
+        .map_err(|e| anyhow::anyhow!("cannot parse probes file {}: {e}", probes_path.display()))?;
+    let probes = file.probes;
+    anyhow::ensure!(
+        !probes.is_empty(),
+        "probes file {} contains no probes",
+        probes_path.display()
+    );
+    let (embedder, kind) = load_embedder_kind();
+    let floor = observer_floor.unwrap_or_else(|| default_observer_floor(kind));
+    let reserve = match observer_reserve {
+        None | Some("") => ObserverReserve::Auto,
+        Some("auto") => ObserverReserve::Auto,
+        Some(n) => ObserverReserve::Fixed(n.parse::<usize>().map_err(|e| {
+            anyhow::anyhow!("--observer-reserve must be 'auto' or a token count: {e}")
+        })?),
+    };
+    let report = run_selftest(&docs, &embedder, &probes, budget, floor, reserve)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        println!(
+            "selftest: {} corpus docs, floor {:.2}, reserve {}",
+            report.corpus_documents,
+            report.floor,
+            match reserve {
+                ObserverReserve::None => "none".to_string(),
+                ObserverReserve::Fixed(n) => format!("{n}"),
+                ObserverReserve::Auto => "auto".to_string(),
+            }
+        );
+        for p in &report.probes {
+            println!(
+                "  {:<32} baseline-absent {} answered {} noise-absent {} -> {}",
+                p.name,
+                if p.baseline_absent { "yes" } else { "NO" },
+                if p.answered { "yes" } else { "NO" },
+                if p.forbidden_absent { "yes" } else { "NO" },
+                if p.passed { "PASS" } else { "FAIL" },
+            );
+        }
+        println!(
+            "{}: {}/{} probes passed",
+            if report.ok {
+                "selftest OK"
+            } else {
+                "selftest FAILED"
+            },
+            report.passed,
+            report.total
+        );
+    }
+    if !report.ok {
+        std::process::exit(1);
+    }
+    Ok(())
 }
 
 fn cmd_context(
