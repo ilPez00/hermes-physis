@@ -437,6 +437,36 @@ impl GateAssessmentSummary {
     }
 }
 
+impl GateOutcomeCountsByKind {
+    /// Merge another per-kind tally into this one (counts/proxies only).
+    pub fn merge(&mut self, other: &GateOutcomeCountsByKind) {
+        fold_simple(&mut self.relation, &other.relation);
+        fold_simple(&mut self.equivalence, &other.equivalence);
+        fold_simple(&mut self.lesson, &other.lesson);
+        fold_simple(&mut self.grounding, &other.grounding);
+        fold_simple(&mut self.claim, &other.claim);
+    }
+}
+
+impl GateAssessmentSummary {
+    /// Merge another summary into this one (counts/proxies only). Deterministic
+    /// aggregation for multi-fixture harness rollups; never a verdict.
+    pub fn merge(&mut self, other: &GateAssessmentSummary) {
+        self.total += other.total;
+        self.accept += other.accept;
+        self.defer += other.defer;
+        self.reject += other.reject;
+        self.abstain += other.abstain;
+        self.equivalence_contradictions += other.equivalence_contradictions;
+        self.by_kind.merge(&other.by_kind);
+        match (&mut self.reason_counts, &other.reason_counts) {
+            (Some(dst), Some(src)) => dst.merge(src),
+            (None, Some(src)) => self.reason_counts = Some(src.clone()),
+            _ => {}
+        }
+    }
+}
+
 // Dead at HEAD (no caller since 3cde7a1 added it); kept because the
 // reason-count rollup work it belongs to is still in flight on another
 // session. `expect` (not `allow`): the moment a caller lands this fires as
