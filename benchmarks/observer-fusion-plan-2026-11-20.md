@@ -72,6 +72,16 @@ engine itself: the binary ships with its own falsification harness.
   `relevance / engine_best_score` in receipts as a diagnostic only, so
   callers can see when a claim is weaker than the engine's own evidence.
 
+## U8 — Held-out broadening n=22 → n=30 (done 2026-11-20)
+
+Eight new held-out queries from fresh plan docs; the noise ceiling held at
+0.6522 across a third broadening (62 noise samples, zero contamination at
+0.66), recall ticked up to 20/30 (67%). Shipped probe set grown to 30 with
+measured expectations; selftest 30/30; calibrate-floor re-derives the record.
+Also fixed: the repo copy of measure.py had gone stale at 22 queries (the
+generator read it instead of the live /tmp one) — re-synced; results-n30.json
+committed.
+
 ## U5 — Receipt drift watch (detailed spec)
 
 **Goal:** a corpus edit that silently flips a gate decision becomes visible.
