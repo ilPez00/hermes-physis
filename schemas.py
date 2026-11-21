@@ -85,8 +85,9 @@ CONTEXT = {
                     "Relevance floor (query↔snippet cosine, 0.0-1.0) for "
                     "observer_claims; below the floor the hit is deferred with the "
                     "reason returned. When omitted the engine picks by embedder kind "
-                    "(0.9 random-projection, 0.6 semantic) — the floor's meaning is "
-                    "embedder-dependent."
+                    "(0.99 random-projection — fusion under RP is opt-in because RP "
+                    "relevance cannot separate noise on real text; 0.6 semantic) — the "
+                    "floor's meaning is embedder-dependent."
                 ),
             },
             "observer_reserve": {
