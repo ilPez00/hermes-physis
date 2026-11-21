@@ -141,7 +141,7 @@ enum Command {
         observer_claims: Option<PathBuf>,
         /// Relevance floor for observer retrieval hits; when omitted, defaults
         /// by embedder kind (0.99 random-projection — fusion opt-in, see
-        /// default_observer_floor; 0.6 semantic).
+        /// default_observer_floor; 0.65 semantic).
         #[arg(long)]
         observer_floor: Option<f32>,
         /// Packet headroom reserved for observer content: a number sets a
@@ -385,7 +385,7 @@ enum Command {
         /// Relevance floor for observer retrieval hits (query↔snippet cosine;
         /// meaning is embedder-dependent — see gate_retrieval_hit docs).
         /// When omitted, defaults by embedder kind: 0.99 for random-projection
-        /// 0.6 for a semantic (ONNX) embedder.
+        /// (fusion opt-in), 0.65 for a semantic (ONNX) embedder.
         #[arg(long)]
         observer_floor: Option<f32>,
         /// Tokens of packet headroom reserved for observer content: the engine
@@ -3071,10 +3071,12 @@ fn cmd_ngram_cells(
 
 /// Default observer relevance floor, by embedder kind — measured, not assumed.
 ///
-/// Semantic embedder (bge-small) separates cleanly on both fixtures and the
-/// real corpus: fixture relevant 0.891/0.644 vs noise 0.375–0.445; real-corpus
-/// relevant 0.69–0.73 vs noise 0.40–0.55. Default 0.6 admits relevant hits
-/// with margin and rejects all noise.
+/// Semantic embedder (bge-small) separates on fixtures cleanly (relevant
+/// 0.891/0.644 vs noise 0.375–0.445). On the broadened real corpus (7
+/// held-out queries) the bands OVERLAP: relevant 0.6185–0.768, noise up to
+/// 0.6385 — the old 0.6 default admitted real noise on 1 of 7 queries.
+/// Default 0.65 sits in the measured zero-noise gap (0.6385, 0.6536]:
+/// 6/7 answerable, zero noise; the one deferral is the safe direction.
 ///
 /// Random-projection (lexical hash) separates on synthetic fixtures only
 /// (relevant 0.934/0.917 vs noise 0.892/0.858 — hence the old 0.9 default).
@@ -3094,8 +3096,14 @@ fn default_observer_floor(kind: &str) -> f32 {
         // RP is opt-in (the caller passes --observer-floor explicitly).
         0.99
     } else {
-        // Validated on the real corpus: relevant 0.69-0.73, noise 0.40-0.55.
-        0.6
+        // Measured on the broadened real corpus (7 held-out queries): the
+        // relevant band is 0.6185-0.768, the noise band reaches 0.6385 —
+        // they OVERLAP at the old 0.6 default, which admitted real noise
+        // (noise text verbatim in a packet) on 1 of 7 queries. 0.65 sits in
+        // the measured zero-noise gap (0.6385, 0.6536]: 6/7 held-out
+        // queries answerable, zero noise; the one deferral is the safe
+        // direction (visible receipt, not silent contamination).
+        0.65
     }
 }
 
@@ -3575,8 +3583,16 @@ mod tests {
         // relevant content (0.8848). A path that cannot keep its gate's
         // promise ships disabled: fusion under RP is opt-in.
         assert_eq!(default_observer_floor("random-projection"), 0.99);
-        assert_eq!(default_observer_floor("onnx-explicit"), 0.6);
-        assert_eq!(default_observer_floor("onnx-minilm"), 0.6);
+        // Floor sweep on the broadened real corpus (7 held-out queries,
+        // benchmarks/observer-fusion-real-corpus-2026-11-20.md): at 0.6 the
+        // noise band's top (0.6385) cleared the floor and its text landed
+        // verbatim in a packet; the relevant band's floor is 0.6185, so the
+        // bands OVERLAP at 0.6. 0.65 sits in the measured zero-noise gap
+        // (0.6385, 0.6536]: 6/7 held-out queries answerable, zero noise —
+        // the one deferral is the safe direction (a visible receipt, not
+        // silent contamination).
+        assert_eq!(default_observer_floor("onnx-explicit"), 0.65);
+        assert_eq!(default_observer_floor("onnx-minilm"), 0.65);
     }
 
     #[test]

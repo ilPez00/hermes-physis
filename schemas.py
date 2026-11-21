@@ -86,8 +86,10 @@ CONTEXT = {
                     "observer_claims; below the floor the hit is deferred with the "
                     "reason returned. When omitted the engine picks by embedder kind "
                     "(0.99 random-projection — fusion under RP is opt-in because RP "
-                    "relevance cannot separate noise on real text; 0.6 semantic) — the "
-                    "floor's meaning is embedder-dependent."
+                    "relevance cannot separate noise on real text; 0.65 semantic — "
+                    "measured zero-noise gap on 7 held-out real queries; the old 0.6 "
+                    "admitted real noise on 1 of 7) — the floor's meaning is "
+                    "embedder-dependent."
                 ),
             },
             "observer_reserve": {
