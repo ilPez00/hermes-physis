@@ -407,6 +407,11 @@ fn fold_simple(total: &mut SimpleOutcomeCounts, part: &SimpleOutcomeCounts) {
     total.abstain += part.abstain;
 }
 
+// Dead at HEAD (no caller since 3cde7a1 added it); kept because the
+// reason-count rollup work it belongs to is still in flight on another
+// session. `expect` (not `allow`): the moment a caller lands this fires as
+// an error and forces the attribute's removal instead of rotting silently.
+#[expect(dead_code)]
 fn gate_outcome_contradiction_count(outcome: &GateOutcome) -> usize {
     match outcome {
         GateOutcome::Equivalence(r) if r.contradiction.is_some() => 1,
