@@ -72,10 +72,109 @@ engine itself: the binary ships with its own falsification harness.
   `relevance / engine_best_score` in receipts as a diagnostic only, so
   callers can see when a claim is weaker than the engine's own evidence.
 
+## U5 — Receipt drift watch (detailed spec)
+
+**Goal:** a corpus edit that silently flips a gate decision becomes visible.
+
+**Design:** extend `physis-core selftest` with `--baseline <report.json>`.
+The baseline is a previous `selftest --json` output (the report IS the
+baseline artifact — no second format). After the live run, diff per probe:
+
+- decision flips: `baseline_absent` / `answered` / `forbidden_absent` /
+  `passed` changing value;
+- relevance drift: any claim's cosine moving more than 0.01 between runs
+  (embedders are deterministic; a bigger move means the corpus or model
+  changed under the probe).
+
+To carry relevances, `SelftestProbeReport` gains
+`relevances: BTreeMap<String, f32>` (serde-defaulted, from the fused run's
+`observer_gated` receipts).
+
+**Core is a pure function** `diff_selftest_reports(baseline, current) ->
+Vec<SelftestDrift>` — trivially testable, no I/O. `SelftestDrift` names the
+probe, the kind of drift (DecisionFlip { field, from, to } / RelevanceDrift
+{ object_id, from, to }), and both values.
+
+**CLI contract:** with `--baseline`, print `DRIFT` lines after the normal
+report and **exit 1 on any drift** (drift is what the caller is asking
+about; regenerating a baseline = rerun without `--baseline` and save the
+`--json` output). Without `--baseline`, behaviour is unchanged.
+
+**Red-first:** tests against the missing `diff_selftest_reports` (recorded
+E0425), then: identical reports → empty; one flipped decision → one
+DecisionFlip; relevance moved 0.02 → one RelevanceDrift; 0.005 → none.
+Mutation: flip the epsilon comparison → relevance test fails → revert.
+
+**E2E:** run selftest --json on the real corpus twice → no drift, exit 0;
+then against a corpus with one doc's text edited → drift detected, exit 1.
+
+## U6 — Per-corpus floor calibration (detailed spec)
+
+**Goal:** the 0.66 default is corpus-agnostic; give callers a measured,
+corpus-aware floor recommendation from THEIR corpus and THEIR probe set.
+
+**Design:** new subcommand
+`physis-core calibrate-floor --corpus <dir> --probes <file.json>` reusing
+the U4 probes file (each probe: query + claim[0] relevant + rest noise).
+For every probe, run one floor-0.0 context compile and collect labelled
+relevances (label = `obj:noise` prefix convention, same as the harness).
+
+**Core is a pure function** `calibrate_from_relevances(relevant: &[f32],
+noise: &[f32]) -> CalibrationReport` with fields: relevant band
+(min/max/n), noise band (min/max/n), `noise_ceiling`, `minimal_zero_noise_floor`
+(noise_ceiling + 1e-3), `recommended_floor` (noise_ceiling + 0.008 — the
+shipped default's measured margin over its own noise ceiling), recall at
+the minimal floor and at the recommendation, and the full ROC table at
+fixed steps. All numbers are **advisory measurements, never directives** —
+the output says so on every render, per the project rule that advisory
+scores are never trusted.
+
+**CLI contract:** prints the bands, the ROC table, the recommendation, and
+the explicit caveat; `--json` for the full report. Exit 0 always (this is
+a measurement, not a gate).
+
+**Red-first:** tests against the missing `calibrate_from_relevances`:
+fixture relevant [0.70, 0.55] / noise [0.65, 0.40] → noise_ceiling 0.65,
+recommended 0.658, minimal floor admits 1/2 relevant with 0 noise; noise
+above relevant (inverted bands) → report says no separating floor exists
+(`separable: false`) rather than recommending nonsense. Mutation on the
+margin constant → test fails → revert.
+
+**E2E:** run against the real corpus with `selftest-probes.json` (bge-small):
+expect noise ceiling ≈ 0.6522, recommendation ≈ 0.66, recall at
+recommendation 4/5 — matching the recorded n22 measurement. The e2e IS the
+cross-check that the shipped 0.66 is what calibration would recommend.
+
+## U7 — Relative diagnostic reporting (detailed spec)
+
+**Goal:** the relative gate was rejected for *gating* (`8e602`) — but the
+ratio is still diagnostic information: a claim weaker than the engine's own
+best chunk is probably not adding anything. Make it visible without letting
+it decide.
+
+**Design:** `ObserverGateReceipt` gains `engine_relative: Option<f32>`
+(serde-defaulted) = relevance / engine_best_score, filled in
+`compile_context_with_observer` after the engine retrieval is known. The
+receipt already carries `relevance`; the ratio needs no new plumbing beyond
+the field and one fill-in pass.
+
+**Semantics documented on the field:** ratio > 1 means the claim outscores
+the engine's own best chunk for this query; < 1 means the engine already
+retrieved something more on-topic than this claim. Advisory only — the gate
+decision logic is untouched (that was measured and rejected).
+
+**Red-first:** test that a fixture report's receipt carries
+engine_relative ≈ relevance / engine_best_score (recorded E0425/E0609 on
+the missing field), then implement. Mutation: fill with a constant → test
+fails → revert.
+
+**E2E:** one real-corpus context run; check the JSON receipts carry
+sensible ratios (relevant claim > 1, noise < 1 on the n22 data).
+
 ## Execution order
 
-U1 → U2 → U3 as one housekeeping commit; U4 as its own measured unit with
-red-first tests; U5+ stay plan-only until called.
+U5 → U6 → U7, one commit each, red-first each, gates each, push each.
+U1–U4 are done (see execution record below).
 
 ## Execution record (2026-11-20)
 

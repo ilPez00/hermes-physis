@@ -35,7 +35,7 @@ pub struct SelftestProbe {
     pub claims: Vec<crate::ingest::CandidateClaimPacket>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SelftestProbeReport {
     pub name: String,
     pub baseline_absent: bool,
@@ -44,9 +44,13 @@ pub struct SelftestProbeReport {
     pub observer_selected: usize,
     pub engine_best_score: Option<f32>,
     pub passed: bool,
+    /// Raw cosine per claim from the fused run's gate receipts — the drift
+    /// signal. `#[serde(default)]` keeps old reports parseable.
+    #[serde(default)]
+    pub relevances: std::collections::BTreeMap<String, f32>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SelftestReport {
     pub corpus_documents: usize,
     pub floor: f32,
@@ -106,6 +110,11 @@ pub fn run_selftest(
             observer_selected: fused.observer_selected,
             engine_best_score: fused.engine_best_score,
             passed,
+            relevances: fused
+                .observer_gated
+                .iter()
+                .map(|r| (r.object_id.clone(), r.relevance.unwrap_or(0.0)))
+                .collect(),
         });
     }
     let passed_count = reports.iter().filter(|r| r.passed).count();
@@ -118,6 +127,108 @@ pub fn run_selftest(
         total,
         ok: passed_count == total,
     })
+}
+
+/// One difference between a baseline selftest report and the live run.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub enum SelftestDrift {
+    /// A per-probe decision changed value.
+    DecisionFlip {
+        probe: String,
+        field: &'static str,
+        from: bool,
+        to: bool,
+    },
+    /// A claim's cosine moved more than the drift tolerance.
+    RelevanceDrift {
+        probe: String,
+        object_id: String,
+        from: f32,
+        to: f32,
+    },
+    /// The engine retrieval's own best chunk score moved beyond the
+    /// tolerance — the corpus-side signal. Claim relevances are
+    /// query↔claim cosines and cannot see corpus edits; this can.
+    EngineBestDrift { probe: String, from: f32, to: f32 },
+}
+
+/// Cosine drift below this is embedder noise, not a corpus/model change.
+pub const RELEVANCE_DRIFT_EPSILON: f32 = 0.01;
+
+/// Diff a baseline selftest report against the live run. Pure function —
+/// the CLI only prints and exits on its result.
+pub fn diff_selftest_reports(
+    baseline: &SelftestReport,
+    current: &SelftestReport,
+) -> Vec<SelftestDrift> {
+    let mut drifts = Vec::new();
+    for cur in &current.probes {
+        let Some(base) = baseline.probes.iter().find(|p| p.name == cur.name) else {
+            // A probe present now but absent from the baseline is new, not
+            // drift — the baseline was taken with a different probe set.
+            continue;
+        };
+        for (field, b, c) in [
+            ("baseline_absent", base.baseline_absent, cur.baseline_absent),
+            ("answered", base.answered, cur.answered),
+            (
+                "forbidden_absent",
+                base.forbidden_absent,
+                cur.forbidden_absent,
+            ),
+            ("passed", base.passed, cur.passed),
+        ] {
+            if b != c {
+                drifts.push(SelftestDrift::DecisionFlip {
+                    probe: cur.name.clone(),
+                    field,
+                    from: b,
+                    to: c,
+                });
+            }
+        }
+        for (oid, cur_score) in &cur.relevances {
+            match base.relevances.get(oid) {
+                Some(base_score) if (base_score - cur_score).abs() > RELEVANCE_DRIFT_EPSILON => {
+                    drifts.push(SelftestDrift::RelevanceDrift {
+                        probe: cur.name.clone(),
+                        object_id: oid.clone(),
+                        from: *base_score,
+                        to: *cur_score,
+                    });
+                }
+                Some(_) => {}
+                None => drifts.push(SelftestDrift::RelevanceDrift {
+                    probe: cur.name.clone(),
+                    object_id: oid.clone(),
+                    from: f32::NAN,
+                    to: *cur_score,
+                }),
+            }
+        }
+        // Corpus-side drift: claim relevances are query↔claim cosines and
+        // are blind to corpus edits; the engine's best chunk score is not.
+        if let (Some(b), Some(c)) = (base.engine_best_score, cur.engine_best_score) {
+            if (b - c).abs() > RELEVANCE_DRIFT_EPSILON {
+                drifts.push(SelftestDrift::EngineBestDrift {
+                    probe: cur.name.clone(),
+                    from: b,
+                    to: c,
+                });
+            }
+        }
+        for oid in base.relevances.keys() {
+            if !cur.relevances.contains_key(oid) {
+                drifts.push(SelftestDrift::RelevanceDrift {
+                    probe: cur.name.clone(),
+                    object_id: oid.clone(),
+                    from: base.relevances[oid],
+                    to: f32::NAN,
+                });
+            }
+        }
+    }
+    drifts
 }
 
 #[cfg(test)]
@@ -285,5 +396,96 @@ mod tests {
         assert!(!report.ok, "a corpus-covered probe is not a valid selftest");
         assert!(!report.probes[0].baseline_absent);
         assert!(!report.probes[0].passed);
+    }
+
+    fn report_with(name: &str, answered: bool, relevances: &[(&str, f32)]) -> SelftestReport {
+        SelftestReport {
+            corpus_documents: 3,
+            floor: 0.9,
+            probes: vec![SelftestProbeReport {
+                name: name.into(),
+                baseline_absent: true,
+                answered,
+                forbidden_absent: true,
+                observer_selected: usize::from(answered),
+                engine_best_score: Some(0.7),
+                passed: answered,
+                relevances: relevances
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), *v))
+                    .collect(),
+            }],
+            passed: usize::from(answered),
+            total: 1,
+            ok: answered,
+        }
+    }
+
+    #[test]
+    fn drift_diff_is_empty_for_identical_reports() {
+        let a = report_with("p", true, &[("obj:x", 0.72)]);
+        let b = report_with("p", true, &[("obj:x", 0.72)]);
+        assert!(diff_selftest_reports(&a, &b).is_empty());
+    }
+
+    #[test]
+    fn drift_diff_reports_decision_flips_and_relevance_moves() {
+        let base = report_with("p", true, &[("obj:x", 0.72)]);
+        // decision flip: `passed` is derived from the three decisions, so it
+        // co-flips with `answered` — both must be reported.
+        let flipped = report_with("p", false, &[("obj:x", 0.72)]);
+        let d = diff_selftest_reports(&base, &flipped);
+        assert_eq!(d.len(), 2, "answered + derived passed flip: {d:?}");
+        assert!(d
+            .iter()
+            .all(|x| matches!(x, SelftestDrift::DecisionFlip { .. })));
+        assert!(d.iter().any(|x| matches!(
+            x,
+            SelftestDrift::DecisionFlip {
+                field: "answered",
+                ..
+            }
+        )));
+        // relevance move beyond the epsilon
+        let moved = report_with("p", true, &[("obj:x", 0.75)]);
+        let d = diff_selftest_reports(&base, &moved);
+        assert_eq!(d.len(), 1, "one relevance drift: {d:?}");
+        assert!(
+            matches!(&d[0], SelftestDrift::RelevanceDrift { from, to, .. }
+            if (*from - 0.72).abs() < 1e-6 && (*to - 0.75).abs() < 1e-6)
+        );
+        // a 0.005 move is embedder noise, not drift
+        let tiny = report_with("p", true, &[("obj:x", 0.725)]);
+        assert!(diff_selftest_reports(&base, &tiny).is_empty());
+    }
+
+    #[test]
+    fn drift_diff_sees_corpus_edits_through_engine_best() {
+        // Claim relevances are query<->claim cosines: corpus edits do not
+        // move them. The engine's best chunk score is the corpus signal.
+        let mut base = report_with("p", true, &[("obj:x", 0.72)]);
+        base.probes[0].engine_best_score = Some(0.70);
+        let mut edited = report_with("p", true, &[("obj:x", 0.72)]);
+        edited.probes[0].engine_best_score = Some(0.75);
+        let d = diff_selftest_reports(&base, &edited);
+        assert_eq!(d.len(), 1, "engine-best move is drift: {d:?}");
+        assert!(
+            matches!(&d[0], SelftestDrift::EngineBestDrift { from, to, .. }
+            if (*from - 0.70).abs() < 1e-6 && (*to - 0.75).abs() < 1e-6)
+        );
+        // within epsilon: not drift
+        edited.probes[0].engine_best_score = Some(0.705);
+        assert!(diff_selftest_reports(&base, &edited).is_empty());
+    }
+
+    #[test]
+    fn drift_diff_reports_a_claim_that_appeared_or_vanished() {
+        let base = report_with("p", true, &[("obj:x", 0.72)]);
+        let gained = report_with("p", true, &[("obj:x", 0.72), ("obj:y", 0.60)]);
+        let d = diff_selftest_reports(&base, &gained);
+        assert_eq!(d.len(), 1, "new claim is drift: {d:?}");
+        let lost = report_with("p", true, &[]);
+        let d = diff_selftest_reports(&base, &lost);
+        assert_eq!(d.len(), 1, "vanished claim is drift: {d:?}");
     }
 }

@@ -423,6 +423,11 @@ enum Command {
         /// Machine-readable full report.
         #[arg(long)]
         json: bool,
+        /// A previous `selftest --json` report; after the live run the two
+        /// are diffed and any decision flip or relevance move beyond the
+        /// drift epsilon is reported as DRIFT. Exits 1 on drift.
+        #[arg(long)]
+        baseline: Option<PathBuf>,
     },
     /// One-command offline demo: corpus → map → ngram table → model answer.
     Demo {
@@ -771,6 +776,7 @@ fn main() -> anyhow::Result<()> {
             observer_floor,
             observer_reserve,
             json,
+            baseline,
         } => cmd_selftest(
             &corpus,
             &probes,
@@ -778,6 +784,7 @@ fn main() -> anyhow::Result<()> {
             observer_floor,
             observer_reserve.as_deref(),
             json,
+            baseline.as_deref(),
         ),
         Command::Benchmark {
             order,
@@ -3202,9 +3209,12 @@ fn cmd_selftest(
     observer_floor: Option<f32>,
     observer_reserve: Option<&str>,
     json: bool,
+    baseline_path: Option<&Path>,
 ) -> anyhow::Result<()> {
     use physis_core::map::{load_corpus, ObserverReserve};
-    use physis_core::selftest::{run_selftest, SelftestProbeFile};
+    use physis_core::selftest::{
+        diff_selftest_reports, run_selftest, SelftestProbeFile, SelftestReport,
+    };
     let docs = load_corpus(corpus)?;
     anyhow::ensure!(
         !docs.is_empty(),
@@ -3232,6 +3242,15 @@ fn cmd_selftest(
         })?),
     };
     let report = run_selftest(&docs, &embedder, &probes, budget, floor, reserve)?;
+    let baseline_report: Option<SelftestReport> = match baseline_path {
+        Some(p) => Some(
+            serde_json::from_reader(std::fs::File::open(p).map_err(|e| {
+                anyhow::anyhow!("cannot read baseline report {}: {e}", p.display())
+            })?)
+            .map_err(|e| anyhow::anyhow!("cannot parse baseline report {}: {e}", p.display()))?,
+        ),
+        None => None,
+    };
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
@@ -3265,6 +3284,25 @@ fn cmd_selftest(
             report.passed,
             report.total
         );
+    }
+    if let Some(base) = &baseline_report {
+        let drifts = diff_selftest_reports(base, &report);
+        if json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({ "drift": drifts }))?
+            );
+        } else if drifts.is_empty() {
+            println!("drift: none — decisions and relevances match the baseline");
+        } else {
+            println!("drift: {} entries", drifts.len());
+            for d in &drifts {
+                println!("  DRIFT {d:?}");
+            }
+        }
+        if !drifts.is_empty() {
+            std::process::exit(1);
+        }
     }
     if !report.ok {
         std::process::exit(1);
