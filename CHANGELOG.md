@@ -11,6 +11,8 @@ harness (`benchmarks/observer-fusion/`).
 
 ## Unreleased
 
+- **`physis-core selftest`** — the engine audits its own gated observer fusion: known-answer probes (held-out claim + distinctive phrase + forbidden noise text) run against a caller corpus; the command exits nonzero if a should-pass probe defers, the baseline already answers it, or noise text enters a packet. Defaults to the shipped configuration (embedder-aware floor, auto reserve); `--probes` accepts caller-supplied sets; `--json` for CI. Red-first tests incl. mutation check; e2e-verified on the real corpus (5/5 pass at the default floor, 0/5 + exit 1 at floor 0.99).
+
 - **Negative result, recorded**: the relative-signal observer gate (claim relevance vs the engine's own best chunk score) was measured against the absolute floor on the real corpus and does not beat it — ratio >= 1.05 gives the identical operating point (9/13 relevant, 0 noise) because engine_best is nearly constant across queries. Does not ship. `ContextReport.engine_best_score` (serde-defaulted) is added as the visibility field the measurement needed.
 
 - **Semantic observer floor -> 0.66, the measured zero-contamination point**: broadening to 13 held-out queries / 28 noise samples shows the relevance ROC on real text is SHALLOW (relevant 0.5543-0.7774, noise to 0.6522 — domain-adjacent hard negatives). No floor gives both high recall and zero contamination: 0.60 = 12/13 relevant + 3 noise; 0.66 = 9/13 + 0. The default now buys zero contamination and pays in recall; callers tune --observer-floor to move along the measured curve.

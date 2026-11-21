@@ -76,3 +76,21 @@ engine itself: the binary ships with its own falsification harness.
 
 U1 → U2 → U3 as one housekeeping commit; U4 as its own measured unit with
 red-first tests; U5+ stay plan-only until called.
+
+## Execution record (2026-11-20)
+
+- U1 done (`bee01e7`): harness in-repo, acceptance 23/23 reproduce from the
+  new location.
+- U2 done (`bee01e7`): verdict header prepended; log sections untouched.
+- U3 done (`bee01e7`): crate 0.2.0 → 0.3.0.
+- U4 done: `physis-core selftest` shipped — `SelftestProbe{File}`,
+  `run_selftest`, `cmd_selftest` (defaults: embedder-aware floor, auto
+  reserve; `--json`; exit 1 on any failure). Red-first: three tests written
+  against the missing API (recorded E0425 ×3), then implemented; mutation
+  `passed = true` → 3/3 fail → reverted → 3/3 green. E2E on the real corpus
+  with `selftest-probes.json` (5 probes from the n22 set): 5/5 PASS exit 0;
+  negative control at floor 0.99 → 0/5, exit 1. Probes file shipped at
+  `benchmarks/observer-fusion/selftest-probes.json`.
+- Note: the sync bot committed its own in-progress work as `25c477a` (which
+  also carries this unit's one-line `pub mod selftest;` registration); an
+  earlier injection that slipped into `bee01e7` was reverted in `e6c014e`.

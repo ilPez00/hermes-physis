@@ -1,0 +1,314 @@
+{
+ "probes": [
+  {
+   "name": "impossibllm-reasoning-ladder",
+   "query": "how does the cascade decide between reasoning engines",
+   "phrase": "hard abstain with escalation flagged",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "h5",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:cascade-decide",
+       "score": 0.5,
+       "snippet": "Cascade::decide walks ordered engines and accepts the first decision with confidence at or above the accept threshold; otherwise it retains the best sub-threshold decision above the escalate floor; everything else is a hard abstain with escalation flagged. Tiers: compiled rules, embed, causal logit, tiny scorer, transition cache."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "invariant-coverage",
+   "query": "what does the physis invariants report currently cover",
+   "phrase": "executable, expanding coverage set",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "h11",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:invariant-coverage",
+       "score": 0.5,
+       "snippet": "Turn Physis invariants from a two-item, partly UNKNOWN report into an executable, expanding coverage set. The report currently shows append-only-history PASS and deterministic-replay UNKNOWN; evaluate_invariants accepts an optional replay_deterministic flag."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "economic-relevance",
+   "query": "what must the engineering prove for the commercial offer to be honest",
+   "phrase": "for that offer to be",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "h13",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:economic-relevance",
+       "score": 0.5,
+       "snippet": "The commercial plan is a 190 euro structural review of one repository in one day, with no licence until the install path verifies. The open question: what does the engineering have to be true for that offer to be honest, and what is still false?"
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "viewspec-lens",
+   "query": "how does the typed viewspec get validated against the canonical world",
+   "phrase": "validated against a named gate",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "h14",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:viewspec-lens",
+       "score": 0.5,
+       "snippet": "One typed ViewSpec compiled from the canonical world, validated against a named gate before any component renders a retraction; the card is not admissible with a weaker gate."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "workbench-receipts",
+   "query": "what does the workbench shell attach to every rendered fact",
+   "phrase": "the seq or revision behind it",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "h22",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:workbench-receipts",
+       "score": 0.5,
+       "snippet": "Every rendered fact in the workbench carries a receipt naming the tool, its arguments, and the seq or revision behind it, with lenses sharing one selection and one as-of cursor."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  }
+ ]
+}
