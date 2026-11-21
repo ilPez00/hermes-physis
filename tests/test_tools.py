@@ -1289,3 +1289,42 @@ def test_selftest_corpus_path_is_literal(tmp_path):
     assert result["ok"] is True, result
     argv = result["argv"]
     assert argv[argv.index("--corpus") + 1] == str(corpus_dir)
+
+
+def test_selftest_bad_floor_returns_error_not_exception(tmp_path):
+    # Review finding: the dispatcher does not catch handler exceptions; a
+    # bad observer_floor raised ValueError out of the handler and crashed
+    # the host call instead of returning a structured error.
+    binary = _fake_engine_printing(tmp_path, "fake-engine-selftest-floor", SELFTEST_OK)
+    result = HANDLERS["physis_selftest"](
+        {"engine_bin": str(binary), "corpus": str(tmp_path),
+         "probes": str(tmp_path / "p.json"), "observer_floor": "high"}
+    )
+    assert result["ok"] is False
+    assert "observer_floor" in result["error"]
+
+
+def test_selftest_bad_budget_returns_error_not_exception(tmp_path):
+    binary = _fake_engine_printing(tmp_path, "fake-engine-selftest-budget", SELFTEST_OK)
+    result = HANDLERS["physis_selftest"](
+        {"engine_bin": str(binary), "corpus": str(tmp_path),
+         "probes": str(tmp_path / "p.json"), "budget": "lots"}
+    )
+    assert result["ok"] is False
+    assert "budget" in result["error"]
+
+
+def test_calibrate_floor_engine_failure_is_not_ok(tmp_path):
+    # Review finding: the handler reported ok=True regardless of the engine
+    # exit code, masking real failures (bad corpus, unreadable probes).
+    binary = tmp_path / "fake-engine-calibrate-fail"
+    binary.write_text("#!/usr/bin/env python3\nimport sys\nprint('boom', file=sys.stderr)\nsys.exit(2)\n")
+    binary.chmod(binary.stat().st_mode | stat.S_IEXEC)
+    (tmp_path / "p.json").write_text(json.dumps({"probes": []}))
+    result = HANDLERS["physis_calibrate_floor"](
+        {"engine_bin": str(binary), "corpus": str(tmp_path),
+         "probes": str(tmp_path / "p.json")}
+    )
+    assert result["ok"] is False, result
+    assert result["exit_code"] == 2
+    assert "boom" in result.get("stderr", "")

@@ -3207,6 +3207,14 @@ fn default_observer_floor(kind: &str) -> f32 {
         // this gate exists to keep out. Unknown explicit models fall back
         // to the bge-small point and should be measured with
         // `calibrate-floor` before trusting fusion.
+        //
+        // Matching is substring-based on purpose: a name that merely
+        // CONTAINS "bge-base"/"minilm" routes to that model's floor, and
+        // the failure direction is always over-deferral (a higher floor),
+        // never noise admission. Exact matching would instead route
+        // unknown spellings to the bge-small point — under minilm that
+        // 0.66 default ADMITS noise (measured: 6/62), so the coarse match
+        // is the safe side of the asymmetry.
         0.66
     }
 }

@@ -293,8 +293,9 @@ SELFTEST = {
         "probe, answered a baseline-covered one, or let noise text into a "
         "packet — treat that as a defect report, not a tool failure. Pass "
         "baseline (a previous report) to also detect drift. The probes file "
-        "is JSON: {'probes': [{'name', 'expect': 'answer'|'defer', 'query', "
-        "'phrase', 'forbidden', 'claims'}]} — see the engine repo's "
+        "is JSON with a probes array of objects, each with keys name, "
+        "expect ('answer' or 'defer'), query, phrase, forbidden (list), "
+        "claims (list) — see the engine repo's "
         "benchmarks/observer-fusion/selftest-probes.json for a worked set."
     ),
     "parameters": {
@@ -317,7 +318,8 @@ SELFTEST = {
                 "description": "Relevance floor override; omit to use the model-aware default",
             },
             "observer_reserve": {
-                "description": "Packet headroom for observer content: integer or 'auto'",
+                "type": ["integer", "string"],
+                "description": "Packet headroom for observer content: a non-negative integer or the string 'auto'",
             },
             "baseline": {
                 "type": "string",

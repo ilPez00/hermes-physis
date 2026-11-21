@@ -2326,7 +2326,6 @@ mod tests {
     #[test]
     fn gate_assessment_summary_merge_rolls_up_counts_and_reasons() {
         let mut a = summarize_gate_outcomes(&[]);
-        let core = crate::core::PhysisCore::new();
         let rel = ProposedRelation {
             subject: "a".into(),
             predicate: "depends_on".into(),
@@ -2334,20 +2333,44 @@ mod tests {
             object: "b".into(),
             fact: None,
         };
-        let r = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
-        let b = summarize_gate_outcomes(&[GateOutcome::Relation(r)]);
-        let _ = core;
+        let rel_out = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        let b = summarize_gate_outcomes(&[GateOutcome::Relation(rel_out)]);
         a.merge(&b);
         assert_eq!(a.total, b.total);
         assert_eq!(a.by_kind.relation.accept, 1);
-        assert!(a.reason_counts.as_ref().is_some_and(|rc| !rc.is_empty()));
+        let b_rc = b.reason_counts.as_ref().expect("relation reasons present");
+        assert!(!b_rc.is_empty());
 
+        // None + Some copies reasons; Some + Some accumulates.
         let mut c = GateAssessmentSummary::default();
         c.merge(&b);
         assert_eq!(c.total, b.total);
-        assert_eq!(
-            c.reason_counts.as_ref().unwrap().total(),
-            b.reason_counts.as_ref().unwrap().total()
-        );
+        assert_eq!(c.reason_counts.as_ref().unwrap().total(), b_rc.total());
+        c.merge(&b);
+        assert_eq!(c.total, b.total * 2);
+        assert_eq!(c.reason_counts.as_ref().unwrap().total(), b_rc.total() * 2);
+
+        // Contradiction count is a proxy/counter, not a verdict.
+        let core = crate::core::PhysisCore::new();
+        let eq = crate::ingest::EquivalenceProposal {
+            left: "a".into(),
+            right: "b".into(),
+            kind: crate::ingest::EquivalenceKind::Candidate,
+            confidence: 0.9,
+        };
+        let mut eq_out =
+            gate::gate_equivalence(&core, &claim(ClaimPayload::Equivalence(eq.clone())), &eq);
+        eq_out.contradiction = Some(crate::contradiction::Contradiction {
+            left: "a".into(),
+            right: "b".into(),
+            reason: "test".into(),
+        });
+        let d = summarize_gate_outcomes(&[GateOutcome::Equivalence(eq_out)]);
+        let mut merged = GateAssessmentSummary::default();
+        merged.merge(&d);
+        assert_eq!(merged.equivalence_contradictions, 1);
+        merged.merge(&d);
+        assert_eq!(merged.equivalence_contradictions, 2);
+        assert_eq!(merged.by_kind.equivalence.accept, 2);
     }
 }

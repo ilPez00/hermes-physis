@@ -843,40 +843,52 @@ def physis_selftest(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return {"ok": False, "error": f"not a file: {probes_path}"}
 
     argv = ["selftest", "--corpus", corpus, "--probes", str(probes_path), "--json"]
-    budget = merged.get("budget")
-    if budget is not None:
-        argv += ["--budget", str(int(budget))]
-    floor = merged.get("observer_floor")
-    if floor is not None:
-        try:
-            floor_val = float(floor)
-        except (TypeError, ValueError):
-            raise ValueError("observer_floor must be a number") from None
-        if not 0.0 <= floor_val <= 1.0:
-            raise ValueError("observer_floor must be between 0.0 and 1.0")
-        argv += ["--observer-floor", repr(floor_val)]
-    reserve = merged.get("observer_reserve")
-    if reserve is not None:
-        if isinstance(reserve, str) and reserve.strip().lower() == "auto":
-            argv += ["--observer-reserve", "auto"]
-        else:
+    try:
+        # The dispatcher does not catch handler exceptions: every caller-input
+        # problem must come back as a structured error dict, never as an
+        # exception crossing the plugin boundary.
+        budget = merged.get("budget")
+        if budget is not None:
             try:
-                reserve_val = int(reserve)
+                budget_val = int(budget)
             except (TypeError, ValueError):
-                raise ValueError(
-                    "observer_reserve must be a non-negative integer or 'auto'"
-                ) from None
-            if reserve_val < 0:
-                raise ValueError(
-                    "observer_reserve must be a non-negative integer or 'auto'"
-                )
-            argv += ["--observer-reserve", str(reserve_val)]
-    baseline = merged.get("baseline")
-    if baseline:
-        baseline_path = Path(str(baseline))
-        if not baseline_path.is_file():
-            return {"ok": False, "error": f"not a file: {baseline_path}"}
-        argv += ["--baseline", str(baseline_path)]
+                raise ValueError("budget must be an integer") from None
+            if budget_val <= 0:
+                raise ValueError("budget must be a positive integer")
+            argv += ["--budget", str(budget_val)]
+        floor = merged.get("observer_floor")
+        if floor is not None:
+            try:
+                floor_val = float(floor)
+            except (TypeError, ValueError):
+                raise ValueError("observer_floor must be a number") from None
+            if not 0.0 <= floor_val <= 1.0:
+                raise ValueError("observer_floor must be between 0.0 and 1.0")
+            argv += ["--observer-floor", repr(floor_val)]
+        reserve = merged.get("observer_reserve")
+        if reserve is not None:
+            if isinstance(reserve, str) and reserve.strip().lower() == "auto":
+                argv += ["--observer-reserve", "auto"]
+            else:
+                try:
+                    reserve_val = int(reserve)
+                except (TypeError, ValueError):
+                    raise ValueError(
+                        "observer_reserve must be a non-negative integer or 'auto'"
+                    ) from None
+                if reserve_val < 0:
+                    raise ValueError(
+                        "observer_reserve must be a non-negative integer or 'auto'"
+                    )
+                argv += ["--observer-reserve", str(reserve_val)]
+        baseline = merged.get("baseline")
+        if baseline:
+            baseline_path = Path(str(baseline))
+            if not baseline_path.is_file():
+                return {"ok": False, "error": f"not a file: {baseline_path}"}
+            argv += ["--baseline", str(baseline_path)]
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
 
     result = _run(pool, argv, merged)
     payload = _json_payload(result)
@@ -933,16 +945,26 @@ def physis_calibrate_floor(args: Any = None, **kwargs: Any) -> dict[str, Any]:
         return {"ok": False, "error": f"not a file: {probes_path}"}
 
     argv = ["calibrate-floor", "--corpus", corpus, "--probes", str(probes_path), "--json"]
-    budget = merged.get("budget")
-    if budget is not None:
-        argv += ["--budget", str(int(budget))]
+    try:
+        budget = merged.get("budget")
+        if budget is not None:
+            budget_val = int(budget)
+            if budget_val <= 0:
+                raise ValueError("budget must be a positive integer")
+            argv += ["--budget", str(budget_val)]
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
 
     result = _run(pool, argv, merged)
     payload = _json_payload(result)
     report = payload if isinstance(payload, dict) else {}
+    # The engine exits 0 for every valid measurement (advisory by design),
+    # but a nonzero exit — bad corpus, unreadable probes — is a real
+    # failure and must not be masked behind advisory=True.
+    engine_ok = result.get("returncode") == 0 and bool(report)
     out = {
-        "ok": True,
-        "advisory": True,
+        "ok": engine_ok,
+        "advisory": engine_ok,
         "report": report,
         "exit_code": result.get("returncode"),
         "argv": argv,
