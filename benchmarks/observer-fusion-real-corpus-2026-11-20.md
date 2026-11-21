@@ -118,3 +118,39 @@ starving_the_engine` pins that auto keeps engine content an over-guessing
 Fixed(40) starves; can-fail verified (auto zeroed → test fails). Verdict
 update: the reserve knob is now usable without guessing, but default-off
 still stands — auto still changes the packet in both directions by design.
+
+## Reserve-size sweep: the coverage-vs-knowledge frontier (same corpus, same day)
+
+Four settings over the same four queries (budget 1200, bge-small, floor 0.6,
+zero noise admitted at every setting — the gate holds across the sweep):
+
+| reserve | held-out answerable | control keeps its answer | engine tokens (fused) |
+|---|---|---|---|
+| **auto** | **3/3** | **yes** | 1195 / 1157 / 1191 / 1171 |
+| 100 | 2/3 (symbolic fails) | **no** | 1162 / 1098 / 1115 / 1069 |
+| 250 | 3/3 | no | 1006 / 1022 / 975 / 948 |
+| 500 | 3/3 | no | 654 / 793 / 717 / 657 |
+
+Readings, all measured:
+
+1. Fixed reserves are dominated in both directions. Too small (100) and the
+   symbolic block (~104 tokens) does not fit — the held-out query stays
+   unanswerable while the control query STILL loses its answer. Too large
+   (250, 500) and the control query loses its answer for headroom the
+   observer content does not need — 500 burns ~500 engine tokens to admit a
+   ~30-token block on the language-organs query.
+2. Auto is the only setting that answers all three held-out queries AND keeps
+   the corpus-covered control query. It sizes the trade per query: ~0 engine
+   cost where the block is small (language-organs: 1196→1191), ~40 tokens
+   where it is large (symbolic: 1190→1157).
+3. The frontier is not a smooth trade-off with a sweet spot to tune — it is a
+   dominated region (every fixed size loses somewhere auto does not) plus a
+   single adaptive point. That is the strongest form of the auto argument:
+   there is no fixed number a caller could pick that does as well.
+4. Zero noise admission at every reserve size, including the raw-relevance
+   probes: the 0.6 semantic floor's separation (relevant 0.69-0.73, noise
+   0.40-0.55) is stable across the whole sweep.
+
+Verdict unchanged: default-off stands — but the caller-facing story is now
+complete. `auto` is the measured-recommended setting when fusion is wanted at
+all; fixed reserves exist for callers with an explicit headroom policy.
