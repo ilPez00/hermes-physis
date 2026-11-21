@@ -56,6 +56,21 @@ token counts, phrase checks).
   its text is verbatim in the packet. Must be 0 at the shipped default.
 - `relevances` — raw cosine per claim from the floor-0.0 probe (the ROC data).
 
+## Second corpus family (cross-family check)
+
+`corpus-praxis/` + `selftest-probes-praxis.json` — a heterogeneous corpus
+(30 praxis_webapp docs: API references, runbooks, plans) with 5 held-out
+probes from docs verified absent. Measured: selftest 5/5 PASS; noise
+ceiling 0.5590 (vs 0.6522 on the plan family) — the shipped 0.66 keeps
+~0.10 of margin here. **The floor is corpus-relative; zero contamination
+transfers.** Run with:
+
+```sh
+PHYSIS_BENCH_CORPUS=$PWD/corpus-praxis python3.13 measure.py auto   # not wired for this corpus
+physis-core selftest --corpus corpus-praxis --probes selftest-probes-praxis.json
+physis-core calibrate-floor --corpus corpus-praxis --probes selftest-probes-praxis.json
+```
+
 ## Probe schema
 
 ```json

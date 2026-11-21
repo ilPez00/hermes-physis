@@ -1,0 +1,319 @@
+{
+ "probes": [
+  {
+   "name": "nietzschedice-modes",
+   "expect": "answer",
+   "query": "what are the three modes of the nietzsche dice redesign",
+   "phrase": "local-first philosophical workspace",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "pnietzschedice-modes",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:nietzschedice-modes",
+       "score": 0.5,
+       "snippet": "NietzscheDice becomes a local-first philosophical workspace with three modes: a Notebook where user uploads are indexed locally with grounded citations, a Quote Finder searching the full corpus with semantic and keyword matching over verbatim excerpts with source attribution, and a brainstorm mode."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "self-hosting-stack",
+   "expect": "answer",
+   "query": "what stack does self-hosted praxis run on",
+   "phrase": "zero cloud dependencies",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "pself-hosting-stack",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:self-hosting-stack",
+       "score": 0.5,
+       "snippet": "Praxis is built with a local-first and data-sovereign philosophy: self-host the entire stack \u2014 PostgreSQL database, Node.js API, React PWA and local AI model \u2014 on your own hardware, VPS or home server with zero cloud dependencies."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "tech-debt-order",
+   "expect": "answer",
+   "query": "how are the technical debt items prioritised",
+   "phrase": "user-data risk first",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "ptech-debt-order",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:tech-debt-order",
+       "score": 0.5,
+       "snippet": "Technical debt items are prioritised by user-data risk first, then observability and CI, then low-impact housekeeping; each item names the offending file and line with a smallest-justified fix."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "shared-objects",
+   "expect": "answer",
+   "query": "what does sharing a link into praxis create",
+   "phrase": "affinity between two people",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "pshared-objects",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:shared-objects",
+       "score": 0.5,
+       "snippet": "Sharing a link from another app is an implicit statement of interest: Praxis turns it into a durable fact \u2014 a canonical object, a user-to-object edge, and from repeated edges an affinity between two people who were never introduced."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "axiom-data-access",
+   "expect": "answer",
+   "query": "does axiom read direct message content",
+   "phrase": "never direct messages",
+   "forbidden": [
+    "ugreen runtime compatibility",
+    "public playground for learning"
+   ],
+   "claims": [
+    {
+     "id": "paxiom-data-access",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:axiom-data-access",
+       "score": 0.5,
+       "snippet": "Axiom reads tracker entries, note titles, public posts, goal names and check-in timestamps, but never direct messages: private conversations and confidential one-to-one discussions are excluded from its data access."
+      }
+     }
+    },
+    {
+     "id": "n1",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-nas",
+       "score": 0.5,
+       "snippet": "Read-only inventory, change tracking and evidence tooling for an explicitly mounted share, using the existing Physis CLI. A separate local index is kept for each canonical mount path. This is not a UGREEN Skill or a hackathon submission, and UGREEN runtime compatibility has not been established."
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "source": {
+      "uri": "doc://heldout"
+     },
+     "extractor": {
+      "id": "heldout-docs"
+     },
+     "payload": {
+      "kind": "retrieval",
+      "data": {
+       "object_id": "obj:noise-playground",
+       "score": 0.5,
+       "snippet": "An interactive, public playground for learning how Physis builds a world model: observations ground facts, identity joins domains, rules derive with named premises, and truth maintenance keeps the world honest under change."
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

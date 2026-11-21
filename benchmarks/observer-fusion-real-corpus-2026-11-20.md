@@ -386,3 +386,31 @@ probes with measured expectations (20 answer / 10 defer); `physis-core
 selftest` passes 30/30 against the deployed binary, and `calibrate-floor` on
 the full set re-derives the entire record (bands 0.5543–0.8630 / ceiling
 0.6522, recommendation 0.6602, recall 20/30) through the shipped tooling.
+
+## Cross-family check: the floor is corpus-relative, zero contamination transfers
+
+A second corpus family — 30 heterogeneous praxis_webapp docs (API references,
+runbooks, business plans, data-access guides; 1.6 MB) with 5 held-out probes
+from docs verified absent — tests whether 0.66 generalizes beyond the
+physis-plan family. Shipped tooling results on the new family:
+
+- `selftest`: **5/5 PASS, exit 0** (all answered, zero noise text).
+- `calibrate-floor`: noise ceiling **0.5590** — well below the plan family's
+  0.6522. The per-corpus recommendation is 0.567; the shipped 0.66 keeps ~0.10
+  of margin here. Relevant band 0.6694–0.8155.
+
+**Verdict: 0.66 is not a universal constant — it is the plan-doc family's
+zero-noise point.** Zero contamination transfers across families (0.66 sits
+above both measured ceilings), but the *optimal* floor is corpus-relative:
+on the heterogeneous family the same floor is over-cautious by ~0.09. This
+is exactly the case for shipping `calibrate-floor` rather than claiming one
+universal number: a caller with a different corpus measures their own ceiling
+and chooses with the receipt in hand.
+
+Method note, recorded honestly: the first probe draft had 8 probes, three of
+which (dr-runbook, hosting-retirement, metrics-endpoint) turned out to draw
+from docs INSIDE the corpus — a selection error. The baseline-presence check
+flagged exactly those (base=True on two; the third's phrase merely failed to
+surface), which is the selftest's `baseline_absent` contract working on real
+data. The shipped `selftest-probes-praxis.json` contains only the 5 clean
+probes; the 8-probe raw run is preserved in `results-praxis-family.json`.
