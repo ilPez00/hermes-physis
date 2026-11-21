@@ -400,6 +400,7 @@ pub use observer_eval::{
     accepted_equivalence_pair_keys, accepted_relation_keys, assessed_contradiction_count,
     assessed_outcome_counts, assessed_outcomes_by_kind, assessed_reason_counts_by_kind,
     build_observer_fixture_report, canonical_pair_key, classify_gate_reason, compare_compiles,
+    reason_category_for_code,
     context_recall_proxy, gate_outcome_counts, gate_outcome_reason_counts_by_kind,
     gate_outcomes_by_kind, grounding_outcomes, lesson_outcomes,
     observer_fixture_report_from_assessed, observer_fixture_report_from_outcomes,
