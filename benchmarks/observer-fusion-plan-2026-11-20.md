@@ -82,6 +82,17 @@ Also fixed: the repo copy of measure.py had gone stale at 22 queries (the
 generator read it instead of the live /tmp one) — re-synced; results-n30.json
 committed.
 
+## U9 — Cross-family generalization check (done 2026-11-20)
+
+Second corpus family (30 heterogeneous praxis_webapp docs, 5 clean held-out
+probes): selftest 5/5 PASS, noise ceiling 0.5590 vs the plan family's
+0.6522. Verdict: 0.66 is corpus-relative, not universal — zero contamination
+transfers, the optimal floor does not. This is the empirical case for
+`calibrate-floor` as a shipped tool. Shipped: `corpus-praxis/`,
+`selftest-probes-praxis.json`, `results-praxis-family.json`. Method note: a
+first draft had 3 corpus-covered probes; the baseline-absence check caught
+exactly them.
+
 ## U5 — Receipt drift watch (detailed spec)
 
 **Goal:** a corpus edit that silently flips a gate decision becomes visible.
