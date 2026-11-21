@@ -584,6 +584,24 @@ impl GateOutcomeReasonCountsByKind {
     pub fn is_empty(&self) -> bool {
         self.total() == 0
     }
+
+    /// Merge another tally into this one (counts/proxies only). Deterministic
+    /// aggregation for multi-fixture harness rollups.
+    pub fn merge(&mut self, other: &GateOutcomeReasonCountsByKind) {
+        fn merge_map(
+            dst: &mut BTreeMap<ReasonCategory, usize>,
+            src: &BTreeMap<ReasonCategory, usize>,
+        ) {
+            for (k, v) in src {
+                *dst.entry(*k).or_insert(0) += *v;
+            }
+        }
+        merge_map(&mut self.relation, &other.relation);
+        merge_map(&mut self.equivalence, &other.equivalence);
+        merge_map(&mut self.lesson, &other.lesson);
+        merge_map(&mut self.grounding, &other.grounding);
+        merge_map(&mut self.claim, &other.claim);
+    }
 }
 
 fn tally_reasons(map: &mut BTreeMap<ReasonCategory, usize>, reasons: &[String]) {
@@ -2020,5 +2038,18 @@ mod tests {
         assert!(!rc.is_empty());
         let v = serde_json::to_value(&summary).expect("serializes");
         assert!(v.get("reason_counts").is_some());
+    }
+
+    #[test]
+    fn reason_counts_merge_is_deterministic_rollup() {
+        let mut a = GateOutcomeReasonCountsByKind::default();
+        a.relation.insert(ReasonCategory::Advisory, 2);
+        let mut b = GateOutcomeReasonCountsByKind::default();
+        b.relation.insert(ReasonCategory::Advisory, 1);
+        b.grounding.insert(ReasonCategory::Unsupported, 3);
+        a.merge(&b);
+        assert_eq!(a.total(), 6);
+        assert_eq!(a.relation.get(&ReasonCategory::Advisory), Some(&3));
+        assert_eq!(a.grounding.get(&ReasonCategory::Unsupported), Some(&3));
     }
 }
