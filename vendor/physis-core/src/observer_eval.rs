@@ -490,8 +490,49 @@ pub enum ReasonCategory {
     Other,
 }
 
+/// Map a stable gate reason code to a coarse diagnostic category.
+/// Prefer this over string matching when codes are available.
+pub fn reason_category_for_code(code: crate::gate::GateReasonCode) -> ReasonCategory {
+    use crate::gate::GateReasonCode as C;
+    match code {
+        C::MissingProvenance | C::MissingProvenanceAnchor => ReasonCategory::Provenance,
+        C::LossyCitation => ReasonCategory::LossyCitation,
+        C::MissingExtractorId => ReasonCategory::Extractor,
+        C::RelationEndpointsMissing
+        | C::InvalidEquivalenceEndpoints
+        | C::NoObjectId
+        | C::EmptyConcept
+        | C::EmptyLessonStatement => ReasonCategory::Endpoints,
+        C::ConflictSurfaced => ReasonCategory::Conflict,
+        C::AmbiguousSimilarity | C::EndpointsNotBothKnown => ReasonCategory::Ambiguous,
+        C::RelevanceBelowFloor => ReasonCategory::BelowRelevanceFloor,
+        C::NoTestablePrediction
+        | C::NoCitedEpisodes
+        | C::OpaquePayload
+        | C::NoCellMappedType
+        | C::UnmappedLabel
+        | C::NoSnippet => ReasonCategory::Unsupported,
+        C::HistoryStabilityFlags => ReasonCategory::Unstable,
+        C::AdvisoryScoreOutOfRange => ReasonCategory::OutOfRange,
+        C::AdvisoryConfidence
+        | C::AdvisorySimilarity
+        | C::PairAnalysed
+        | C::CandidateEquivalenceAgreement
+        | C::TestablePredictionPresent
+        | C::CitesEpisodes
+        | C::ShadowRobustness
+        | C::NoExistingSubjectRobustnessSkipped
+        | C::RelevanceAtOrAboveFloor
+        | C::ExtractorConfidenceAdvisory
+        | C::PayloadKind
+        | C::MatchesKnownLabel => ReasonCategory::Advisory,
+        C::Other => ReasonCategory::Other,
+    }
+}
+
 /// Classify a gate reason string into a coarse diagnostic category.
 /// Deterministic, counts/proxies only; unknown strings map to `Other`.
+/// Prefer [`reason_category_for_code`] when stable codes are present.
 pub fn classify_gate_reason(reason: &str) -> ReasonCategory {
     let r = reason;
     if r.contains("missing provenance") || r.contains("provenance anchor") {
@@ -604,19 +645,54 @@ impl GateOutcomeReasonCountsByKind {
     }
 }
 
-fn tally_reasons(map: &mut BTreeMap<ReasonCategory, usize>, reasons: &[String]) {
+fn tally_reason_category(map: &mut BTreeMap<ReasonCategory, usize>, cat: ReasonCategory) {
+    *map.entry(cat).or_insert(0) += 1;
+}
+
+fn tally_reason_strings(map: &mut BTreeMap<ReasonCategory, usize>, reasons: &[String]) {
     for r in reasons {
-        *map.entry(classify_gate_reason(r)).or_insert(0) += 1;
+        tally_reason_category(map, classify_gate_reason(r));
+    }
+}
+
+fn tally_reason_codes(
+    map: &mut BTreeMap<ReasonCategory, usize>,
+    codes: &[crate::gate::GateReasonCode],
+) {
+    for c in codes {
+        tally_reason_category(map, reason_category_for_code(*c));
+    }
+}
+
+fn tally_outcome_reasons_by_parts(
+    map: &mut BTreeMap<ReasonCategory, usize>,
+    reasons: &[String],
+    reason_codes: &[crate::gate::GateReasonCode],
+) {
+    if reason_codes.is_empty() {
+        tally_reason_strings(map, reasons);
+    } else {
+        tally_reason_codes(map, reason_codes);
     }
 }
 
 fn tally_outcome_reasons(counts: &mut GateOutcomeReasonCountsByKind, outcome: &GateOutcome) {
     match outcome {
-        GateOutcome::Relation(r) => tally_reasons(&mut counts.relation, &r.reasons),
-        GateOutcome::Equivalence(r) => tally_reasons(&mut counts.equivalence, &r.reasons),
-        GateOutcome::Lesson(r) => tally_reasons(&mut counts.lesson, &r.reasons),
-        GateOutcome::Grounding(r) => tally_reasons(&mut counts.grounding, &r.reasons),
-        GateOutcome::Claim(r) => tally_reasons(&mut counts.claim, &r.reasons),
+        GateOutcome::Relation(r) => {
+            tally_outcome_reasons_by_parts(&mut counts.relation, &r.reasons, &r.reason_codes)
+        }
+        GateOutcome::Equivalence(r) => {
+            tally_outcome_reasons_by_parts(&mut counts.equivalence, &r.reasons, &r.reason_codes)
+        }
+        GateOutcome::Lesson(r) => {
+            tally_outcome_reasons_by_parts(&mut counts.lesson, &r.reasons, &r.reason_codes)
+        }
+        GateOutcome::Grounding(r) => {
+            tally_outcome_reasons_by_parts(&mut counts.grounding, &r.reasons, &r.reason_codes)
+        }
+        GateOutcome::Claim(r) => {
+            tally_outcome_reasons_by_parts(&mut counts.claim, &r.reasons, &r.reason_codes)
+        }
     }
 }
 
@@ -628,27 +704,39 @@ fn accumulate_outcome(
     match outcome {
         GateOutcome::Relation(r) => {
             bump(&mut by_kind.relation, r.decision);
-            tally_reasons(&mut reason_counts.relation, &r.reasons);
+            tally_outcome_reasons_by_parts(
+                &mut reason_counts.relation,
+                &r.reasons,
+                &r.reason_codes,
+            );
             0
         }
         GateOutcome::Equivalence(r) => {
             bump(&mut by_kind.equivalence, r.decision);
-            tally_reasons(&mut reason_counts.equivalence, &r.reasons);
+            tally_outcome_reasons_by_parts(
+                &mut reason_counts.equivalence,
+                &r.reasons,
+                &r.reason_codes,
+            );
             usize::from(r.contradiction.is_some())
         }
         GateOutcome::Lesson(r) => {
             bump(&mut by_kind.lesson, r.decision);
-            tally_reasons(&mut reason_counts.lesson, &r.reasons);
+            tally_outcome_reasons_by_parts(&mut reason_counts.lesson, &r.reasons, &r.reason_codes);
             0
         }
         GateOutcome::Grounding(r) => {
             bump(&mut by_kind.grounding, r.decision);
-            tally_reasons(&mut reason_counts.grounding, &r.reasons);
+            tally_outcome_reasons_by_parts(
+                &mut reason_counts.grounding,
+                &r.reasons,
+                &r.reason_codes,
+            );
             0
         }
         GateOutcome::Claim(r) => {
             bump(&mut by_kind.claim, r.decision);
-            tally_reasons(&mut reason_counts.claim, &r.reasons);
+            tally_outcome_reasons_by_parts(&mut reason_counts.claim, &r.reasons, &r.reason_codes);
             0
         }
     }
@@ -2051,5 +2139,96 @@ mod tests {
         assert_eq!(a.total(), 6);
         assert_eq!(a.relation.get(&ReasonCategory::Advisory), Some(&3));
         assert_eq!(a.grounding.get(&ReasonCategory::Unsupported), Some(&3));
+    }
+
+    #[test]
+    fn reason_code_mapping_covers_current_gate_codes() {
+        use crate::gate::GateReasonCode as C;
+        let codes = [
+            C::MissingProvenance,
+            C::LossyCitation,
+            C::MissingExtractorId,
+            C::RelationEndpointsMissing,
+            C::InvalidEquivalenceEndpoints,
+            C::AdvisoryConfidence,
+            C::AdvisorySimilarity,
+            C::PairAnalysed,
+            C::CandidateEquivalenceAgreement,
+            C::ConflictSurfaced,
+            C::AmbiguousSimilarity,
+            C::EndpointsNotBothKnown,
+            C::NoTestablePrediction,
+            C::TestablePredictionPresent,
+            C::NoCitedEpisodes,
+            C::CitesEpisodes,
+            C::HistoryStabilityFlags,
+            C::ShadowRobustness,
+            C::NoExistingSubjectRobustnessSkipped,
+            C::RelevanceBelowFloor,
+            C::RelevanceAtOrAboveFloor,
+            C::AdvisoryScoreOutOfRange,
+            C::NoObjectId,
+            C::NoSnippet,
+            C::ExtractorConfidenceAdvisory,
+            C::MissingProvenanceAnchor,
+            C::OpaquePayload,
+            C::PayloadKind,
+            C::NoCellMappedType,
+            C::MatchesKnownLabel,
+            C::UnmappedLabel,
+            C::EmptyConcept,
+            C::EmptyLessonStatement,
+            C::Other,
+        ];
+        for c in codes {
+            let _ = reason_category_for_code(c);
+        }
+        assert_eq!(
+            reason_category_for_code(C::ConflictSurfaced),
+            ReasonCategory::Conflict
+        );
+        assert_eq!(reason_category_for_code(C::Other), ReasonCategory::Other);
+    }
+
+    #[test]
+    fn reason_code_tally_prefers_codes_with_string_fallback() {
+        use crate::gate::GateReasonCode as C;
+        let core = crate::core::PhysisCore::new();
+        let rel = ProposedRelation {
+            subject: "a".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "b".into(),
+            fact: None,
+        };
+        let mut r = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        assert!(!r.reason_codes.is_empty());
+        r.reason_codes.clear();
+        let from_strings = gate_outcome_reason_counts_by_kind(&[GateOutcome::Relation(r.clone())]);
+
+        let mut r2 = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        r2.reasons = vec!["novel reason text".into()];
+        let from_codes = gate_outcome_reason_counts_by_kind(&[GateOutcome::Relation(r2)]);
+        assert!(!from_strings.relation.is_empty());
+        assert!(
+            from_codes.relation.contains_key(&ReasonCategory::Advisory)
+                || from_codes
+                    .relation
+                    .contains_key(&ReasonCategory::LossyCitation)
+                || from_codes
+                    .relation
+                    .contains_key(&ReasonCategory::Provenance)
+        );
+        // code path should not fall back to Other due to unknown reason string when codes exist
+        assert_eq!(
+            from_codes
+                .relation
+                .get(&ReasonCategory::Other)
+                .copied()
+                .unwrap_or(0),
+            0
+        );
+        let _ = core;
+        let _ = C::Other;
     }
 }
