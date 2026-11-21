@@ -2380,17 +2380,20 @@ mod tests {
                 embedding: vec![],
                 context: vec![],
             },
-            resolution: crate::contradiction::ResolutionStatus::Unresolved,
+            resolution: crate::contradiction::ResolutionStatus::Open,
             explanation: Some("test".into()),
             detected_at: chrono::Utc::now(),
-            temporal: crate::contradiction::TemporalValidity::default(),
+            temporal: crate::temporal::TemporalValidity::permanent(),
         });
-        let d = summarize_gate_outcomes(&[GateOutcome::Equivalence(eq_out)]);
+        let d = summarize_gate_outcomes(&[GateOutcome::Equivalence(eq_out.clone())]);
         let mut merged = GateAssessmentSummary::default();
         merged.merge(&d);
         assert_eq!(merged.equivalence_contradictions, 1);
         merged.merge(&d);
         assert_eq!(merged.equivalence_contradictions, 2);
-        assert_eq!(merged.by_kind.equivalence.accept, 2);
+        // Decision tally follows the outcome decision (counts/proxies only).
+        let expected_accept =
+            usize::from(eq_out.decision == crate::gate::GateDecision::AcceptCandidate) * 2;
+        assert_eq!(merged.by_kind.equivalence.accept, expected_accept);
     }
 }
