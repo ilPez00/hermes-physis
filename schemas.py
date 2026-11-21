@@ -87,12 +87,13 @@ CONTEXT = {
                     "reason returned. When omitted the engine picks by embedder kind "
                     "(0.99 random-projection — fusion under RP is opt-in because RP "
                     "relevance cannot separate noise on real text; 0.66 semantic — "
-                    "the measured zero-contamination point on 13 held-out real "
-                    "queries: the relevance ROC is shallow (0.60 admits 12/13 "
-                    "relevant but 3 noise; 0.66 admits 9/13 and 0 noise), so the "
-                    "default buys zero noise and pays in recall — raise it via this "
-                    "parameter to move along the measured curve and own the risk) — "
-                    "the floor's meaning is embedder-dependent."
+                    "the measured zero-contamination point on 22 held-out real "
+                    "queries: the relevance ROC is shallow (0.60 admits 20/22 "
+                    "relevant but 4 noise; 0.66 admits 14/22 and 0 noise across 46 "
+                    "noise samples), so the default buys zero noise and pays in "
+                    "recall — raise it via this parameter to move along the measured "
+                    "curve and own the risk) — the floor's meaning is "
+                    "embedder-dependent."
                 ),
             },
             "observer_reserve": {

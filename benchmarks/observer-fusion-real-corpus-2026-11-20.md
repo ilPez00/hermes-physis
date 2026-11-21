@@ -322,3 +322,33 @@ baseline, now with a measured refutation of the obvious alternative rather
 than an open question. If a future embedder makes engine_best vary meaningfully
 across queries (e.g. on corpora with heterogeneous chunk quality), this
 measurement should be repeated before dismissing the idea again.
+
+## n=22: the 0.66 placement holds on a doubled sample
+
+Nine further held-out queries (viewspec-lens, dream-grading, sovereign-sequence,
+praxis-census, full-review-verified, gui-pulse-bar, blast-radius-timing,
+semantic-lens-exclusions, workbench-receipts) broaden the sample to 22 relevant
+/ 46 noise. Result at the shipped default 0.66: **14/22 answerable, zero noise
+admitted, zero noise text** — the zero-contamination property held as the noise
+sample nearly doubled (ceiling still 0.6522; no new tail appeared).
+
+Full ROC at n=22:
+
+| floor | relevant admitted | false-admits |
+|---|---|---|
+| 0.60 | 20/22 | 4 |
+| 0.65 | 15/22 | 1 |
+| **0.66** | **14/22** | **0** |
+| 0.70 | 10/22 | 0 |
+
+Frontier note, recorded for honesty: the measured-optimal zero-noise floor is
+any point in (0.6522, 0.6536] — it would admit 15/22 (release-closeout at
+0.6536) with zero noise. That sits 0.0014 above the observed noise ceiling of
+46 samples. After three consecutive overturns from tails the sample did not
+contain (0.9 RP, 0.9 fixed deferral, 0.6 semantic), a 0.0014 margin over an
+observed maximum is overfit territory; 0.66 keeps 0.0078 of margin and gives
+up one query for it. The recall trend as the set broadened is also recorded:
+10/13 (77%) at n=13 became 14/22 (64%) at n=22 — the later queries are harder,
+and every deferral is a visible receipt, which is the safe direction.
+
+Verdict: 0.66 stands, now validated on n=22/n=46 rather than assumed.
