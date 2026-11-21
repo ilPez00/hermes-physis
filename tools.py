@@ -825,7 +825,10 @@ def physis_selftest(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if not pool.supports("selftest"):
         return _unsupported(pool, "selftest")
 
-    corpus = _path(merged)
+    corpus_raw = str(merged.get("corpus") or "").strip()
+    if not corpus_raw:
+        return {"ok": False, "error": "corpus path is required: a directory of markdown/text documents"}
+    corpus = str(Path(corpus_raw).expanduser().resolve())
     if not Path(corpus).is_dir():
         return {"ok": False, "error": f"not a directory: {corpus}"}
     probes = merged.get("probes")
@@ -912,7 +915,10 @@ def physis_calibrate_floor(args: Any = None, **kwargs: Any) -> dict[str, Any]:
     if not pool.supports("calibrate-floor"):
         return _unsupported(pool, "calibrate-floor")
 
-    corpus = _path(merged)
+    corpus_raw = str(merged.get("corpus") or "").strip()
+    if not corpus_raw:
+        return {"ok": False, "error": "corpus path is required: a directory of markdown/text documents"}
+    corpus = str(Path(corpus_raw).expanduser().resolve())
     if not Path(corpus).is_dir():
         return {"ok": False, "error": f"not a directory: {corpus}"}
     probes = merged.get("probes")

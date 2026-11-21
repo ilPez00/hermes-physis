@@ -1272,3 +1272,20 @@ def test_calibrate_floor_tool_is_advisory(tmp_path):
     assert result["advisory"] is True
     assert result["report"]["noise_ceiling"] == 0.6522
     assert result["report"]["recommended_floor"] == 0.6602
+
+
+def test_selftest_corpus_path_is_literal(tmp_path):
+    # Regression: the audit tools originally resolved the corpus through
+    # _path(), which reads args["path"] and falls back to the plugin cwd —
+    # silently auditing the wrong directory (repo root) when the caller
+    # passed `corpus`. The corpus argument must be used literally.
+    corpus_dir = tmp_path / "mycorpus"
+    corpus_dir.mkdir()
+    binary = _fake_engine_printing(tmp_path, "fake-engine-selftest-literal", SELFTEST_OK)
+    result = HANDLERS["physis_selftest"](
+        {"engine_bin": str(binary), "corpus": str(corpus_dir),
+         "probes": str(tmp_path / "p.json")}
+    )
+    assert result["ok"] is True, result
+    argv = result["argv"]
+    assert argv[argv.index("--corpus") + 1] == str(corpus_dir)
