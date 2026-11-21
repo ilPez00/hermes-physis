@@ -768,6 +768,48 @@ mod tests {
     // the caller's explicit trade: engine retrieval capped at budget minus
     // reserve, observer content fills the reserved headroom.
     #[test]
+    fn receipts_carry_the_engine_relative_diagnostic() {
+        // Advisory only: relevance / engine_best_score, filled after the
+        // engine retrieval is known. The gate decision is untouched.
+        let embedder = RandomProjectionEmbedder::new(64);
+        let docs: Vec<(String, String)> = [
+            "relay.md",
+            "relay calibration requires the bench harness and a reference meter",
+            "verify.md",
+            "relay calibration two pass verification catches swapped contacts",
+            "other.md",
+            "shift handover notes filed weekly",
+        ]
+        .chunks(2)
+        .map(|c| (c[0].to_string(), c[1].to_string()))
+        .collect();
+        let claims = vec![retrieval_claim(
+            "obj:relay-procedure",
+            "relay calibration: bench harness, reference meter, two-pass verification",
+            0.9,
+        )];
+        let report = compile_context_with_observer(
+            &docs,
+            &embedder,
+            "relay calibration bench harness",
+            400,
+            &claims,
+            0.9,
+            ObserverReserve::None,
+        )
+        .unwrap();
+        assert!(report.engine_best_score.is_some(), "engine best is known");
+        let receipt = &report.observer_gated[0];
+        let rel = receipt.relevance.unwrap();
+        let ratio = receipt.engine_relative.unwrap();
+        assert!(
+            (ratio - rel / report.engine_best_score.unwrap()).abs() < 1e-5,
+            "ratio {ratio} must equal relevance {rel} / engine_best {:?}",
+            report.engine_best_score
+        );
+    }
+
+    #[test]
     fn observer_reserve_makes_room_when_the_engine_would_fill_the_budget() {
         let embedder = RandomProjectionEmbedder::new(64);
         // Two ~32-token docs: at budget 40 the engine fills 32 (first chunk
@@ -1197,6 +1239,14 @@ pub struct ObserverGateReceipt {
     /// can still be excluded at the append stage when the budget is spent).
     pub included: bool,
     pub relevance: Option<f32>,
+    /// Advisory diagnostic: relevance / engine_best_score — does this claim
+    /// outscore the engine's own best chunk for this query (>1) or is the
+    /// engine already retrieving something more on-topic (<1)? NOT a gate
+    /// input: the relative gate was measured and rejected (benchmarks/
+    /// observer-fusion-real-corpus-2026-11-20.md, `8e602`); this only makes
+    /// the relationship visible. `#[serde(default)]` keeps old JSON parseable.
+    #[serde(default)]
+    pub engine_relative: Option<f32>,
     /// Gate reasons plus append-stage reasons (e.g. over budget).
     pub reasons: Vec<String>,
 }
@@ -1371,6 +1421,7 @@ pub fn compile_context_with_observer(
                 decision: crate::gate::GateDecision::Defer,
                 included: false,
                 relevance: None,
+                engine_relative: None,
                 reasons: vec![format!(
                     "not a retrieval hit: {}",
                     claim.payload.kind_label()
@@ -1382,11 +1433,16 @@ pub fn compile_context_with_observer(
         let snippet_emb = embedder.embed(snippet);
         let gate =
             crate::gate::gate_retrieval_hit(&q_emb, &snippet_emb, claim, hit, observer_floor);
+        let engine_relative = match (gate.relevance, engine_best) {
+            (Some(rel), Some(best)) if best > 0.0 => Some(rel / best),
+            _ => None,
+        };
         let mut receipt = ObserverGateReceipt {
             object_id: hit.object_id.clone(),
             decision: gate.decision,
             included: false,
             relevance: gate.relevance,
+            engine_relative,
             reasons: gate.reasons,
         };
         if gate.decision == crate::gate::GateDecision::AcceptCandidate {

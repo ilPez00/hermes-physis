@@ -193,3 +193,17 @@ U1–U4 are done (see execution record below).
 - Note: the sync bot committed its own in-progress work as `25c477a` (which
   also carries this unit's one-line `pub mod selftest;` registration); an
   earlier injection that slipped into `bee01e7` was reverted in `e6c014e`.
+- U5 done (`d166958`): `selftest --baseline` drift watch. Design correction
+  found by the e2e itself: claim relevances are query↔claim cosines and are
+  structurally blind to corpus edits — the corpus-side signal is
+  `EngineBestDrift` on `engine_best_score`. E2E: same corpus → no drift,
+  exit 0; doc removed → EngineBestDrift 0.6314→0.6058, exit 1.
+- U6 done (`da1a43f`): `calibrate-floor`. E2E cross-check: noise ceiling
+  0.6522 (the recorded n22 value) and recommendation 0.6602 — calibration
+  independently reproduces the shipped 0.66 from the 5-probe subset.
+- U7 done: `ObserverGateReceipt.engine_relative` (advisory, serde-defaulted,
+  gate untouched). E2E on the invariants query: relevant claim 1.106 (>1 —
+  outscores the engine's own best chunk), noise 0.928/0.840. Process note:
+  the implementation landed before the test this time (order slipped);
+  the test was added immediately after and mutation-verified (constant
+  1.234 → fail → revert → green).

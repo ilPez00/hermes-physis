@@ -11,6 +11,10 @@ harness (`benchmarks/observer-fusion/`).
 
 ## Unreleased
 
+- **`selftest --baseline` (receipt drift watch)**: diff a live selftest against a previous `selftest --json` report; decision flips, per-claim relevance moves beyond 0.01, and engine-best-score moves are reported as DRIFT with exit 1. Claim relevances are query↔claim cosines (corpus-blind); engine-best is the corpus-side signal.
+- **`calibrate-floor`**: per-corpus, advisory floor placement from the caller's labelled probes — bands, noise ceiling, minimal zero-noise floor, a recommendation at ceiling + 0.008 with recall cost, and an inseparable-bands verdict when no floor can gate safely. Measurements only, never directives.
+- **`ObserverGateReceipt.engine_relative`**: advisory diagnostic ratio (relevance / engine_best_score) — visible, not gating; the relative gate itself was measured and rejected.
+
 - **`physis-core selftest`** — the engine audits its own gated observer fusion: known-answer probes (held-out claim + distinctive phrase + forbidden noise text) run against a caller corpus; the command exits nonzero if a should-pass probe defers, the baseline already answers it, or noise text enters a packet. Defaults to the shipped configuration (embedder-aware floor, auto reserve); `--probes` accepts caller-supplied sets; `--json` for CI. Red-first tests incl. mutation check; e2e-verified on the real corpus (5/5 pass at the default floor, 0/5 + exit 1 at floor 0.99).
 
 - **Negative result, recorded**: the relative-signal observer gate (claim relevance vs the engine's own best chunk score) was measured against the absolute floor on the real corpus and does not beat it — ratio >= 1.05 gives the identical operating point (9/13 relevant, 0 noise) because engine_best is nearly constant across queries. Does not ship. `ContextReport.engine_best_score` (serde-defaulted) is added as the visibility field the measurement needed.
