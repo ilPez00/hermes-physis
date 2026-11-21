@@ -190,3 +190,34 @@ text in any packet.
 
 Verdict update: the relevance gate is a **semantic-embedder feature**. Under
 RP it is inert by default, and that is the correct shipping state.
+
+## Semantic floor sweep: 0.6 is measured-placed, not assumed (same corpus, same day)
+
+Same corpus, bge-small, auto reserve, floor varied. Raw relevances (floor-0.0
+probes): relevant 0.6928 / 0.7314 / 0.6976; noise 0.3971–0.5534.
+
+| floor | held-out answerable | noise admitted | noise text in packet |
+|---|---|---|---|
+| 0.5 | 3/3 | **yes (2 queries)** | **yes** |
+| **0.6** | **3/3** | **no** | **no** |
+| 0.7 | 1/3 | no | no |
+
+Readings, all measured:
+
+1. At 0.5 the noise band's top (0.5534, 0.5356) clears the floor — real noise
+   text lands in packets on two queries. The gate's promise breaks exactly as
+   the distributions predict.
+2. At 0.7 the relevant band's bottom (0.6928, 0.6976) falls below — two of
+   three held-out queries lose their answer.
+3. 0.6 sits between the measured noise ceiling (0.5534) and the measured
+   relevant floor (0.6928): ~0.05 margin above noise, ~0.09 below relevant.
+   The margin is asymmetric — noise is the nearer threat — so a slightly
+   higher floor (0.62–0.65) would trade relevant recall for noise margin;
+   with only three held-out queries measured, 0.6 is the defensible center
+   and the sweep's job is to show 0.6 is inside a real gap, not on a
+   knife-edge invented by fixtures.
+
+Verdict: the semantic default 0.6 is measured-placed. The full shipping
+story is now: semantic embedder + floor 0.6 + auto reserve = the only
+configuration that answers every held-out query, keeps corpus coverage, and
+admits zero noise — all three properties measured, none assumed.
