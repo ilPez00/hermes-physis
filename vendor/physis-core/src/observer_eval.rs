@@ -437,22 +437,27 @@ fn summary_from_kind_totals(
     }
 }
 
+fn summarize_outcomes<'a, I>(outcomes: I) -> GateAssessmentSummary
+where
+    I: IntoIterator<Item = &'a GateOutcome>,
+{
+    let mut by_kind = GateOutcomeCountsByKind::default();
+    let mut reason_counts = GateOutcomeReasonCountsByKind::default();
+    let mut equivalence_contradictions = 0usize;
+    for outcome in outcomes {
+        equivalence_contradictions += accumulate_outcome(&mut by_kind, &mut reason_counts, outcome);
+    }
+    summary_from_kind_totals(by_kind, equivalence_contradictions, Some(reason_counts))
+}
+
 /// Summarize typed gate outcomes (dispatch results) as counts/proxies only.
 pub fn summarize_gate_outcomes(outcomes: &[GateOutcome]) -> GateAssessmentSummary {
-    summary_from_kind_totals(
-        gate_outcomes_by_kind(outcomes),
-        outcomes.iter().map(gate_outcome_contradiction_count).sum(),
-        Some(gate_outcome_reason_counts_by_kind(outcomes)),
-    )
+    summarize_outcomes(outcomes)
 }
 
 /// Summarize assessed intakes (intake+outcome pairs) as counts/proxies only.
 pub fn summarize_assessed(assessed: &[crate::gate::AssessedIntake]) -> GateAssessmentSummary {
-    summary_from_kind_totals(
-        assessed_outcomes_by_kind(assessed),
-        assessed_contradiction_count(assessed),
-        Some(assessed_reason_counts_by_kind(assessed)),
-    )
+    summarize_outcomes(assessed.iter().map(|a| &a.outcome))
 }
 
 /// Count contradiction candidates surfaced by assessed equivalence outcomes.
@@ -594,6 +599,40 @@ fn tally_outcome_reasons(counts: &mut GateOutcomeReasonCountsByKind, outcome: &G
         GateOutcome::Lesson(r) => tally_reasons(&mut counts.lesson, &r.reasons),
         GateOutcome::Grounding(r) => tally_reasons(&mut counts.grounding, &r.reasons),
         GateOutcome::Claim(r) => tally_reasons(&mut counts.claim, &r.reasons),
+    }
+}
+
+fn accumulate_outcome(
+    by_kind: &mut GateOutcomeCountsByKind,
+    reason_counts: &mut GateOutcomeReasonCountsByKind,
+    outcome: &GateOutcome,
+) -> usize {
+    match outcome {
+        GateOutcome::Relation(r) => {
+            bump(&mut by_kind.relation, r.decision);
+            tally_reasons(&mut reason_counts.relation, &r.reasons);
+            0
+        }
+        GateOutcome::Equivalence(r) => {
+            bump(&mut by_kind.equivalence, r.decision);
+            tally_reasons(&mut reason_counts.equivalence, &r.reasons);
+            usize::from(r.contradiction.is_some())
+        }
+        GateOutcome::Lesson(r) => {
+            bump(&mut by_kind.lesson, r.decision);
+            tally_reasons(&mut reason_counts.lesson, &r.reasons);
+            0
+        }
+        GateOutcome::Grounding(r) => {
+            bump(&mut by_kind.grounding, r.decision);
+            tally_reasons(&mut reason_counts.grounding, &r.reasons);
+            0
+        }
+        GateOutcome::Claim(r) => {
+            bump(&mut by_kind.claim, r.decision);
+            tally_reasons(&mut reason_counts.claim, &r.reasons);
+            0
+        }
     }
 }
 
