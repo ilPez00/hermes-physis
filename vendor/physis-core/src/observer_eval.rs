@@ -565,6 +565,22 @@ pub struct GateOutcomeReasonCountsByKind {
     pub claim: BTreeMap<ReasonCategory, usize>,
 }
 
+impl GateOutcomeReasonCountsByKind {
+    /// Total reason occurrences across all kinds (counts/proxies only).
+    pub fn total(&self) -> usize {
+        self.relation.values().sum::<usize>()
+            + self.equivalence.values().sum::<usize>()
+            + self.lesson.values().sum::<usize>()
+            + self.grounding.values().sum::<usize>()
+            + self.claim.values().sum::<usize>()
+    }
+
+    /// True when no reason occurrences were tallied.
+    pub fn is_empty(&self) -> bool {
+        self.total() == 0
+    }
+}
+
 fn tally_reasons(map: &mut BTreeMap<ReasonCategory, usize>, reasons: &[String]) {
     for r in reasons {
         *map.entry(classify_gate_reason(r)).or_insert(0) += 1;
@@ -1906,5 +1922,64 @@ mod tests {
             classify_gate_reason("novel reason text"),
             ReasonCategory::Other
         );
+        assert!(!counts.is_empty());
+        assert!(counts.total() >= 5);
+    }
+
+    #[test]
+    fn gate_assessment_summary_and_report_serde_backcompat() {
+        let minimal_summary: GateAssessmentSummary = serde_json::from_str("{}").expect("defaults");
+        assert_eq!(minimal_summary.total, 0);
+        assert_eq!(minimal_summary.by_kind.relation.accept, 0);
+        assert!(minimal_summary.reason_counts.is_none());
+
+        let report_json = r#"{
+            "compile": {
+                "baseline_selected": 1, "fused_selected": 2,
+                "baseline_observer_selected": 0, "fused_observer_selected": 1,
+                "baseline_utilization": 0.5, "fused_utilization": 0.6,
+                "recall_proxy_baseline": 0.5, "recall_proxy_fused": 1.0, "recall_proxy_delta": 0.5
+            },
+            "baseline_observer_selection_ratio": 0.0,
+            "fused_observer_selection_ratio": 0.5
+        }"#;
+        let report: ObserverFixtureReport =
+            serde_json::from_str(report_json).expect("old report parses");
+        assert!(report.gate.is_none());
+        assert!(report.reason_counts.is_none());
+
+        let counts = GateOutcomeReasonCountsByKind::default();
+        assert!(counts.is_empty());
+        assert_eq!(counts.total(), 0);
+    }
+
+    #[test]
+    fn summarize_gate_outcomes_includes_reason_counts() {
+        let core = crate::core::PhysisCore::new();
+        let rel = ProposedRelation {
+            subject: "a".into(),
+            predicate: "depends_on".into(),
+            relation_type: Some(RelationType::DependsOn),
+            object: "b".into(),
+            fact: None,
+        };
+        let r = gate::gate_relation(&claim(ClaimPayload::Relation(rel.clone())), &rel);
+        let eq = EquivalenceProposal {
+            left: "n1".into(),
+            right: "n2".into(),
+            similarity: Some(0.1),
+            rationale: None,
+        };
+        let er = gate::gate_equivalence(&core, &claim(ClaimPayload::Equivalence(eq.clone())), &eq);
+        let summary =
+            summarize_gate_outcomes(&[GateOutcome::Relation(r), GateOutcome::Equivalence(er)]);
+        assert_eq!(summary.total, 2);
+        let rc = summary
+            .reason_counts
+            .as_ref()
+            .expect("summary has reason counts");
+        assert!(!rc.is_empty());
+        let v = serde_json::to_value(&summary).expect("serializes");
+        assert!(v.get("reason_counts").is_some());
     }
 }
