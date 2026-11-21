@@ -231,6 +231,71 @@ pub fn diff_selftest_reports(
     drifts
 }
 
+/// Per-corpus floor calibration: measured bands and an advisory floor
+/// recommendation from the caller's own corpus and labelled probe set.
+/// Every number here is a measurement receipt, never a directive — the
+/// project rule is that advisory scores are not trusted, only read.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalibrationReport {
+    /// (min, max, n) of the labelled relevant claims' cosines.
+    pub relevant_band: (f32, f32, usize),
+    /// (min, max, n) of the labelled noise claims' cosines.
+    pub noise_band: (f32, f32, usize),
+    /// The highest observed noise cosine.
+    pub noise_ceiling: f32,
+    /// noise_ceiling + 1e-3: the lowest floor with zero measured noise.
+    pub minimal_zero_noise_floor: f32,
+    /// noise_ceiling + 0.008 — the margin the shipped 0.66 default keeps
+    /// over its own measured noise ceiling (0.6522). Advisory.
+    pub recommended_floor: f32,
+    /// Relevant claims admitted at the recommended floor.
+    pub recall_at_recommended: (usize, usize),
+    /// False when the bands overlap so badly that no floor separates them
+    /// (e.g. the random-projection embedder on real text).
+    pub separable: bool,
+    /// (floor, relevant admitted, noise admitted) at fixed steps.
+    pub roc: Vec<(f32, usize, usize)>,
+}
+
+/// Compute the calibration from labelled cosines. Pure function.
+pub fn calibrate_from_relevances(
+    relevant: &[f32],
+    noise: &[f32],
+) -> anyhow::Result<CalibrationReport> {
+    anyhow::ensure!(!relevant.is_empty(), "no labelled relevant claims");
+    anyhow::ensure!(!noise.is_empty(), "no labelled noise claims");
+    let band = |v: &[f32]| {
+        let min = v.iter().cloned().fold(f32::INFINITY, f32::min);
+        let max = v.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        (min, max)
+    };
+    let (rel_min, rel_max) = band(relevant);
+    let (noi_min, noi_max) = band(noise);
+    let noise_ceiling = noi_max;
+    let minimal_zero_noise_floor = noise_ceiling + 1e-3;
+    // The shipped 0.66 default keeps 0.0078 of margin over its own measured
+    // noise ceiling (0.6522 on the n22 corpus). 0.008 is that convention.
+    let recommended_floor = noise_ceiling + 0.008;
+    let separable = rel_max > noise_ceiling;
+    let count_at = |v: &[f32], floor: f32| v.iter().filter(|&&x| x >= floor).count();
+    let roc = (50..=100)
+        .map(|i| {
+            let f = i as f32 / 100.0;
+            (f, count_at(relevant, f), count_at(noise, f))
+        })
+        .collect();
+    Ok(CalibrationReport {
+        relevant_band: (rel_min, rel_max, relevant.len()),
+        noise_band: (noi_min, noi_max, noise.len()),
+        noise_ceiling,
+        minimal_zero_noise_floor,
+        recommended_floor,
+        recall_at_recommended: (count_at(relevant, recommended_floor), relevant.len()),
+        separable,
+        roc,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -419,6 +484,39 @@ mod tests {
             total: 1,
             ok: answered,
         }
+    }
+
+    #[test]
+    fn calibration_places_the_floor_in_the_measured_gap() {
+        let rep = calibrate_from_relevances(&[0.70, 0.55], &[0.65, 0.40]).unwrap();
+        assert!((rep.noise_ceiling - 0.65).abs() < 1e-6);
+        assert!((rep.minimal_zero_noise_floor - 0.651).abs() < 1e-6);
+        assert!((rep.recommended_floor - 0.658).abs() < 1e-6);
+        assert!(rep.separable);
+        // at the recommendation, 1/2 relevant admitted, 0 noise
+        assert_eq!(rep.recall_at_recommended, (1, 2));
+    }
+
+    #[test]
+    fn calibration_reports_inseparable_bands_instead_of_nonsense() {
+        // noise ceiling above the relevant maximum: no floor separates them
+        let rep = calibrate_from_relevances(&[0.60, 0.55], &[0.65, 0.40]).unwrap();
+        assert!(!rep.separable);
+    }
+
+    #[test]
+    fn calibration_roc_counts_admissions_at_each_step() {
+        let rep = calibrate_from_relevances(&[0.70, 0.55], &[0.65, 0.40]).unwrap();
+        let at = |f: f32| {
+            rep.roc
+                .iter()
+                .find(|(fl, _, _)| (*fl - f).abs() < 1e-6)
+                .unwrap()
+        };
+        let (_, rel, noi) = at(0.60);
+        assert_eq!((*rel, *noi), (1, 1));
+        let (_, rel, noi) = at(0.66);
+        assert_eq!((*rel, *noi), (1, 0));
     }
 
     #[test]

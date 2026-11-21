@@ -429,6 +429,24 @@ enum Command {
         #[arg(long)]
         baseline: Option<PathBuf>,
     },
+    /// Measure where the zero-noise floor sits on THIS corpus with THIS
+    /// labelled probe set (claim 0 relevant, obj:noise* the rest), and
+    /// report an advisory floor recommendation. Every number is a
+    /// measurement receipt, never a directive — advisory scores are not
+    /// trusted, only read. Exits 0 regardless of the recommendation.
+    CalibrateFloor {
+        /// Corpus directory (any text file; binaries and build dirs are skipped).
+        #[arg(long)]
+        corpus: PathBuf,
+        /// Same probes file selftest takes.
+        #[arg(long)]
+        probes: PathBuf,
+        #[arg(long, default_value_t = 1200)]
+        budget: usize,
+        /// Machine-readable full report.
+        #[arg(long)]
+        json: bool,
+    },
     /// One-command offline demo: corpus → map → ngram table → model answer.
     Demo {
         /// Corpus directory (any text file; binaries and build dirs are skipped).
@@ -786,6 +804,12 @@ fn main() -> anyhow::Result<()> {
             json,
             baseline.as_deref(),
         ),
+        Command::CalibrateFloor {
+            corpus,
+            probes,
+            budget,
+            json,
+        } => cmd_calibrate_floor(&corpus, &probes, budget, json),
         Command::Benchmark {
             order,
             budget,
@@ -3197,6 +3221,99 @@ fn print_observer_receipts(
             }
         );
     }
+}
+
+/// Measure the zero-noise floor placement on the caller's corpus with the
+/// caller's labelled probes. Advisory output only.
+fn cmd_calibrate_floor(
+    corpus: &Path,
+    probes_path: &Path,
+    budget: usize,
+    json: bool,
+) -> anyhow::Result<()> {
+    use physis_core::map::{compile_context_with_observer, load_corpus, ObserverReserve};
+    use physis_core::selftest::{calibrate_from_relevances, SelftestProbeFile};
+    let docs = load_corpus(corpus)?;
+    anyhow::ensure!(
+        !docs.is_empty(),
+        "no corpus documents under {}",
+        corpus.display()
+    );
+    let file: SelftestProbeFile =
+        serde_json::from_reader(std::fs::File::open(probes_path).map_err(|e| {
+            anyhow::anyhow!("cannot read probes file {}: {e}", probes_path.display())
+        })?)
+        .map_err(|e| anyhow::anyhow!("cannot parse probes file {}: {e}", probes_path.display()))?;
+    anyhow::ensure!(!file.probes.is_empty(), "probes file contains no probes");
+    let (embedder, _kind) = load_embedder_kind();
+    let mut relevant: Vec<f32> = Vec::new();
+    let mut noise: Vec<f32> = Vec::new();
+    for probe in &file.probes {
+        let report = compile_context_with_observer(
+            &docs,
+            &embedder,
+            &probe.query,
+            budget,
+            &probe.claims,
+            0.0,
+            ObserverReserve::None,
+        )?;
+        for receipt in &report.observer_gated {
+            let Some(rel) = receipt.relevance else {
+                continue;
+            };
+            if receipt.object_id.starts_with("obj:noise") {
+                noise.push(rel);
+            } else {
+                relevant.push(rel);
+            }
+        }
+    }
+    let cal = calibrate_from_relevances(&relevant, &noise)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&cal)?);
+    } else {
+        println!(
+            "calibration: {} labelled cosines ({} relevant / {} noise) over {} corpus docs",
+            cal.relevant_band.2 + cal.noise_band.2,
+            cal.relevant_band.2,
+            cal.noise_band.2,
+            docs.len()
+        );
+        println!(
+            "  relevant band: {:.4} .. {:.4}",
+            cal.relevant_band.0, cal.relevant_band.1
+        );
+        println!(
+            "  noise band:    {:.4} .. {:.4}",
+            cal.noise_band.0, cal.noise_band.1
+        );
+        println!("  noise ceiling: {:.4}", cal.noise_ceiling);
+        if cal.separable {
+            println!(
+                "  minimal zero-noise floor: {:.4} (recalls {}/{})",
+                cal.minimal_zero_noise_floor,
+                cal.recall_at_recommended.0,
+                cal.recall_at_recommended.1
+            );
+            println!(
+                "  recommended floor (advisory): {:.4} (recalls {}/{})",
+                cal.recommended_floor, cal.recall_at_recommended.0, cal.recall_at_recommended.1
+            );
+        } else {
+            println!(
+                "  NO SEPARATING FLOOR: the noise band reaches {:.4} while the \
+                 relevant band tops out at {:.4} — fusion cannot be gated \
+                 safely on this embedder/corpus pair",
+                cal.noise_ceiling, cal.relevant_band.1
+            );
+        }
+        println!(
+            "  advisory only: these are measurements of this corpus and probe \
+             set, not directives — verify against your own held-out checks"
+        );
+    }
+    Ok(())
 }
 
 /// Run known-answer probes against a corpus: the engine audits its own
