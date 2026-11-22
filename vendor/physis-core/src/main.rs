@@ -2657,6 +2657,11 @@ fn cmd_demo(dir: &Path, query: &str, order: u8) -> anyhow::Result<()> {
     use physis_core::model_provider::{ModelProvider, NgramDecoderModel};
     use physis_core::ngram_table::{TableBuilder, TableConfig};
     use std::sync::Arc;
+    anyhow::ensure!(
+        dir.is_dir(),
+        "no corpus directory at `{}` — pass --dir <your-corpus> (any directory of text files)",
+        dir.display()
+    );
     let docs = physis_core::map::load_corpus(dir)?;
     anyhow::ensure!(
         !docs.is_empty(),
