@@ -55,10 +55,10 @@ physis-core = { version = "0.4.0", default-features = false }
 ```bash
 cargo install physis-core
 
-physis-core demo                 # corpus → map → n-gram table → model answer, offline
+physis-core demo --dir <corpus>  # corpus → map → n-gram table → model answer, offline
 physis-core grid                 # the adaptive semiotic grid, its axes and cells
-physis-core observe .            # persist this tree as an observation graph
-physis-core context src/lib.rs --budget 800
+physis-core scan .               # register this tree as a persisted coherence graph
+physis-core context --corpus . --query "how does revision work" --budget 800
 physis-core ground               # what is believed, on what evidence, what is disputed
 ```
 
