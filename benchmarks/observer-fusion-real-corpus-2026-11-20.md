@@ -450,3 +450,13 @@ copies). The accidental rerun exactly reproduced the n30 record — a free
 reproducibility check. The engine_best drift noted mid-session (0.6879 →
 0.7982 on the control query) moved no gate decision (31/31 verdicts match);
 claim relevances are corpus-independent and identical throughout.
+
+## Cross-machine reproduction (omo, 2026-11-21)
+
+The full gate suite ran on a second machine (omo, Ryzen 9 6900HX, fresh
+clone from the origin bundle, release build): `cargo test --all-targets`
+400 passed, fmt clean, clippy 0 errors; and the measurements reproduce
+exactly — selftest 30/30 on the plan corpus, 5/5 on the praxis corpus,
+same floors (0.66), same binary version 0.3.0. The floor placement is
+machine-independent as claimed: ONNX inference is deterministic and the
+cosine bands carry over.
