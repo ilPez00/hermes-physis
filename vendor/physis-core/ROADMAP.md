@@ -38,9 +38,9 @@ missing-corpus error.
 - [ ] **Installed-binary corpus.** `examples/demo-corpus` makes `demo` work
       in-tree; a `cargo install`ed binary still needs `--dir`. Consider an
       embedded default corpus so `physis-core demo` works anywhere.
-- [ ] **Runnable README example.** The README shows verified CLI, not a library
-      snippet. A `#![doc = include_str!("../README.md")]` doctest (or an
-      `examples/*.rs`) would make the library example compile-checked.
+- [x] **Runnable, compile-checked example.** `examples/observation_log.rs`
+      appends typed observations and reads them back (`cargo run --example
+      observation_log`), demonstrating the observation-log capability.
 - [ ] **`selftest` needs a shipped fixture.** `selftest`/`calibrate-floor`
       require corpus+probes fixtures that live in the private engine repo, so
       they are NOT MEASURED from this crate alone. Ship a tiny probe set.
