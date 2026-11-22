@@ -1,0 +1,1 @@
+Pump maintenance required: replace the seal on line 2, vibration rising after bearing wear. Schedule downtime tonight and file the shift report.

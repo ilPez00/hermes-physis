@@ -1,0 +1,1 @@
+Release 17 deployed to staging: config drift fixed, rollout verified, telemetry green, rollback plan documented in the runbook.

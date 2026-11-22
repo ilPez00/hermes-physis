@@ -1,0 +1,1 @@
+The lighthouse painted gold at midnight, whistling backward through seven unfinished winters.

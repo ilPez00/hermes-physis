@@ -1,0 +1,1 @@
+Invoice 12: payment terms net 30, purchase order approved, vendor shipping confirmation received by the office today.

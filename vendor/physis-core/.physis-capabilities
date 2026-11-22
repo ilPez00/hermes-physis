@@ -1,0 +1,9 @@
+# physis-core capability manifest — read with `physis-check capabilities .`
+#
+# Each capability is present only when BOTH halves run outside their declaring
+# file and outside tests: something writes it, and something reads it.
+#
+# capability | write path | read path
+observation log      | watch_fs                                     | by_source
+bi-temporal validity | during                                       | is_valid_at
+belief revision      | revise                                       | current_hypotheses, hypotheses_including_history
