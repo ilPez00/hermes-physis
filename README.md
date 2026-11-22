@@ -29,10 +29,14 @@ label-permuted control - when a task needs an overview rather than one query.
 
 | Engine | Version | License | Role |
 |---|---:|---|---|
-| `bin/physis-core` | 0.2.0 | Apache-2.0 | scan, search, node-search, context, classify, grid, snapshot |
+| `bin/physis-core` | 0.3.0 | Apache-2.0 | scan, search, node-search, context, classify, grid, snapshot |
 | `bin/replant` | 0.3.0 | Apache-2.0 | verified tool-recipe replay |
-| `vendor/physis-core` | 0.2.0 | Apache-2.0 | full source snapshot used to build the binary |
+| `vendor/physis-core` | 0.4.0 | Apache-2.0 | full source snapshot (newer than the bundled binary) |
 | `vendor/physis-replant` | 0.3.0 | Apache-2.0 | full source snapshot used to build the binary |
+
+`vendor/physis-core` tracks **0.4.0**; the bundled `bin/physis-core` is the last
+release build (**0.3.0**). Run `scripts/build-engines.sh` to rebuild the binary
+from the 0.4.0 snapshot.
 
 The binaries are Linux x86_64 and are used by default. `PHYSIS_BIN` or the
 `engine_bin` setting overrides discovery; a comma-separated list is accepted.
