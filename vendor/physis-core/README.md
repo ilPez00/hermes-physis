@@ -55,7 +55,8 @@ physis-core = { version = "0.4.0", default-features = false }
 ```bash
 cargo install physis-core
 
-physis-core demo --dir <corpus>  # corpus → map → n-gram table → model answer, offline
+physis-core demo                 # bundled corpus → map → n-gram table → model answer, offline
+physis-core demo --dir <corpus>  # or point it at your own tree
 physis-core grid                 # the adaptive semiotic grid, its axes and cells
 physis-core scan .               # register this tree as a persisted coherence graph
 physis-core context --corpus . --query "how does revision work" --budget 800
