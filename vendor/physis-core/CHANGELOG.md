@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.0] — unreleased
+## [0.4.0] — 2026-11-22
 
 ### Added
 - `physis-core selftest` — the engine audits its own fusion gate; `--baseline`
@@ -27,7 +27,7 @@
 ### Fixed
 - Gate outcome accumulation no longer double-counts across rollup boundaries.
 
-## [0.3.0] — 2026-XX-XX
+## [0.3.0] — 2026-11-21
 
 First crates.io candidate. Deterministic structural mapping, token-fixed RAG,
 semantic embeddings, optional ONNX MiniLM embedder, `cli`/`studio`/`embed-onnx`
